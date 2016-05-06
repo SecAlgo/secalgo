@@ -7,47 +7,77 @@ from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
 from Crypto import Random
-#Definition of High-Level Encryption/Authentication Methods
 
-def gen_k():
-    return RSA.generate(2048)
+RSA_KEY_SIZE_BITS = 1024
+RSA_KEY_SIZE_BYTES = 128
 
-def gen_pk(k):
+def sa_gen_ key_pair():
+    return RSA.generate(1024)
+#end sa_gen_key_pair()
+
+def sa_get_public_key(k):
     return k.publickey()
+#end sa_get_public_key()
 
-def gen_symk():
+def sa_sym_key():
     return Random.new().read(32)
+#end sa_gen_sym_key
 
-def encrypt(data, key):
-    if isinstance(key, _RSAobj):
-        if len(data) > 256:
-            blergh = (key.encrypt(data[0:256], '')[0] + key.encrypt(data[256:], '')[0], )
-            return blergh
-        return key.encrypt(data, '')
+def sa_sym_encrypt(plaintext, key):
     pre = Random.new().read(8)
     ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return pre + crypter.encrypt(data)
+    encrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
+    return pre + crypter.encrypt(plaintext)
+#end sa_sym_encrypt()
 
-def decrypt(data, key):
-    if isinstance(key, _RSAobj):
-        if len(data[0]) > 256:
-            blergh = key.decrypt((data[0][0:256], )) + key.decrypt((data[0][256:], ))            
-            return blergh
-        return key.decrypt(data)
+def sa_sym_decrypt(ciphertext, key):
     pre = data[0:8]
     ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return crypter.decrypt(data[8:])
+    decrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
+    return crypterdecrypt(data[8:])
+#end sa_sym_decrypt()
 
-def sign(data, key):
+def sa_asym_encrypt(plaintext, public_key):
+    frag_counter = (len(plaintext) // RSA_KEY_SIZE_BYTES) + 1
+    ct_list = []
+    for i in range(frag_counter):
+        ciphertext = public_key.encrypt(plaintext[(i * RSA_KEY_SIZE_BYTES):
+                                                  ((i + 1) * RSA_KEY_SIZE_BYTES)])
+        ct_list.append(ciphertext)
+    #end for
+    return ct_list
+#end sa_asym_encrypt()
+
+def sa_asym_decrypt(ct_list, key):
+    for ciphertext in ct_list:
+        pt += key.decrypt(ciphertext)
+    #end for
+    return pt
+#end sa_asym_decrypt()
+
+def sa_encrypt(plaintext, key):
+    if isinstance(key, _RSAobj):
+        return sa_asym_encrypt(plaintext, key)
+    else:
+        return sa_sym_encrypt(plaintext, key)
+#end sa_encrypt
+
+def sa_decrypt(ciphertext, key):
+    if isinstance(key, _RSAobj):
+        return sa_asym_decrypt(ciphertext, key)
+    else:
+        return sa_sym_decrypt(ciphertext, key)
+#end sa_decrypt()
+
+def sa_sign(data, key):
     sig = key.sign(SHA256.new(data).digest(), '')
     result = (data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
                                     byteorder = 'little'))
     return pickle.dumps(result)
+#end sa_sign()
 
 #returns None when verfication fails
-def checksign(data, key):
+def verify(data, key):
     unp_data = pickle.loads(data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
     verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
@@ -55,5 +85,4 @@ def checksign(data, key):
         return unp_data[0]
     else:
         return None
-               
-#End of High-Level Encryption Definitions
+#end def sa_verify()
