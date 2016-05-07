@@ -11,7 +11,7 @@ from Crypto import Random
 RSA_KEY_SIZE_BITS = 1024
 RSA_KEY_SIZE_BYTES = 128
 
-def sa_gen_ key_pair():
+def sa_gen_key_pair():
     return RSA.generate(1024)
 #end sa_gen_key_pair()
 

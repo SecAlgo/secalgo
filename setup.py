@@ -8,4 +8,4 @@ setup(name = "SecAlgo",
       author_email = "ckane@cs.stonybrook.edu",
       classifiers = ['Programming Language :: Python :: 3',
                      'Programming Language :: Python :: 3.4',],
-      packages = ['sa'])
+      packages = ['sa', 'sa.Misc'])

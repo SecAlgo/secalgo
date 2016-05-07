@@ -8,7 +8,7 @@ from charm.toolbox.pairinggroup import PairingGroup, GT
 from charm.toolbox.symcrypto import SymmetricCryptoAbstraction
 from charm.toolbox.integergroup import IntegerGroup
 from charm.schemes.pkenc.pkenc_rsa import RSA, RSA_Enc, RSA_Sig
-from charm_da_utils import serialize_endpoint, deserialize_endpoint
+from sa.Misc.charm_da_utils import serialize_endpoint, deserialize_endpoint
 
 RSA_KEY_SIZE_BITS = 1024
 RSA_KEY_SIZE_BYTES = 128
