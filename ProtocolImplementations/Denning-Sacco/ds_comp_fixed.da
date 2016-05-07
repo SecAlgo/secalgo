@@ -7,57 +7,8 @@ from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
 from Crypto import Random
+from SecAlgoProject.AbstractionImplementations.sec_algo_pycrypto import *
 
-#Definition of High-Level Encryption/Authentication Methods
-
-def gen_k():
-    return RSA.generate(2048)
-
-def gen_pk(k):
-    return k.publickey()
-
-def gen_symk():
-    return Random.new().read(32)
-
-def encrypt(data, key):
-    if isinstance(key, _RSAobj):
-        if len(data) > 256:
-            blergh = (key.encrypt(data[0:256], '')[0] + key.encrypt(data[256:], '')[0], )
-            return blergh
-        return key.encrypt(data, '')
-    pre = Random.new().read(8)
-    ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return pre + crypter.encrypt(data)
-
-def decrypt(data, key):
-    if isinstance(key, _RSAobj):
-        if len(data[0]) > 256:
-            blergh = key.decrypt((data[0][0:256], )) + key.decrypt((data[0][256:], ))            
-            return blergh
-        return key.decrypt(data)
-    pre = data[0:8]
-    ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return crypter.decrypt(data[8:])
-
-def sign(data, key):
-    sig = key.sign(SHA256.new(data).digest(), '')
-    result = (data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
-                                    byteorder = 'little'))
-    return pickle.dumps(result)
-
-#returns None when verfication fails
-def checksign(data, key):
-    unp_data = pickle.loads(data)
-    sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
-    if verdict:
-        return unp_data[0]
-    else:
-        return None
-               
-#End of High-Level Encryption Definitions
 
 #Misc Global Methods
 
@@ -101,36 +52,24 @@ set_pk() contains an await statement and await statements are not permitted
 within the setup() method.
 
 2. The await statements in set_pk() and get_pk() did nto work when the from_
-class was included (that is, they never evaluated to true and all the processes
+statement was included (that is, they never evaluated to true and all the processes
 would hang. So, I remove the from_ from each.
 
 3. I had to change the definition of get_pk inside the pk_server class in order
 to prevent cases in which a process would request the public key for another
 process that had not yet registered its key.
 
-4. As it is now, each process has a 25% chance of initiating DS with some other
-randomly chosen process. This has led to some problems. 
-
-    A. If multiple processes initiate DS with the same target, then checksign 
-       fails for at least one of them at the target.
-    
-    B. In addition, I am getting unpickling errors in some cases, though I have
-       not yet identified the pattern. It may be cases in which a process
-       initiates a DS connection to a target before that target has started
-       run()-ing.
-
-So, there is still some interleaving weirdness I cannot account for yet.
 """
 class P (process):
     def setup(s, pk_p, testing, test_i, test_r):
-        self.skA = gen_k()
+        self.skA = sa_gen_key_pair()
         self.counter = 0
         #self.cid_gen = self.gen_cid()
         #set_pk(self.id, gen_pk(skA))
 
     def run():
         output('started')
-        set_pk(self.id, gen_pk(skA))
+        set_pk(self.id, sa_get_public_key(self.skA))
         if needed() and not testing:
             b = random.choice(tuple(s))
             s = ds(b)
@@ -154,8 +93,6 @@ class P (process):
         #cid = next(self.cid_gen)
         cid = self.gen_cid()
         send(('set_pk', p, k, cid), to = self.pk_p)
-        #print('HEY!!!-set_pk')
-        sys.stdout.flush()
         await(some(received(('re_set_pk', _cid))))
         #await(some(received(('re_set_pk', _cid), from_ = self.pk_p)))
 
@@ -163,30 +100,28 @@ class P (process):
         #cid = next(self.cid_gen)
         cid = self.gen_cid()
         send(('get_pk', p, cid), to = self.pk_p)
-        #print('HEY!!!-get_pk')
-        sys.stdout.flush()
         await(some(received(('re_get_pk', k, _cid))))
         #await(some(received(('re_get_pk', k, _cid), from_ = self.pk_p)))
         return k
 
     def ds(b):
         output('DS Initiated from', self.id, 'to', b)
-        k = gen_symk()        
+        k = sa_gen_sym_key()        
         pkB = get_pk(b)
         output('Sign Key:', skA)
-        send(('ds-key', encrypt(sign(k, skA), pkB)), to = b)
+        send(('ds-key', sa_encrypt(sa_sign(k, skA), pkB)), to = b)
         await(some(received(('msg', m), from_= b)))
-        return decrypt(m, k)
+        return sa_decrypt(m, k)
         
     def receive(msg=('ds-key', m), from_ = b):
         output('Retrieving Key for:', b)
         pkB = get_pk(b)
         #output('Check Key:', pkB, '\n', pkB.exportKey(), '\n', 
         #      pkB.keydata[0], '\n', pkB.keydata[1])
-        k = checksign(decrypt(m, skA), pkB)
+        k = sa_verify(sa_decrypt(m, skA), pkB)
         if k is not None:
             s = "secret"
-            send(('msg', encrypt(s, k)), to = b)
+            send(('msg', sa_encrypt(s, k)), to = b)
         else:
             output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
 
