@@ -1,7 +1,10 @@
 #SecAlgoProject .gitignore
 *~
 *.pyc
+<<<<<<< HEAD
 __pycache__/
+=======
+>>>>>>> fe82b9a9ddec11c87d0d2c8859085653a580e056
 ProtocolImplementations/**/*.py
 build/
 
