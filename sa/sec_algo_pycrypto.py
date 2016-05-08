@@ -19,7 +19,7 @@ def sa_get_public_key(k):
     return k.publickey()
 #end sa_get_public_key()
 
-def sa_sym_key():
+def sa_gen_sym_key():
     return Random.new().read(32)
 #end sa_gen_sym_key
 
@@ -27,14 +27,14 @@ def sa_sym_encrypt(plaintext, key):
     pre = Random.new().read(8)
     ctr = Counter.new(64, prefix = pre)
     encrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return pre + crypter.encrypt(plaintext)
+    return pre + encrypter.encrypt(plaintext)
 #end sa_sym_encrypt()
 
 def sa_sym_decrypt(ciphertext, key):
-    pre = data[0:8]
+    pre = ciphertext[0:8]
     ctr = Counter.new(64, prefix = pre)
     decrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return crypterdecrypt(data[8:])
+    return decrypter.decrypt(ciphertext[8:])
 #end sa_sym_decrypt()
 
 def sa_asym_encrypt(plaintext, public_key):
@@ -42,13 +42,14 @@ def sa_asym_encrypt(plaintext, public_key):
     ct_list = []
     for i in range(frag_counter):
         ciphertext = public_key.encrypt(plaintext[(i * RSA_KEY_SIZE_BYTES):
-                                                  ((i + 1) * RSA_KEY_SIZE_BYTES)])
+                                                  ((i + 1) * RSA_KEY_SIZE_BYTES)], '')
         ct_list.append(ciphertext)
     #end for
     return ct_list
 #end sa_asym_encrypt()
 
 def sa_asym_decrypt(ct_list, key):
+    pt = b''
     for ciphertext in ct_list:
         pt += key.decrypt(ciphertext)
     #end for
@@ -77,7 +78,7 @@ def sa_sign(data, key):
 #end sa_sign()
 
 #returns None when verfication fails
-def verify(data, key):
+def sa_verify(data, key):
     unp_data = pickle.loads(data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
     verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)

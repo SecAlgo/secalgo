@@ -3,8 +3,8 @@ import random
 from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.toolbox.pairinggroup import PairingGroup
 from charm.toolbox.integergroup import IntegerGroup
-from charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
-from sec_algo_charm import *
+from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
+from sa.sec_algo_charm import *
 
 #Misc Global Methods
 
