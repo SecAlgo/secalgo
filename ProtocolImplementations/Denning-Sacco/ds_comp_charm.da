@@ -1,6 +1,5 @@
 import sys
 import random
-import json
 from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.core.math.pairing import hashPair as extractor
 from charm.toolbox.symcrypto import SymmetricCryptoAbstraction
@@ -85,11 +84,6 @@ class P (process):
 
     def run():
         output('started')
-        #for beep, boop in self.auth_skA.items():
-        #    print(type(beep))
-        #    print(beep, '\n\n')
-        #    print(type(boop))
-        #    print(boop, '\n\n')
         set_pk(self.id, [self.crypt_pkA, self.auth_pkA])
         if needed() and not testing:
             b = random.choice(tuple(s))
@@ -130,53 +124,37 @@ class P (process):
 
         group_object = PairingGroup('SS512')
         k = group_object.random(GT)
-        print('1. !!!!!!!!!!!!!!!!!!!!!!!!:', k, '\n\n', flush = True)
         
         crypt_pkB, auth_pkB = get_pk(b)
         signed_k = self.rsa_auth.sign(self.auth_skA, k)
 
         serial_k = objectToBytes(k, group_object)
-        print('2. !!!!!!!!!!!!!!!!!!!!!!!!:', serial_k, '\n\n', flush = True)
         encrypted_k = self.rsa_crypt.encrypt(crypt_pkB, serial_k)
-        print('3. !!!!!!!!!!!!!!!!!!!!!!!!:', encrypted_k, '\n\n', flush = True)
         encrypted_sig = self.rsa_crypt.encrypt(crypt_pkB, signed_k)
 
         s_encrypted_k_and_sig = objectToBytes([encrypted_k, encrypted_sig], IntegerGroup())
-        print('4. !!!!!!!!!!!!!!!!!!!!!!!!:', s_encrypted_k_and_sig, '\n\n', flush = True)
         send(('ds-key', s_encrypted_k_and_sig), to = b)
         await(some(received(('msg', m), from_ = b)))
-        #print('888888888888888888', m, flush = True)
         
         crypter_ab = SymmetricCryptoAbstraction(extractor(k))
-        #print('999999999999999999', crypter_ab.decrypt(m))
         return crypter_ab.decrypt(m)
         
     def receive(msg=('ds-key', m), from_ = b):
         output('Retrieving Key for:', b)
 
-        print('4. %%%%%%%%%%%%%%%%%:', m, '\n\n', flush = True)
         encrypted_k_and_sig = bytesToObject(m, IntegerGroup())
         encrypted_k, encrypted_sig = encrypted_k_and_sig
-        print('3. %%%%%%%%%%%%%%%%%:', encrypted_k, '\n\n', flush = True)
         serial_k = self.rsa_crypt.decrypt(self.crypt_pkA, self.crypt_skA, encrypted_k)
-        print('2. %%%%%%%%%%%%%%%%%:', serial_k, '\n\n', flush = True)
         signed_k = self.rsa_crypt.decrypt(self.crypt_pkA, self.crypt_skA, encrypted_sig)
 
         k = bytesToObject(serial_k, PairingGroup('SS512'))
-        print('1. %%%%%%%%%%%%%%%%%:', k, '\n\n', flush = True)
         crypt_pkB, auth_pkB = get_pk(b)
 
         verdict = self.rsa_auth.verify(auth_pkB, k, signed_k)
         if verdict == True:
             s = 'secret'
-            #print('!!!!!!!!!!!!!!!!!!!!!!!!:', k, '\n\n')
             crypter_ab = SymmetricCryptoAbstraction(extractor(k))
-            #print('$$$$$$$$$$$$$$$$$$', s)
-            c_s = crypter_ab.encrypt(s)
-            #p_s = crypter_ab.decrypt(c_s)
-            #print('*******************:', c_s)
-            #print('*******************:', p_s)
-            send(('msg', c_s), to = b)
+            send(('msg', crypter_ab.encrypt(s)), to = b)
         else:
             output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
 

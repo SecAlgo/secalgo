@@ -1,5 +1,6 @@
 #SecAlgoProject .gitignore
 *~
+*.pyc
 ProtocolImplementations/**/*.py
 build/
 __pycache__/

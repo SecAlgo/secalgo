@@ -1,73 +1,13 @@
 import sys
 import random
 from charm.core.engine.util import objectToBytes, bytesToObject
+from charm.core.math.pairing import hashPair as extractor
 from charm.toolbox.symcrypto import SymmetricCryptoAbstraction
 from charm.toolbox.pairinggroup import PairingGroup, GT
-from charm.core.math.pairing import hashPair as extractor
-from charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
 from charm.toolbox.conversion import Conversion
 from charm.toolbox.securerandom import OpenSSLRand
+from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
 
-#Definition of High-Level Encryption/Authentication Methods
-'''
-def gen_k():
-    return RSA.generate(2048)
-
-def gen_pk(k):
-    return k.publickey()
-
-def gen_symk():
-    return Random.new().read(32)
-
-def encrypt(data, key):
-    data_flag = (0).to_bytes(1, byteorder = 'little')
-    if not isinstance(data, bytes):
-        data = pickle.dumps(data)
-        data_flag = (1).to_bytes(1, byteorder = 'little')
-    if isinstance(key, _RSAobj):
-        if len(data > 256):
-            blergh = data_flag + (key.encrypt(data[0:256], '')[0] + key.encrypt(data[256:], '')[0], )
-            return blergh
-        return data_flag + key.encrypt(data, '')
-    pre = Random.new().read(8)
-    ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    return data_flag + pre + crypter.encrypt(data)
-
-def decrypt(data, key):
-    data_flag = data[0]
-    if isinstance(key, _RSAobj):
-        if len(data[0]) > 256:
-            blergh = ((key.decrypt(data[0][1:257], )) + key.decrypt(data[0][257:], ))
-            if data_flag == 1:
-                blergh = pickle.loads(blergh)
-            return blergh
-        if data_flag == 1:
-            return pickle.loads(key.decrypt(data))
-        return key.decrypt(data)
-    pre = data[1:9]
-    ctr = Counter.new(64, prefix = pre)
-    crypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-    if data_flag == 1:
-        return pickle.loads(crypter.decrypt(data[9:]))
-    return crypter.decrypt(data[9:])
-
-def sign(data, key):
-    sig = key.sign(SHA256.new(data).digest(), '')
-    result = (data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), byteorder = 'little'))
-    return pickle.dumps(result)
-
-#returns None when verification fails
-def checksign(data, key):
-    unp_data = pickle.loads(data)
-    sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
-    if verdict:
-        return unp_data[0]
-    else:
-        return None
-'''
-#End of High-Level Encryption/Authentication Methods
 
 #Misc Global Methods
 #null_group = Null_Group()

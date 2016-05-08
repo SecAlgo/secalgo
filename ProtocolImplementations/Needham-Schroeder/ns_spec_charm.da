@@ -4,8 +4,8 @@ from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.toolbox.pairinggroup import PairingGroup, GT
 from charm.toolbox.conversion import Conversion
 from charm.toolbox.securerandom import OpenSSLRand
-from charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
-from sec_algo_charm import *
+from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
+from sa.sec_algo_charm import *
 
 #Misc Global Methods
 
