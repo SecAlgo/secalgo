@@ -1,2 +1,5 @@
-#CMK .gitignore
+#SecAlgoProject .gitignore
 *~
+ProtocolImplementations/**/*.py
+build/
+__pycache__/
