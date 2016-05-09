@@ -1,6 +1,5 @@
 import sys
 import random
-import json
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto.PublicKey import RSA
@@ -59,7 +58,7 @@ process that had not yet registered its key.
 """
 class P (process):
     def setup(s, pk_p, testing, test_i, test_r):
-        self.skA = RSA.generate(2048)
+        self.skA = RSA.generate(1024)
         self.counter = 0
         #self.cid_gen = self.gen_cid()
         #set_pk(self.id, gen_pk(skA))
