@@ -72,7 +72,7 @@ def sa_decrypt(plaintext, key):
         return sa_sym_decrypt(plaintext, key)
     else:
         return sa_asym_decrypt(plaintext, key)
-        
+#end sa_decrypt()
 
 def sa_sign(data, private_key):
     signer = RSA_Sig()
