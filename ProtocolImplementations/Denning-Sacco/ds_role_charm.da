@@ -10,6 +10,8 @@ from charm.toolbox.conversion import Conversion
 from charm.toolbox.securerandom import OpenSSLRand
 from charm.schemes.pkenc.pkenc_rsa import RSA, RSA_Enc, RSA_Sig
 
+RSA_KEY_LENGTH_BYTES = 128
+
 #Misc Global Methods
 
 def needed():
@@ -81,12 +83,26 @@ class Initiator(process):
 
     def ds(r):
         output('DS initiated from', self.id, 'to', r)
-        k = PairingGroup('SS512').random(GT)
         pkR = get_pk(r)
+        k = PairingGroup('SS512').random(GT)
         key_sig = RSA_Sig().sign(self.secret_key, k)
-        c_key_sig = RSA_Enc().encrypt(pkR, key_sig)
-        c_k = RSA_Enc().encrypt(pkR, k)
-        send(('ds-key', (c_k, c_key_sig)), to = r)
+
+        serial_k = objectToBytes(k, PairingGroup('SS512'))
+        serial_key_sig = objectToBytes(Conversion.OS2IP(key_sig), IntegerGroup())
+
+        c_key_sig = []
+        sig_frags = (len(serial_key_sig) // RSA_KEY_LENGTH_BYTES) + 1
+        for i in range(sig_frags):
+            c_key_sig.append(RSA_Enc().encrypt(pkR, serial_key_sig[(i*RSA_KEY_LENGTH_BYTES):((i+1)*RSA_KEY_LENGTH_BYTES)]))
+
+        c_k = []   
+        k_frags = (len(serial_k) // RSA_KEY_LENGTH_BYTES) + 1
+        for j in range(k_frags):
+            c_k.append(RSA_Enc().encrypt(pkR, serial_k[(i*RSA_KEY_LENGTH_BYTES):((i+1)*RSA_KEY_LENGTH_BYTES)]))
+
+        serial_encrypted_k_and_sig = objectToBytes([c_k, c_key_sig], IntegerGroup())
+
+        send(('ds-key', serial_encrypted_k_and_sig), to = r)
         await(some(received(('msg', m), from_ = r)))
         decrypter = SymmetricCryptoAbstraction(extractor(k))
         return decrypter.decrypt(m)
@@ -125,9 +141,20 @@ class Recipient(process):
 
     def receive(msg=('ds-key', m), from_ = i):
         pkI = get_pk(i)
-        c_k, c_key_sig = m
-        k = RSA_Enc.decrypt(self.public_key, self.secret_key, c_k)
-        key_sig = RSA_Enc().decrypt(self.public_key, self.secret_key, c_key_sig)
+        c_k, c_key_sig = bytesToObject(m, IntegerGroup())
+
+        serial_k = b''
+        for k_frag in c_k:
+            serial_k += RSA_Enc().decrypt(self.public_key, self.secret_key, k_frag)
+
+
+        k = bytesToObject(serial_k, PairingGroup('SS512'))
+
+        serial_key_sig = b''
+        for sig_frag in c_key_sig:
+            serial_key_sig += RSA_Enc().decrypt(self.public_key, self.secret_key, sig_frag)
+        key_sig = Conversion.IP2OS(bytesToObject(serial_key_sig, IntegerGroup()))
+
         verdict = RSA_Sig().verify(pkI, k, key_sig)
         if verdict:
             s = "secret"
@@ -140,7 +167,7 @@ class Recipient(process):
 
 def main():
     test_run = True if (len(sys.argv) > 1 and sys.argv[1] == 'test') else False
-    n = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     pk_p = new(pk_server)
     setup(pk_p, ())
     if test_run:
@@ -154,8 +181,8 @@ def main():
         start(pk_p)
         start(ps)
     else:
-        ps = new(Initiator, num = n)
-        rs = new(Recipient, num = n)
+        ps = new(Initiator, num = n // 2)
+        rs = new(Recipient, num = n // 2)
         for p in ps:
             setup(p, (rs, pk_p, False, False, None))
         for r in rs:
