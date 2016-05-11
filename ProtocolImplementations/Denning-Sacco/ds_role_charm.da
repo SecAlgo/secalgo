@@ -98,7 +98,7 @@ class Initiator(process):
         c_k = []   
         k_frags = (len(serial_k) // RSA_KEY_LENGTH_BYTES) + 1
         for j in range(k_frags):
-            c_k.append(RSA_Enc().encrypt(pkR, serial_k[(i*RSA_KEY_LENGTH_BYTES):((i+1)*RSA_KEY_LENGTH_BYTES)]))
+            c_k.append(RSA_Enc().encrypt(pkR, serial_k[(j*RSA_KEY_LENGTH_BYTES):((j+1)*RSA_KEY_LENGTH_BYTES)]))
 
         serial_encrypted_k_and_sig = objectToBytes([c_k, c_key_sig], IntegerGroup())
 
@@ -146,8 +146,6 @@ class Recipient(process):
         serial_k = b''
         for k_frag in c_k:
             serial_k += RSA_Enc().decrypt(self.public_key, self.secret_key, k_frag)
-
-
         k = bytesToObject(serial_k, PairingGroup('SS512'))
 
         serial_key_sig = b''
