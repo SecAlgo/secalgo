@@ -76,7 +76,7 @@ def sa_decrypt(plaintext, key):
 
 def sa_sign(data, private_key):
     signer = RSA_Sig()
-    sig = signer.sign(private_key, data)
+    sig = signer.sign(private_key[1], data)
     sig = Conversion.OS2IP(sig)
     serial_data_and_sig = objectToBytes([data, sig], IntegerGroup())
     return serial_data_and_sig

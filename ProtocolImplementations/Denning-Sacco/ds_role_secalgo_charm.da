@@ -1,0 +1,160 @@
+import sys
+import random
+from charm.toolbox.conversion import Conversion
+from charm.toolbox.integergroup import IntegerGroup
+from charm.toolbox.pairinggroup import PairingGroup
+from charm.core.engine.util import objectToBytes, bytesToObject
+from sa.sec_algo_charm import sa_gen_key_pair, sa_get_public_key
+from sa.sec_algo_charm import sa_gen_sym_key, sa_encrypt, sa_decrypt
+from sa.sec_algo_charm import sa_sign, sa_verify
+
+#Misc Global Methods
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+# end neeed()
+
+#End Misc Global Methods        
+
+class pk_server(process):
+    def setup():
+        self.public_keys = dict()
+    #end setup()
+
+    def run():
+        output('pks started')
+        await(False)
+    #end run()
+
+    def receive(msg=('set_pk', p, k, cid), from_ = client):
+        self.public_keys[p] = k
+        send(('re_set_pk', cid), to = client)
+    #end receive(set_pk)
+
+    def receive(msg=('get_pk', p, cid), from_ = client):
+        await(p in self.public_keys.keys())
+        send(('re_get_pk', self.public_keys[p], cid), to = client)
+    #end receive(get_pk)
+#end class pk_server
+
+class Initiator(process):
+    def setup(rs, pk_p, testing, test_i, test_r):
+        self.secret_key = sa_gen_key_pair()
+        self.counter = 0
+    #end setup()
+
+    def run():
+        output('initiator started')
+        set_pk(self.id, sa_get_public_key(self.secret_key))
+        if needed() and not testing:
+            b = random.choice(tuple(rs))
+            s = ds(b)
+            output(s)
+        if testing and test_i:
+            test_s = ds(test_r.pop())
+            output(test_s)
+        await(False)
+    #end run()
+
+    def gen_cid():
+        self.counter += 1
+        return (self.id, self.counter)
+    #end gen_cid()
+
+    def set_pk(p, k):
+        cid = self.gen_cid()
+        send(('set_pk', p, objectToBytes(k, IntegerGroup()), cid), to = self.pk_p)
+        await(some(received(('re_set_pk', _cid))))
+    #end set_pk()
+
+    def get_pk(p):
+        cid = self.gen_cid()
+        send(('get_pk', p, cid), to = self.pk_p)
+        await(some(received(('re_get_pk', k, _cid))))
+        return bytesToObject(k, IntegerGroup())
+    #end get_pk
+
+    def ds(r):
+        output('DS initiated from', self.id, 'to', r)
+        k = sa_gen_sym_key()
+        serial_k = objectToBytes(k, PairingGroup('SS512'))
+        pkR = get_pk(r)
+        encrypted_k_and_sig = sa_encrypt(sa_sign(serial_k, self.secret_key), pkR)
+        send(('ds-key', objectToBytes(encrypted_k_and_sig, IntegerGroup())), to = r)
+        await(some(received(('msg', m), from_ = r)))
+        return sa_decrypt(m, k)
+    #end ds()
+#end class Initiator
+
+class Recipient(process):
+    def setup(pk_p):
+        self.secret_key = sa_gen_key_pair()
+        self.counter = 0
+    #end setup()
+
+    def gen_cid():
+        self.counter += 1
+        return (self.id, self.counter)
+    #end gen_cid()
+
+    def run():
+        output('recipient started')
+        set_pk(self.id, sa_get_public_key(self.secret_key))
+        await(False)
+    #end run()
+
+    def set_pk(p, k):
+        cid = self.gen_cid()
+        send(('set_pk', p, objectToBytes(k, IntegerGroup()), cid), to = self.pk_p)
+        await(some(received(('re_set_pk', _cid))))
+    #end set_pk()
+
+    def get_pk(p):
+        cid = self.gen_cid()
+        send(('get_pk', p, cid), to = self.pk_p)
+        await(some(received(('re_get_pk', k, _cid))))
+        return bytesToObject(k, IntegerGroup())
+    #end get_pk
+
+    def receive(msg=('ds-key', m), from_ = i):
+        pkI = get_pk(i)
+        encrypted_k_and_sig = bytesToObject(m, IntegerGroup())
+        serial_k = sa_verify(sa_decrypt(encrypted_k_and_sig, self.secret_key), pkI)
+        k = bytesToObject(serial_k, PairingGroup('SS512'))
+        if k != None:
+            s = "secret"
+            send(('msg', sa_encrypt(s, k)), to = i)
+        else:
+            output('VERIFICATION FAILED for DS from', i, 'to', self.id)
+    #end receive(ds-key)
+#end class Recipient
+
+def main():
+    test_run = True if (len(sys.argv) > 1 and sys.argv[1] == 'test') else False
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    pk_p = new(pk_server)
+    setup(pk_p, ())
+    if test_run:
+        i1 = new(Initiator)
+        i2 = new(Initiator)
+        r = new(Recipient)
+        ps = i1 | i2 | r
+        setup(i1, (r, pk_p, True, True, r))
+        setup(i2, (r, pk_p, True, True, r))
+        setup(r, (pk_p,))
+        start(pk_p)
+        start(ps)
+    else:
+        ps = new(Initiator, num = n)
+        rs = new(Recipient, num = n)
+        for p in ps:
+            setup(p, (rs, pk_p, False, False, None))
+        for r in rs:
+            setup(r, (pk_p,))
+        start(pk_p)
+        start(rs)
+        start(ps)
+#end main()
