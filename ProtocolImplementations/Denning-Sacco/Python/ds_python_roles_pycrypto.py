@@ -8,3 +8,6 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto import Random
 
+class pk_server():
+    
+#end class pk_server
