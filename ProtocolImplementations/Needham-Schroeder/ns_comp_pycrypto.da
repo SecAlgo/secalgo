@@ -49,17 +49,21 @@ class kg_server (process):
     def receive(msg=('get_key', p, cid, nonce), from_ = client):
         shared_key = Random.new().read(32)
         pre_b = Random.new().read(8)
-        ctr_b = Counter.new(8, prefix = pre_b)
+        ctr_b = Counter.new(64, prefix = pre_b)
         encrypter_b = AES.new(self.keys[p], AES.MODE_CTR, counter = ctr_b)
-        print('####################', flush = True)
-        c_package_b = encrypter_b.encrypt([shared_key, serialize_endpoint(client)])
-        print('####################', flush = True)
+        package_b = [int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(client)]
+        s_package_b = json.dumps(package_b)
+        c_pacakge_b = pre_b + encrypter_b.encrypt(s_package_b)
+        sc_package_b = int.from_bytes(shared_key, byteorder = 'little')
         pre_a = Random.new().read(8)
-        ctr_a = Counter.new(8, prefix = pre_a)
+        ctr_a = Counter.new(64, prefix = pre_a)
         encrypter_a = AES.new(self.keys[client], AES.MODE_CTR, counter = ctr_a)
-        package_a = encrypter_a.encrypt((nonce, shared_key, p, pre_b + package_b))
-        send(('re_get_key', cid, pre_a + package_a), to = client)
+        package_a = [nonce, int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(p), sc_package_b]
+        s_package_a = json.dumps(package_a)
+        c_package_a = pre_a + encrypter_a.encrypt(s_package_a)
+        send(('re_get_key', cid, c_package_a), to = client)
     #end receive(get_key)
+#end clas kg_server
 """
 Protocol steps -
 1. A process, I, initiating the NS protocol first chooses a recipient process,
@@ -129,10 +133,11 @@ class P (process):
         send(('get_key', p, cid, nonce), to = self.kg_p)
         await(some(received(('re_get_key', _cid, pre_c_package_a))))
         pre_a = pre_c_package_a[0:8]
-        ctr_a = Counter.new(8, prefix = pre_a)
+        ctr_a = Counter.new(64, prefix = pre_a)
         decrypter_a = AES.new(self.server_key, AES.MODE_CTR, counter = ctr_a)
-        key_package = decrypter_a.decrypt(pre_c_package_a[8:])
-        if nonce == key_package[0] and p == key_package[2]:
+        s_key_package = decrypter_a.decrypt(pre_c_package_a[8:]).decode()
+        key_package = json.loads(s_key_package)
+        if nonce == key_package[0] and serialize_endpoint(p) == key_package[2]:
             return key_package
         else:
             output('ERROR: Received wrong key package!')
@@ -142,12 +147,13 @@ class P (process):
     def ns(b):
         output('NS initiated from', self.id, 'to', b)
         package_a = get_key_package(b)
-        key_ab, package_b = package_a[1], package_a[3]
+        key_ab, c_package_b = (package_a[1].to_bytes(32, byteorder = 'little'),
+                               package_a[3].to_bytes(((package_a[3].bit_length() // 8) + 1), byteorder = 'little'))
         cid = self.gen_cid()
-        send(('ns-key', cid, package_b), to = b)
+        send(('ns-key', cid, c_package_b), to = b)
         await(some(received(('ns-reply', _cid, pre_c_nonce_ba), from_ = b)))
         pre_ab = pre_c_nonce_ba[0:8]
-        ctr_ab = Counter.new(8, prefix = pre_ab)
+        ctr_ab = Counter.new(64, prefix = pre_ab)
         crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
         nonce_ba = crypter_ab.decrypt(pre_c_nonce_ba[8:])
         send(('ns-reply2', cid, crypter_ab.encrypt(nonce_ba - 1)), to = b)
@@ -157,14 +163,17 @@ class P (process):
     
     def receive(msg=('ns-key', cid, pre_c_package_b), from_ = b):
         pre_b = pre_c_package_b[0:8]
-        ctr_b = Counter.new(8, prefix = pre_b)
+        ctr_b = Counter.new(64, prefix = pre_b)
         decrypter_b = AES.new(self.server_key, AES.MODE_CTR, counter = ctr_b)
-        key_ab, initiator = decrypter_b.decrypt(pre_c_package_b[8:])
+        s_package_b = decrypter_b.decrypt(pre_c_package_b[8:]).decode()
+        print('\n#############:', s_package_b, '\n\n', flush = True)
+        package_b = json.loads(s_package_b)
+        key_ab, initiator = package_b[0].to_bytes(32, byteorder = 'little'), package_b[1]
         nonce_ba = securerandom.getrandbits(128)
         pre_ab = Random.new().read(8)
-        ctr_ab = Counter.new(8, prefix = pre_ab)
+        ctr_ab = Counter.new(64, prefix = pre_ab)
         crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
-        if initiator == b:
+        if initiator == serialize_endpoint(b):
             send(('ns-reply', cid, crypter_ab.encrypt(pre_ab + nonce_ba)), to = b)
         await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = b)))
         if crypter_ab.decrypt(c_nonce_mod) == (nonce_ba - 1):
