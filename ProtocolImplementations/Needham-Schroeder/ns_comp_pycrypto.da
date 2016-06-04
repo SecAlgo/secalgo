@@ -5,7 +5,8 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto import Random
 from Crypto.Random import random as securerandom
-from sa.Misc.charm_da_utils import serialize_endpoint, deserialize_endpoint
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+from sa.Misc.padding import pkcs7_pad, pkcs7_unpad
 
 #Misc Global Methods
 
@@ -53,12 +54,13 @@ class kg_server (process):
         encrypter_b = AES.new(self.keys[p], AES.MODE_CTR, counter = ctr_b)
         package_b = [int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(client)]
         s_package_b = json.dumps(package_b)
-        c_pacakge_b = pre_b + encrypter_b.encrypt(s_package_b)
-        sc_package_b = int.from_bytes(shared_key, byteorder = 'little')
+        cs_package_b = pre_b + encrypter_b.encrypt(s_package_b)
+        pcs_package_b = pkcs7_pad(cs_package_b)
+        spcs_package_b = int.from_bytes(pcs_package_b, byteorder = 'little')
         pre_a = Random.new().read(8)
         ctr_a = Counter.new(64, prefix = pre_a)
         encrypter_a = AES.new(self.keys[client], AES.MODE_CTR, counter = ctr_a)
-        package_a = [nonce, int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(p), sc_package_b]
+        package_a = [nonce, int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(p), spcs_package_b]
         s_package_a = json.dumps(package_a)
         c_package_a = pre_a + encrypter_a.encrypt(s_package_a)
         send(('re_get_key', cid, c_package_a), to = client)
@@ -147,10 +149,9 @@ class P (process):
     def ns(b):
         output('NS initiated from', self.id, 'to', b)
         package_a = get_key_package(b)
-        key_ab, c_package_b = (package_a[1].to_bytes(32, byteorder = 'little'),
-                               package_a[3].to_bytes(((package_a[3].bit_length() // 8) + 1), byteorder = 'little'))
+        key_ab, spcs_package_b = (package_a[1].to_bytes(32, byteorder = 'little'), package_a[3])
         cid = self.gen_cid()
-        send(('ns-key', cid, c_package_b), to = b)
+        send(('ns-key', cid, spcs_package_b), to = b)
         await(some(received(('ns-reply', _cid, pre_c_nonce_ba), from_ = b)))
         pre_ab = pre_c_nonce_ba[0:8]
         ctr_ab = Counter.new(64, prefix = pre_ab)
@@ -161,12 +162,14 @@ class P (process):
         return crypter_ab.decrypt(m)
     #end ns()
     
-    def receive(msg=('ns-key', cid, pre_c_package_b), from_ = b):
-        pre_b = pre_c_package_b[0:8]
+    def receive(msg=('ns-key', cid, spcs_package_b), from_ = b):
+        pcs_package_b = spcs_package_b.to_bytes(((spcs_package_b.bit_length() // 8) + 1), 
+                                                byteorder = 'little')
+        cs_package_b = pkcs7_unpad(pcs_package_b)
+        pre_b = cs_package_b[0:8]
         ctr_b = Counter.new(64, prefix = pre_b)
         decrypter_b = AES.new(self.server_key, AES.MODE_CTR, counter = ctr_b)
-        s_package_b = decrypter_b.decrypt(pre_c_package_b[8:]).decode()
-        print('\n#############:', s_package_b, '\n\n', flush = True)
+        s_package_b = decrypter_b.decrypt(cs_package_b[8:]).decode()
         package_b = json.loads(s_package_b)
         key_ab, initiator = package_b[0].to_bytes(32, byteorder = 'little'), package_b[1]
         nonce_ba = securerandom.getrandbits(128)
