@@ -156,10 +156,10 @@ class P (process):
         pre_ab = pre_c_nonce_ba[0:8]
         ctr_ab = Counter.new(64, prefix = pre_ab)
         crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
-        nonce_ba = crypter_ab.decrypt(pre_c_nonce_ba[8:])
-        send(('ns-reply2', cid, crypter_ab.encrypt(nonce_ba - 1)), to = b)
+        nonce_ba = json.loads(crypter_ab.decrypt(pre_c_nonce_ba[8:]).decode())
+        send(('ns-reply2', cid, crypter_ab.encrypt(json.dumps(nonce_ba - 1))), to = b)
         await(some(received(('msg', _cid, m), from_ = b)))
-        return crypter_ab.decrypt(m)
+        return crypter_ab.decrypt(m).decode()
     #end ns()
     
     def receive(msg=('ns-key', cid, spcs_package_b), from_ = b):
@@ -177,11 +177,11 @@ class P (process):
         ctr_ab = Counter.new(64, prefix = pre_ab)
         crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
         if initiator == serialize_endpoint(b):
-            send(('ns-reply', cid, crypter_ab.encrypt(pre_ab + nonce_ba)), to = b)
+            send(('ns-reply', cid, pre_ab + crypter_ab.encrypt(json.dumps(nonce_ba))), to = b)
         await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = b)))
-        if crypter_ab.decrypt(c_nonce_mod) == (nonce_ba - 1):
+        if json.loads(crypter_ab.decrypt(c_nonce_mod).decode()) == (nonce_ba - 1):
             s = 'secret'
-            send(('msg', cid, crypter_ab.encrypt(s, key_ab)), to = b)
+            send(('msg', cid, crypter_ab.encrypt(s)), to = b)
         else:
             output('ERROR: Key package not for sender!')
     #end receive(ns-key)
