@@ -7,7 +7,8 @@ import random
 #from Crypto.PublicKey.RSA import _RSAobj
 #from Crypto.Hash import SHA256
 #from Crypto import Random
-from sa.sec_algo_pycrypto import *
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
+from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key, gen_sym_key
 
 
 #Misc Global Methods
@@ -62,14 +63,14 @@ process that had not yet registered its key.
 """
 class P (process):
     def setup(s, pk_p, testing, test_i, test_r):
-        self.skA = sa_gen_key_pair()
+        self.skA = gen_key_pair()
         self.counter = 0
         #self.cid_gen = self.gen_cid()
         #set_pk(self.id, gen_pk(skA))
 
     def run():
         output('started')
-        set_pk(self.id, sa_get_public_key(self.skA))
+        set_pk(self.id, get_public_key(self.skA))
         if needed() and not testing:
             b = random.choice(tuple(s))
             s = ds(b)
@@ -106,22 +107,22 @@ class P (process):
 
     def ds(b):
         output('DS Initiated from', self.id, 'to', b)
-        k = sa_gen_sym_key()        
+        k = gen_sym_key()        
         pkB = get_pk(b)
         output('Sign Key:', skA)
-        send(('ds-key', sa_encrypt(sa_sign(k, skA), pkB)), to = b)
+        send(('ds-key', encrypt(sign(k, skA), pkB)), to = b)
         await(some(received(('msg', m), from_= b)))
-        return sa_decrypt(m, k)
+        return decrypt(m, k)
         
     def receive(msg=('ds-key', m), from_ = b):
         output('Retrieving Key for:', b)
         pkB = get_pk(b)
         #output('Check Key:', pkB, '\n', pkB.exportKey(), '\n', 
         #      pkB.keydata[0], '\n', pkB.keydata[1])
-        k = sa_verify(sa_decrypt(m, skA), pkB)
+        k = verify(decrypt(m, skA), pkB)
         if k is not None:
             s = "secret"
-            send(('msg', sa_encrypt(s, k)), to = b)
+            send(('msg', encrypt(s, k)), to = b)
         else:
             output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
 

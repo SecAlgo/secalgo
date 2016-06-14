@@ -1,21 +1,22 @@
 import sys
 import random
-from charm.core.engine.util import objectToBytes, bytesToObject
-from charm.toolbox.pairinggroup import PairingGroup, GT
-from charm.toolbox.conversion import Conversion
-from charm.toolbox.securerandom import OpenSSLRand
-from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
-from sa.sec_algo_charm import encrypt, decrypt, sign, verify
-from sa.sec_algo_charm import gen_key_pair, get_pub_key, gen_sym_key
+import json
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+from Crypto import Random
+from Crypto.Random import random as securerandom
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+from sa.Misc.padding import pkcs7_pad, pkcs7_unpad
 
 #Misc Global Methods
 
 def needed():
-    if random.random() < 0.10:
+    if random.random() < 0.25:
         return True
     else:
         return False
-
+#end needed()
+    
 #End Misc Global Methods
 
 """
@@ -39,21 +40,32 @@ setup for each kind of process.
 class kg_server (process):
     def setup(keys: dict()):
         pass
+    #end setup()
         
     def run():
         output('key server started')
         await(False)
-
+    #end run()
+        
     def receive(msg=('get_key', p, cid, nonce), from_ = client):
-        output('Received Key Package Request from:', client, 'for:', p)
-        shared_key = gen_sym_key()
-        package_b = [shared_key, serialize_endpoint(client)]
-        c_package_b = encrypt(package_b, bytesToObject(self.keys[p], PairingGroup('SS512')))
-        package_a = [nonce, shared_key, serialize_endpoint(p), c_package_b]
-        c_package_a = encrypt(package_a, bytesToObject(self.keys[client], PairingGroup('SS512')))
-        output('Replying to Key Package Request from:', client, 'for:', p)
+        shared_key = Random.new().read(32)
+        pre_b = Random.new().read(8)
+        ctr_b = Counter.new(64, prefix = pre_b)
+        encrypter_b = AES.new(self.keys[p], AES.MODE_CTR, counter = ctr_b)
+        package_b = [int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(client)]
+        s_package_b = json.dumps(package_b)
+        cs_package_b = pre_b + encrypter_b.encrypt(s_package_b)
+        pcs_package_b = pkcs7_pad(cs_package_b)
+        spcs_package_b = int.from_bytes(pcs_package_b, byteorder = 'little')
+        pre_a = Random.new().read(8)
+        ctr_a = Counter.new(64, prefix = pre_a)
+        encrypter_a = AES.new(self.keys[client], AES.MODE_CTR, counter = ctr_a)
+        package_a = [nonce, int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(p), spcs_package_b]
+        s_package_a = json.dumps(package_a)
+        c_package_a = pre_a + encrypter_a.encrypt(s_package_a)
         send(('re_get_key', cid, c_package_a), to = client)
-
+    #end receive(get_key)
+#end clas kg_server
 """
 Protocol steps -
 1. A process, I, initiating the NS protocol first chooses a recipient process,
@@ -98,8 +110,8 @@ through a command line argument. The default number is 10.
 class P (process):
     def setup(s, server_key, kg_p):
         self.counter = 0
-        self.server_key = bytesToObject(self.server_key, PairingGroup('SS512'))
-
+    #end setup()
+        
     def run():
         output('started')
         if needed():
@@ -109,69 +121,81 @@ class P (process):
             await(False)
         else:
             await(False)
-
+    #end run()
+            
     #This is still the bad implementation of gen_cid(); I will fix it soon.
     def gen_cid():
         self.counter += 1
         return (self.id, self.counter)
-
+    #end gen_cid()
+    
     def get_key_package(p):
         cid = self.gen_cid()
-        nonce = Conversion.OS2IP(OpenSSLRand().getRandomBits(128))
-        output('Sending Key Package Request to Server:', self.kg_p, 'for:', p)
+        nonce = securerandom.getrandbits(128)
         send(('get_key', p, cid, nonce), to = self.kg_p)
-        await(some(received(('re_get_key', _cid, c_key_package))))
-        output('Received Key Package from Server:', kg_p, 'for:', p)
-        key_package = decrypt(c_key_package, self.server_key)
-        if nonce == key_package[0] and p == deserialize_endpoint(key_package[2]):
+        await(some(received(('re_get_key', _cid, pre_c_package_a))))
+        pre_a = pre_c_package_a[0:8]
+        ctr_a = Counter.new(64, prefix = pre_a)
+        decrypter_a = AES.new(self.server_key, AES.MODE_CTR, counter = ctr_a)
+        s_key_package = decrypter_a.decrypt(pre_c_package_a[8:]).decode()
+        key_package = json.loads(s_key_package)
+        if nonce == key_package[0] and serialize_endpoint(p) == key_package[2]:
             return key_package
         else:
             output('ERROR: Received wrong key package!')
             return None
-
+    #end get_key_package()
+        
     def ns(b):
         output('NS initiated from', self.id, 'to', b)
         package_a = get_key_package(b)
-        key_ab, package_b = package_a[1], package_a[3]
+        key_ab, spcs_package_b = (package_a[1].to_bytes(32, byteorder = 'little'), package_a[3])
         cid = self.gen_cid()
-        output('Sending Key Package to:', b)
-        send(('ns-key', cid, package_b), to = b)
-        await(some(received(('ns-reply', _cid, c_nonce_ba), from_ = b)))
-        output('Received Authentication Check from:', b)
-        nonce_ba = decrypt(c_nonce_ba, key_ab)
-        output('Sending Authentication Reply to:', b)
-        send(('ns-reply2', cid, encrypt((nonce_ba - 1), key_ab)), to = b)
+        send(('ns-key', cid, spcs_package_b), to = b)
+        await(some(received(('ns-reply', _cid, pre_c_nonce_ba), from_ = b)))
+        pre_ab = pre_c_nonce_ba[0:8]
+        ctr_ab = Counter.new(64, prefix = pre_ab)
+        crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
+        nonce_ba = json.loads(crypter_ab.decrypt(pre_c_nonce_ba[8:]).decode())
+        send(('ns-reply2', cid, crypter_ab.encrypt(json.dumps(nonce_ba - 1))), to = b)
         await(some(received(('msg', _cid, m), from_ = b)))
-        output('Received encrypted Message from:', b)
-        return decrypt(m, key_ab)
-
-    def receive(msg=('ns-key', cid, c_package_b), from_ = b):
-        output('Received Key Package from:', b)
-        key_ab, initiator = decrypt(c_package_b, self.server_key)
-        nonce_ba = Conversion.OS2IP(OpenSSLRand().getRandomBits(128))
-        if deserialize_endpoint(initiator) == b:
-            output('Sending Authentication Check to:', b)
-            send(('ns-reply', cid, encrypt(nonce_ba, key_ab)), to = b)
-        else: pass
+        return crypter_ab.decrypt(m).decode()
+    #end ns()
+    
+    def receive(msg=('ns-key', cid, spcs_package_b), from_ = b):
+        pcs_package_b = spcs_package_b.to_bytes(((spcs_package_b.bit_length() // 8) + 1), 
+                                                byteorder = 'little')
+        cs_package_b = pkcs7_unpad(pcs_package_b)
+        pre_b = cs_package_b[0:8]
+        ctr_b = Counter.new(64, prefix = pre_b)
+        decrypter_b = AES.new(self.server_key, AES.MODE_CTR, counter = ctr_b)
+        s_package_b = decrypter_b.decrypt(cs_package_b[8:]).decode()
+        package_b = json.loads(s_package_b)
+        key_ab, initiator = package_b[0].to_bytes(32, byteorder = 'little'), package_b[1]
+        nonce_ba = securerandom.getrandbits(128)
+        pre_ab = Random.new().read(8)
+        ctr_ab = Counter.new(64, prefix = pre_ab)
+        crypter_ab = AES.new(key_ab, AES.MODE_CTR, counter = ctr_ab)
+        if initiator == serialize_endpoint(b):
+            send(('ns-reply', cid, pre_ab + crypter_ab.encrypt(json.dumps(nonce_ba))), to = b)
         await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = b)))
-        output('Received Authentication Reply from:', b) 
-        if decrypt(c_nonce_mod, key_ab) == (nonce_ba - 1):
+        if json.loads(crypter_ab.decrypt(c_nonce_mod).decode()) == (nonce_ba - 1):
             s = 'secret'
-            output('Sending Encrypted Message to:', b)
-            send(('msg', cid, encrypt(s, key_ab)), to = b)
+            send(('msg', cid, crypter_ab.encrypt(s)), to = b)
         else:
             output('ERROR: Key package not for sender!')
-
+    #end receive(ns-key)
+            
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     ps = new(P, num = n)
     kg_p = new(kg_server)
     new_keys = dict()
-    group_object = PairingGroup('SS512')
     for p in ps:
-        new_key = objectToBytes(group_object.random(GT), group_object)
+        new_key = Random.new().read(32)
         new_keys[p] = new_key
         setup(p, ((ps - {p}), new_key, kg_p))
     setup(kg_p, (new_keys, ))
     start(kg_p)
     start(ps)
+#end main()

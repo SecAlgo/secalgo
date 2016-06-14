@@ -6,27 +6,27 @@ class Sec_Algo():
       def __init__(): pass
       #end init()
 
-      def sa_sym_encrypt(plaintext, key): pass
-      #end sa_sym_encrypt()
+      def sym_encrypt(plaintext, key): pass
+      #end sym_encrypt()
 
-      def sa_sym_decrypt(plaintext, key): pass
-      #end sa_sym_decrypt()
+      def sym_decrypt(plaintext, key): pass
+      #end sym_decrypt()
 
-      def sa_asym_encrypt(plaintext, public_key): pass
-      #end sa_asym_encrypt()
+      def asym_encrypt(plaintext, public_key): pass
+      #end asym_encrypt()
 
-      def sa_asym_decrypt(plaintext, public_key, private_key): pass
-      #end sa_asym_decrypt()
+      def asym_decrypt(plaintext, public_key, private_key): pass
+      #end asym_decrypt()
 
-      def sa_encrypt(plaintext, key): pass
-      #end sa_encrypt()
+      def encrypt(plaintext, key): pass
+      #end encrypt()
 
-      def sa_decrypt(plaintext, key): pass
-      #end sa_decrypt
+      def decrypt(plaintext, key): pass
+      #end decrypt
 
-      def sa_sign(data, private_key): pass
-      #end sa_sign()
+      def sign(data, private_key): pass
+      #end sign()
 
-      def sa_verify(data_and_sig, public_key): pass
-      #end sa_verify()
+      def verify(data_and_sig, public_key): pass
+      #end verify()
 #end class Sec_Algo

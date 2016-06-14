@@ -4,7 +4,8 @@ from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.toolbox.pairinggroup import PairingGroup
 from charm.toolbox.integergroup import IntegerGroup
 from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
-from sa.sec_algo_charm import *
+from sa.sec_algo_charm import encrypt, decrypt, sign, verify
+from sa.sec_algo_charm import gen_key_pair, get_pub_key, gen_sym_key
 
 #Misc Global Methods
 
@@ -59,7 +60,7 @@ randomly chosen process.
 """
 class P (process):
     def setup(s, pk_p, testing, test_i, test_r):
-        self.pkA, self.skA = sa_gen_key_pair()
+        self.pkA, self.skA = gen_key_pair()
         self.counter = 0
         #self.cid_gen = self.gen_cid()
 
@@ -104,29 +105,29 @@ class P (process):
 
     def ds(b):
         output('DS Initiated from', self.id, 'to', b)
-        k = sa_gen_sym_key()
+        k = gen_sym_key()
         serial_k = objectToBytes(k, PairingGroup('SS512'))
-        signed_k = sa_sign(serial_k, self.skA)
+        signed_k = sign(serial_k, self.skA)
         pkB = get_pk(b)
-        encrypted_signed_k = sa_encrypt(signed_k, pkB)
+        encrypted_signed_k = encrypt(signed_k, pkB)
         s_encrypted_signed_k = objectToBytes(encrypted_signed_k, IntegerGroup())
         output('Sending Encrypted Session Key to:', b)
         send(('ds-key', s_encrypted_signed_k), to = b)
         await(some(received(('msg', m), from_ = b)))
         output('Received Encrypted Message from:', b)
-        return sa_decrypt(m, k)
+        return decrypt(m, k)
         
     def receive(msg=('ds-key', m), from_ = b):
         output('Received Encrypted Session Key from:', b)
         encrypted_signed_k = bytesToObject(m, IntegerGroup())
-        signed_k = sa_decrypt(encrypted_signed_k, (self.pkA, self.skA))
+        signed_k = decrypt(encrypted_signed_k, (self.pkA, self.skA))
         pkB = get_pk(b)
-        serial_k = sa_verify(signed_k, pkB)
+        serial_k = verify(signed_k, pkB)
         if serial_k != None:
             k = bytesToObject(serial_k, PairingGroup('SS512'))
             s = 'secret'
             output('Sending Encrypted Message back to:', b)
-            send(('msg', sa_encrypt(s, k)), to = b)
+            send(('msg', encrypt(s, k)), to = b)
         else:
             output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
 
