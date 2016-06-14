@@ -6,6 +6,15 @@ class Sec_Algo():
       def __init__(): pass
       #end init()
 
+      def gen_key_pair(): pass
+      #end gen_key_pair()
+      
+      def get_pub_key(): pass
+      #end get_pub_key()
+
+      def gen_sym_key(): pass
+      #end gen_sym_key()
+
       def sym_encrypt(plaintext, key): pass
       #end sym_encrypt()
 

@@ -12,10 +12,10 @@ RKEY_SIZE_BITS = 1024
 RKEY_SIZE_BYTES = 128
 
 def gen_key_pair():
-    return RSA.generate(1024)
+    return RSA.generate(RKEY_SIZE_BITS)
 #end gen_key_pair()
 
-def get_public_key(k):
+def get_pub_key(k):
     return k.publickey()
 #end get_public_key()
 

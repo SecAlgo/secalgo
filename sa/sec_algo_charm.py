@@ -18,7 +18,7 @@ def gen_key_pair():
 #end gen_key_pair()
 
 
-def get_public_key(k):
+def get_pub_key(k):
     return k[0]
 #end get_public_key()
 
