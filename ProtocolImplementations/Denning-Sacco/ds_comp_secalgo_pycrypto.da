@@ -70,7 +70,7 @@ class P (process):
 
     def run():
         output('started')
-        set_pk(self.id, get_public_key(self.skA))
+        set_pk(self.id, get_pub_key(self.skA))
         if needed() and not testing:
             b = random.choice(tuple(s))
             s = ds(b)
