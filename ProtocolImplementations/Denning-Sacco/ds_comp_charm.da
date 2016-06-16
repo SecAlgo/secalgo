@@ -8,7 +8,7 @@ from charm.toolbox.integergroup import IntegerGroup
 from charm.toolbox.conversion import Conversion
 from charm.toolbox.securerandom import OpenSSLRand
 from charm.schemes.pkenc.pkenc_rsa import RSA_Enc, RSA_Sig
-from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
 
 #Misc Global Methods
 

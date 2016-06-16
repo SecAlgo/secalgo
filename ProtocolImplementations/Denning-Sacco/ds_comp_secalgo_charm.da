@@ -3,7 +3,7 @@ import random
 from charm.core.engine.util import objectToBytes, bytesToObject
 from charm.toolbox.pairinggroup import PairingGroup
 from charm.toolbox.integergroup import IntegerGroup
-from sa.Misc.charm_da_utils import Null_Group, serialize_endpoint, deserialize_endpoint
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
 from sa.sec_algo_charm import encrypt, decrypt, sign, verify
 from sa.sec_algo_charm import gen_key_pair, get_pub_key, gen_sym_key
 
@@ -60,13 +60,13 @@ randomly chosen process.
 """
 class P (process):
     def setup(s, pk_p, testing, test_i, test_r):
-        self.pkA, self.skA = gen_key_pair()
+        self.skA = gen_key_pair()
         self.counter = 0
         #self.cid_gen = self.gen_cid()
 
     def run():
         output('started')
-        set_pk(self.id, self.pkA)
+        set_pk(self.id, get_pub_key(self.skA))
         if needed() and not testing:
             b = random.choice(tuple(s))
             s = ds(b)
@@ -120,7 +120,7 @@ class P (process):
     def receive(msg=('ds-key', m), from_ = b):
         output('Received Encrypted Session Key from:', b)
         encrypted_signed_k = bytesToObject(m, IntegerGroup())
-        signed_k = decrypt(encrypted_signed_k, (self.pkA, self.skA))
+        signed_k = decrypt(encrypted_signed_k, self.skA)
         pkB = get_pk(b)
         serial_k = verify(signed_k, pkB)
         if serial_k != None:

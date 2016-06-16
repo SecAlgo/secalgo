@@ -7,8 +7,8 @@ from charm.toolbox.securerandom import OpenSSLRand
 from charm.toolbox.pairinggroup import PairingGroup, GT
 from charm.toolbox.symcrypto import SymmetricCryptoAbstraction
 from charm.toolbox.integergroup import IntegerGroup
-from charm.schemes.pkenc.pkenc_rsa import RSA, REnc, RSig
-from sa.Misc.charm_da_utils import serialize_endpoint, deserialize_endpoint
+from charm.schemes.pkenc.pkenc_rsa import RSA, RSA_Enc, RSA_Sig
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
 
 RKEY_SIZE_BITS = 1024
 RKEY_SIZE_BYTES = 128
@@ -16,7 +16,6 @@ RKEY_SIZE_BYTES = 128
 def gen_key_pair():
     return RSA().keygen(1024)
 #end gen_key_pair()
-
 
 def get_pub_key(k):
     return k[0]
@@ -39,7 +38,7 @@ def sym_decrypt(ciphertext, key):
 #end sym_decrypt()
 
 def asym_encrypt(plaintext, public_key):
-    encrypter = REnc()
+    encrypter = RSA_Enc()
     serial_pt = objectToBytes(plaintext, IntegerGroup())
     frag_counter = (len(serial_pt) // RKEY_SIZE_BYTES) + 1
     ct_list = []
@@ -52,7 +51,7 @@ def asym_encrypt(plaintext, public_key):
 
 def asym_decrypt(ct_list, key):
     public_key, private_key = key
-    decrypter = REnc()
+    decrypter = RSA_Enc()
     serial_pt = b''
     for ciphertext in ct_list:
         serial_pt += decrypter.decrypt(public_key, private_key, ciphertext)
@@ -75,7 +74,7 @@ def decrypt(plaintext, key):
 #end decrypt()
 
 def sign(data, private_key):
-    signer = RSig()
+    signer = RSA_Sig()
     sig = signer.sign(private_key[1], data)
     sig = Conversion.OS2IP(sig)
     serial_data_and_sig = objectToBytes([data, sig], IntegerGroup())
@@ -84,7 +83,7 @@ def sign(data, private_key):
 
 #returns None when verification fails
 def verify(serial_data_and_sig, public_key):
-    verifier = RSig()
+    verifier = RSA_Sig()
     data_and_sig = bytesToObject(serial_data_and_sig, IntegerGroup())
     data, sig = data_and_sig
     sig = Conversion.IP2OS(sig)
