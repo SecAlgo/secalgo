@@ -1,0 +1,86 @@
+import sys
+import random
+import json
+from Crypto import Random
+from Crypto.Random import random as securerandom
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+from sa.Misc.padding import pkcs7_pad, pkcs7_unpad
+from sa.sec_algo_pycrypto import gen_sym_key
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
+
+#Misc Global Methods
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+#end needed()
+    
+#End Misc Global Methods
+
+#Key Generation Server
+class KG_Server(process):
+    def setup(keys: dict()):
+        pass
+    #end setup()
+
+    def run():
+        output('Key Server Started...')
+        await(False)
+    #end run()
+
+    def receive(msg=('get-key', auth_pacakge), from_ = recipient):
+        session_id, client_I, client_R, cs_pacakge_I, cs_pacakge_R = auth_package
+        s_package_I = decrypt(cs_package_I, self.keys[client_I])
+        package_I = json.loads(s_pacakge_I)
+        key_IR = None
+        if package_I[1], package_I[2], package_I[3] == session_id, client_I, client_R:
+            key_IR = gen_sym_key()
+            package_IS = [package_I[0], key_IR]
+        s_package_R = decrypt(cs_package_R, self.keys[client_R])
+        package_R = json.loads(s_package_R)
+        if package_R[1], package_R[2], package_R[3] == session_id, client_I, client_R:
+            package_RS = [package_R[0], key_IR]
+        key_package = [session_id, package_IS, package_RS]
+        send(('re-get-key', cid, key_package), to = recipient)
+    #end receive(msg=('get-key'))
+#end class kg_server()
+
+class ORP(process):
+    def setup(s, server_key, kg_p):
+        self.counter = 0
+    #end setup()
+
+    def run():
+        output('Started...')
+        if needed():
+            b = random.choice(tuple(s))
+            s = orp(b)
+            output(s)
+            await(False)
+        else:
+            await(False)
+    #end run()
+
+    def gen_cid():
+        self.counter += 1
+        return (self.id, self.counter)
+    #end gen_cid()
+
+    
+
+
+    def orp(b):
+        output('OR initiated from', self.id, 'to', b)
+        session_id = gen_cid()
+        nonce_I = securerandom.getrandbits(128)
+        package_I = [nonce_I, session_id, serialize_endpoint(self.id), serialize_endpoint(b)]
+        s_package_I = json.dumps(package_I)
+        cs_package_I = encrypt(s_package_I, self.server_key)
+        req_package = (session_id, serialize_endpoint(self.id), 
+                       serialize_endpoint(b), cs_package_I)
+        send(('req-conn', req_package), to = b)
+        await(
+    #end orp()
+#end class Initiator()
