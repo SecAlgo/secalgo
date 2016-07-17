@@ -30,20 +30,22 @@ class KG_Server(process):
         await(False)
     #end run()
 
-    def receive(msg=('get-key', auth_pacakge), from_ = recipient):
-        session_id, client_I, client_R, cs_pacakge_I, cs_pacakge_R = auth_package
-        s_package_I = decrypt(cs_package_I, self.keys[client_I])
-        package_I = json.loads(s_pacakge_I)
+    def receive(msg=('get-key', session_id, client_I, client_R, cs_package_I, cs_package_R), from_ = recipient):
+        s_package_I = decrypt(cs_package_I, self.keys[client_I]).decode()
+        package_I = json.loads(s_package_I)
         key_IR = None
-        if package_I[1], package_I[2], package_I[3] == session_id, client_I, client_R:
+        if (tuple(package_I[1]), package_I[2], package_I[3]) == (session_id, client_I, client_R):
             key_IR = gen_sym_key()
-            package_IS = [package_I[0], key_IR]
-        s_package_R = decrypt(cs_package_R, self.keys[client_R])
+            package_IS = [package_I[0], int.from_bytes(key_IR, byteorder = 'little')]
+            s_package_IS = json.dumps(package_IS)
+            cs_package_IS = encrypt(s_package_IS, self.keys[client_I])
+        s_package_R = decrypt(cs_package_R, self.keys[client_R]).decode()
         package_R = json.loads(s_package_R)
-        if package_R[1], package_R[2], package_R[3] == session_id, client_I, client_R:
-            package_RS = [package_R[0], key_IR]
-        key_package = [session_id, package_IS, package_RS]
-        send(('re-get-key', cid, key_package), to = recipient)
+        if (tuple(package_R[1]), package_R[2], package_R[3]) == (session_id, client_I, client_R):
+            package_RS = [package_R[0], int.from_bytes(key_IR, byteorder = 'little')]
+            s_package_RS = json.dumps(package_RS)
+            cs_package_RS = encrypt(s_package_RS, self.keys[client_R])
+        send(('re-get-key', session_id, cs_package_IS, cs_package_RS), to = recipient)
     #end receive(msg=('get-key'))
 #end class kg_server()
 
@@ -65,22 +67,67 @@ class ORP(process):
 
     def gen_cid():
         self.counter += 1
-        return (self.id, self.counter)
+        return (serialize_endpoint(self.id), self.counter)
     #end gen_cid()
-
-    
-
 
     def orp(b):
         output('OR initiated from', self.id, 'to', b)
+        key_IR = None
         session_id = gen_cid()
         nonce_I = securerandom.getrandbits(128)
         package_I = [nonce_I, session_id, serialize_endpoint(self.id), serialize_endpoint(b)]
         s_package_I = json.dumps(package_I)
         cs_package_I = encrypt(s_package_I, self.server_key)
-        req_package = (session_id, serialize_endpoint(self.id), 
-                       serialize_endpoint(b), cs_package_I)
-        send(('req-conn', req_package), to = b)
-        await(
+        send(('req-conn', session_id, serialize_endpoint(self.id), serialize_endpoint(b), cs_package_I), to = b)
+        await(some(received(('re-req-conn', _session_id, cs_package_IS), from_ = b)))
+        s_package_IS = decrypt(cs_package_IS, self.server_key).decode()
+        package_IS = json.loads(s_package_IS)
+        if package_IS[0] == nonce_I:
+            if package_IS != None:
+                output('Verified: Reply has correct nonce.  Session Key established.')
+                key_IR = package_IS[1].to_bytes(32, byteorder = 'little')
+                output('Protocol Instance Complete!')                
+                await(some(received(('msg', _session_id, m), from_ = b)))
+                return decrypt(m, key_IR).decode()
+            else:
+                output('Error: Key Generation Failed!')
+        else:
+            output('Error: Reply Nonce Fails to Match Request Nonce!')
+
+    #end orp()
+
+    def receive(msg=('req-conn', session_id, client_I, client_R, cs_package_I), from_ = initiator):
+        if deserialize_endpoint(client_R) == self.id:
+            nonce_R = securerandom.getrandbits(128)
+            package_R = [nonce_R, session_id, client_I, client_R]
+            s_package_R = json.dumps(package_R)
+            cs_package_R = encrypt(s_package_R, self.server_key)
+            send(('get-key', session_id, client_I, client_R, cs_package_I, cs_package_R), to = self.kg_p)
+            await(some(received(('re-get-key', _session_id, cs_package_IS, cs_package_RS), from_= kg_p)))
+            send(('re-req-conn', session_id, cs_package_IS), to = initiator)
+            s_package_RS = decrypt(cs_package_RS, self.server_key).decode()
+            package_RS = json.loads(s_package_RS)
+            if package_RS[0] == nonce_R:
+                if package_RS != None:
+                    output('Verified: Reply has correct nonce.  Session Key established.')
+                    key_IR = package_RS[1].to_bytes(32, byteorder = 'little') 
+                    send(('msg', session_id, encrypt('secret', key_IR)), to = initiator)
+                else:
+                    output('Error: Key Generation Failed!')
+            else:
+                output('Error: Reply Nonce Fails to Match Request Nonce!')
     #end orp()
 #end class Initiator()
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    ps = new(ORP, num = n)
+    kg_p = new(KG_Server)
+    new_keys = dict()
+    for p in ps:
+        new_key = gen_sym_key()
+        new_keys[serialize_endpoint(p)] = new_key
+        setup(p, (ps - {p}, new_key, kg_p))
+    setup(kg_p, (new_keys, ))
+    start(kg_p)
+    start(ps)
