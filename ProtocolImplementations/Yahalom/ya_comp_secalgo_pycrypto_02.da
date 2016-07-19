@@ -10,7 +10,7 @@ from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
 #Misc Global Methods
 
 def needed():
-    if random.random() < 0.25:
+    if random.random() < 1: #0.25:
         return True
     else:
         return False
@@ -43,6 +43,7 @@ class KG_Server(process):
             key_package_R = [client_I, s_key_IR]
             s_key_package_R = json.dumps(key_package_R)
             cs_key_package_R = encrypt(s_key_package_R, self.keys[client_R])
+            output('##########: Sending msg 3 to:', initiator)
             send(('msg3', cid, cs_key_package_I, cs_key_package_R), to = initiator)
         else:
             output('Error: Key Generation Server: Sender does not match',
@@ -53,13 +54,16 @@ class KG_Server(process):
 class Ya(process):
     def setup(s, server_key, kg_p):
         self.counter = 0
+        self.b = None
+        self.nonce_I = None
+        self.msg = None
     #end setup()
 
     def run():
         output('Started...')
         if needed():
-            b = random.choice(tuple(s))
-            s = ya(b)
+            self.b = random.choice(tuple(s))
+            s = ya(self.b)
             output(s)
             await(False)
         else:
@@ -71,40 +75,45 @@ class Ya(process):
         return (serialize_endpoint(self.id), self.counter)
     #end gen_cid()
 
-    def ya(b):
-        output('Ya initiated from', self.id, 'to', b)
+    def ya(recipient):
+        output('Ya initiated from', self.id, 'to', recipient)
         key_IR = None
-        nonce_I = securerandom.getrandbits(128)
+        self.nonce_I = securerandom.getrandbits(128)
         cid = gen_cid()
-        send(('msg1', cid, self.id, nonce_I), to = b)
+        send(('msg1', cid, self.id, nonce_I), to = recipient)
         await(some(received(('msg3', _cid, cs_key_package_I, cs_key_package_R), from_ = kg_p)))
-        s_key_package_I = decrypt(cs_key_package_I, self.server_key)
+        return self.msg
+    #end ya()
+
+    def receive(msg=('msg3', cid, cs_key_package_I, cs_key_package_R), from_ = kg_p):
+        s_key_package_I = decrypt(cs_key_package_I, self.server_key).decode()
         key_package_I = json.loads(s_key_package_I)
-        if deserialize_endpoint(key_package_I[0]) == b:
-            if key_package_I[2] == nonce_I:
-                key_IR = key_package_i[1].to_bytes(32, byteorder = 'litle')
+        if deserialize_endpoint(key_package_I[0]) == self.b:
+            if key_package_I[2] == self.nonce_I:
+                key_IR = key_package_I[1].to_bytes(32, byteorder = 'little')
                 cs_nonce_R = encrypt(json.dumps(key_package_I[3]), key_IR)
+                output('##########: Sending msg 4 to:', b)
                 send(('msg4', cid, cs_key_package_R, cs_nonce_R), to = b)
                 output('Initiator: Authenticated Key Distribution with', b)
                 await(some(received(('msg', _cid, m), from_ = b)))
-                return decrypt(m, key_IR).decode()
+                self.msg = decrypt(m, key_IR).decode()
             else:
                 output('Error: Initator: Returned nonce does not match generated nonce for: b')
         else:
             output('Error: Initator: Received Recipient ID:', key_package_I[0], 
                    ', does not match original Recipient ID:', b)
-    #end ya()
-
-    def receive(msg('msg1', cid, client_I, nonce_I), from_ = initiator):
+    
+    def receive(msg=('msg1', cid, client_I, nonce_I), from_ = initiator):
         key_IR = None
         nonce_R = securerandom.getrandbits(128)
         package_R = [serialize_endpoint(client_I), nonce_I, nonce_R]
         s_package_R = json.dumps(package_R)
-        cs_package_R = encrypt(s_package_r, self.server_key)
+        cs_package_R = encrypt(s_package_R, self.server_key)
+        output('##########: Sending msg 2 to:', kg_p)
         send(('msg2', cid, self.id, cs_package_R), to = kg_p)
         await(some(received(('msg4', _cid, cs_key_package_R, cs_nonce_R), from_ = initiator)))
         s_key_package_R = decrypt(cs_key_package_R, self.server_key).decode()
-        key_package_R = json.loads(s_package_R)
+        key_package_R = json.loads(s_key_package_R)
         if deserialize_endpoint(key_package_R[0]) == initiator:
             key_IR = key_package_R[1].to_bytes(32, byteorder = 'little')
             if nonce_R == json.loads(decrypt(cs_nonce_R, key_IR).decode()):
