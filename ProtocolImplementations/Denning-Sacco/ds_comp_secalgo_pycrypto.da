@@ -1,12 +1,5 @@
 import sys
 import random
-#import pickle
-#from Crypto.Cipher import AES
-#from Crypto.Util import Counter
-#from Crypto.PublicKey import RSA
-#from Crypto.PublicKey.RSA import _RSAobj
-#from Crypto.Hash import SHA256
-#from Crypto import Random
 from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
 from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key, gen_sym_key
 

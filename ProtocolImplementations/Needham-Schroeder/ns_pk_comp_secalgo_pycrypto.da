@@ -1,0 +1,61 @@
+import sys
+import json
+import random
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
+from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key
+from Crypto.PublicKey.RSA._RSAobj import exportKey
+from Crypto.PublicKey.RSA import importKey
+
+#Misc Global Methods
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+#end needed()
+
+#End Misc Global Methods
+
+class KG_Server(sk):
+    def setup():
+        self.secret_key = importKey(sk)
+        self.pk = dict()
+    #end setup()
+    
+    def run():
+        output('Key Server started...')
+        await(False)
+    #end run()
+
+class NS_PK():
+    def setup(s, client_ssk, server_spk, kg_p):
+        self.client_secret_key = importKey(client_ssk)
+        self.server_pub_key = importKey(server_spk)
+        
+
+
+
+
+
+
+
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    ps = new(NS_PK, num = n)
+    kg_p = new(KG_Server)
+    new_keys = dict()
+    new_server_key = gen_key_pair()
+    new_server_pub_key = get_pub_key(new_server_key)
+    serial_server_pub_key = new_server_pub_key.exportKey()
+    for p in ps:
+        new_client_key = gen_key_pair()
+        new_client_pub_key = get_pub_key(new_client_key)
+        serial_client_key = new_client_key.exportKey()
+        serial_client_pub_key = new_client_pub_key.exportKey()
+        new_keys[p] = serial_client_pub_key
+        setup(p, (ps - {p}, serial_client_key, kg_p))
+    setup(kg_p, (new_keys, ))
+    start(kg_p)
+    start(ps)
