@@ -32,6 +32,26 @@ class NS_PK():
     def setup(s, client_ssk, server_spk, kg_p):
         self.client_secret_key = importKey(client_ssk)
         self.server_pub_key = importKey(server_spk)
+    #end setup()
+
+
+    def run():
+        output('Started...')
+        if needed():
+            self.b = random.choice(tuple(s))
+            s = ns_pk(self.b)
+            output(s)
+            await(False)
+        else:
+            await(False)
+            #end run()
+            
+    def gen_cid():
+        self.counter += 1
+        return (serialize_endpoint(self.id), self.counter)
+    #end gen_cid()
+        
+    def ns_pk(recipient):
         
 
 
