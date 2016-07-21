@@ -34,7 +34,7 @@ class KG_Server(sk):
             send(('re-set-key', cid), to = getter)
     #end receive(msg=('set-key')
 
-    def receive(msg=('get-key', cid, client_A, client_B), from_ = getter):
+    def receive(msg=('req-key', cid, client_A, client_B), from_ = getter):
         await(client_A in self.pk.keys())
         if client_A == getter:
             pub_key_package_B = [self.pk[client_B], serialize_endpoint(client_B)]
@@ -52,6 +52,7 @@ class NS_PK():
 
     def run():
         output('Started...')
+        set_pub_key(get_pub_key(self.secret_key))
         if needed():
             self.b = random.choice(tuple(s))
             s = ns_pk(self.b)
@@ -72,16 +73,17 @@ class NS_PK():
         await(some(received(('re-set-key', cid), from_ = kg_p)))
     #end set_pub_key()
 
-    def get_pub_key(client_B):
+    def req_pub_key(client_B):
         cid = gen_cid()
-        send(('get_key', cid, self.id, client_B), to = kg_p)
-        await(some(received(('re-get-key', _cid, ss_pub_key_package_B), from_ = kg_p)))
+        send(('req_key', cid, self.id, client_B), to = kg_p)
+        await(some(received(('re-req-key', _cid, ss_pub_key_package_B), from_ = kg_p)))
         s_pub_key_package_B = verify(ss_pub_key_package_B, self.server_pub_key)
         return json.loads(s_pub_key_package_B)
     #end get_pub_key
 
     def ns_pk(recipient):
-        pub_key_package_R = get_pub_key(recipient)
+        #msg1 and msg2
+        pub_key_package_R = req_pub_key(recipient)
         if deserialize_endpoint(pub_key_package_R[1]) == recipient:
             nonce_I = securerandom.getrandbits(128)
             nonce_package_I = {nonce_I, serialize_endpoint(self.id)}
@@ -89,23 +91,27 @@ class NS_PK():
             cs_nonce_package_I = encrypt(s_nonce_package_I, importKey(pub_key_package_R))
             cid = gen_cid()
             send(('msg3', cid, cs_nonce_package_I), to = recipient)
-            await(some(received(('msg6', _cid, cs_nonce_package_R), from_ = recipient)))
-            
-        
+            await(some(received(('msg6', _cid, cs_nonce_package_R), from_ = recipient)))       
     #end ns_pk()
 
-    def receive(msg=('msg3', cid, cs_nonce_package_I), from_ = kg_p):
+    def receive(msg=('msg3', cid, cs_nonce_package_I), from_ = initiator):
         s_nonce_package_I = decrypt(cs_nonce_package_I, self.secret_key)
         nonce_package_I = json.loads(s_nonce_package_I)
-        if
-    #end receive(msg=('msg2'))
-
-    
-
-
-
-
-
+        if deserialize_endpoint(nonce_package_I[1]) == initiator:
+            #msg4 and msg5
+            pub_key_package_I = req_pub_key(initiator)
+            (pub_key_I, client_I) = pub_key_package_I
+            if deserialize_endpoint(client_I) == initiator:
+                nonce_R = securerandom.getrandbits(128)
+                nonce_package_R = [nonce_package_I[0], nonce_R]
+                s_nonce_package_R = json.dumps(nonce_package_R)
+                cs_nonce_package_R = encrypt(s_nonce_package_R, importKey(pub_key_I))
+                send(('msg6', cid, cs_nonce_package_R), to = initator)
+                await(some(received(('msg7', _cid, cs_nonce_R), from_ = initator)))
+                s_nonce_R = decrypt(cs_nonce_R, self.secret_key)
+                if json.loads(s_nonce_R) == nonce_R:
+                    output
+    #end receive(msg=('msg3'))
 
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
