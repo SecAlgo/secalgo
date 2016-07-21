@@ -10,7 +10,7 @@ from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key
 #Misc Global Methods
 
 def needed():
-    if random.random() < 1: #0.25:
+    if random.random() < 0.25:
         return True
     else:
         return False
@@ -37,7 +37,6 @@ class KG_Server(process):
 
     def receive(msg=('req-key', cid, client_A, client_B), from_ = getter):
         await(client_B in self.pk.keys())
-        print('1111111111:', self.pk[client_B], flush = True)
         if client_A == getter:
             key_dict = {'length': len(self.pk[client_B]), 
                         'key': int.from_bytes(self.pk[client_B], byteorder = 'little')}
@@ -96,7 +95,6 @@ class NS_PK(process):
         #msg1 and msg2
         pub_key_package_R = req_pub_key(recipient)
         (pub_key_R, client_R) = pub_key_package_R
-        print('2222222222:', pub_key_R, flush = True)
         if deserialize_endpoint(client_R) == recipient:
             nonce_I = securerandom.getrandbits(128)
             nonce_package_I = [nonce_I, serialize_endpoint(self.id)]
@@ -105,14 +103,15 @@ class NS_PK(process):
             cid = gen_cid()
             send(('msg3', cid, cs_nonce_package_I), to = recipient)
             await(some(received(('msg6', _cid, cs_nonce_package_R), from_ = recipient)))
-            s_nonce_package_R = decrypt(cs_nonce_package_R, self.secret_key)
+            s_nonce_package_R = decrypt(cs_nonce_package_R, self.secret_key).decode()
             nonce_package_R = json.loads(s_nonce_package_R)
             if nonce_package_R[0] == nonce_I:
-                s_nonce_R = json.dumps(nonce_package_R[1])
+                output('Initiator: Authenticated Identity of:', recipient)
+                s_nonce_R = json.dumps(nonce_package_R[1]).encode()
                 cs_nonce_R = encrypt(s_nonce_R, importKey(pub_key_R))
                 send(('msg7', cid, cs_nonce_R), to = recipient)
-                await(some(received(('msg', m), from_ = recipient)))
-                return decrypt(m, self.secret_key)
+                await(some(received(('msg', _cid, m), from_ = recipient)))
+                return decrypt(m, self.secret_key).decode()
     #end ns_pk()
 
     def receive(msg=('msg3', cid, cs_nonce_package_I), from_ = initiator):
@@ -125,16 +124,16 @@ class NS_PK(process):
             if deserialize_endpoint(client_I) == initiator:
                 nonce_R = securerandom.getrandbits(128)
                 nonce_package_R = [nonce_package_I[0], nonce_R]
-                s_nonce_package_R = json.dumps(nonce_package_R)
+                s_nonce_package_R = json.dumps(nonce_package_R).encode()
                 cs_nonce_package_R = encrypt(s_nonce_package_R, importKey(pub_key_I))
                 send(('msg6', cid, cs_nonce_package_R), to = initiator)
                 await(some(received(('msg7', _cid, cs_nonce_R), from_ = initiator)))
-                s_nonce_R = decrypt(cs_nonce_R, self.secret_key)
+                s_nonce_R = decrypt(cs_nonce_R, self.secret_key).decode()
                 if json.loads(s_nonce_R) == nonce_R:
                     output('Recipient: Authenticated Identity of:', initiator)
                     output('Protocol Instance Complete!')
                     m = 'secret'
-                    send(('msg', cid, encrypt(m, importKey(pub_key_I))), to = initiator)
+                    send(('msg', cid, encrypt(m.encode(), importKey(pub_key_I))), to = initiator)
                 else:
                     output('Error: Recipient: Returned nonce does not match', 
                            'original; Could Not Authenticate Identity of:', initiator)
