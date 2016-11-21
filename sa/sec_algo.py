@@ -27,7 +27,7 @@ class Sec_Algo():
       def asym_decrypt(plaintext, public_key, private_key): pass
       #end asym_decrypt()
 
-      def encrypt(plaintext, key): pass
+      def encrypt(*plaintext, key): pass
       #end encrypt()
 
       def decrypt(plaintext, key): pass
