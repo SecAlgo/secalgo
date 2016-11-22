@@ -1,12 +1,9 @@
 import sys
 import random
-import json
 from Crypto import Random
 from Crypto.Random import random as securerandom
-from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
-from sa.Misc.padding import pkcs7_pad, pkcs7_unpad
-from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
-from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key, gen_sym_key
+from sa.sec_algo_pycrypto import encrypt, decrypt, gen_sym_key
+config(keysize is 128, mode is CBC)
 
 #Misc Global Methods
 
@@ -47,18 +44,12 @@ class kg_server (process):
         await(False)
     #end run()
         
-    def receive(msg=('get_key', p, cid, nonce), from_ = client):
-        shared_key = gen_sym_key()
-        package_b = [int.from_bytes(shared_key, byteorder = 'little'), serialize_endpoint(client)]
-        s_package_b = json.dumps(package_b)
-        cs_package_b = encrypt(s_package_b, self.keys[p])
-        pcs_package_b = pkcs7_pad(cs_package_b)
-        spcs_package_b = int.from_bytes(pcs_package_b, byteorder = 'little')
-        package_a = [nonce, int.from_bytes(shared_key, byteorder = 'little'),
-                     serialize_endpoint(p), spcs_package_b]
-        s_package_a = json.dumps(package_a)
-        c_package_a = encrypt(s_package_a, self.keys[client])
-        send(('re_get_key', cid, c_package_a), to = client)
+    def receive(msg=('get_key', recipient, cid, nonce_i), from_ = initiator):
+        session_key = gen_sym_key()
+        package_r = encrypt(session_key, initiator, key=self.keys[recipient])
+        package_i = encrypt(nonce_i, session_key, recipient, package_r,
+                            key=self.keys[initiator])
+        send(('re_get_key', cid, package_i), to = initiator)
     #end receive(get_key)
 #end clas kg_server
 """
@@ -102,15 +93,15 @@ be split up among several receive handlers).
 The number of processes that can take part in the NS protocol can be determined
 through a command line argument. The default number is 10.
 """
-class P (process):
-    def setup(s, server_key, kg_p):
+class NS_SK (process):
+    def setup(ps, server_key, kg_p):
         self.counter = 0
     #end setup()
         
     def run():
         output('started')
         if needed():
-            b = random.choice(tuple(s))
+            b = random.choice(tuple(self.ps))
             s = ns(b)
             output(s)
             await(False)
@@ -123,59 +114,47 @@ class P (process):
         self.counter += 1
         return (self.id, self.counter)
     #end gen_cid()
-    
-    def get_key_package(p):
-        cid = self.gen_cid()
-        nonce = securerandom.getrandbits(128)
-        send(('get_key', p, cid, nonce), to = self.kg_p)
-        await(some(received(('re_get_key', _cid, pre_c_package_a))))
-        s_key_package = decrypt(pre_c_package_a, self.server_key).decode()
-        key_package = json.loads(s_key_package)
-        if nonce == key_package[0] and serialize_endpoint(p) == key_package[2]:
-            return key_package
-        else:
-            output('ERROR: Received wrong key package!')
-            return None
-    #end get_key_package()
         
     def ns(b):
         output('NS initiated from', self.id, 'to', b)
-        package_a = get_key_package(b)
-        key_ab, spcs_package_b = (package_a[1].to_bytes(32, byteorder = 'little'), package_a[3])
+        nonce_i = securerandom.getrandbits(128)
         cid = self.gen_cid()
-        send(('ns-key', cid, spcs_package_b), to = b)
-        await(some(received(('ns-reply', _cid, pre_c_nonce_ba), from_ = b)))
-        nonce_ba = json.loads(decrypt(pre_c_nonce_ba, key_ab).decode())
-        send(('ns-reply2', cid, encrypt(json.dumps(nonce_ba - 1), key_ab)), to = b)
-        await(some(received(('msg', _cid, m), from_ = b)))
-        return decrypt(m, key_ab).decode()
+        send(('get_key', b, cid, nonce_i), to = self.kg_p)
+
+        await(some(received(('re_get_key', _cid, package_i))))
+        nonce_is, session_key, recipient, package_r = decrypt(package_i, key=self.server_key)
+
+        send(('ns-key', cid, package_r), to = recipient)
+
+        await(some(received(('ns-reply', _cid, c_nonce_r), from_ = recipient)))
+        (nonce_r,) = decrypt(c_nonce_r, key=session_key)
+        print('$$$$$$$$$$:', nonce_r, ':', type(nonce_r))
+        send(('ns-reply2', cid, encrypt((nonce_r - 1), key=session_key)), to = recipient)
+
+        await(some(received(('msg', _cid, m), from_ = recipient)))
+        (s,) = decrypt(m, key=session_key)
+        return s
     #end ns()
     
-    def receive(msg=('ns-key', cid, spcs_package_b), from_ = b):
-        pcs_package_b = spcs_package_b.to_bytes(((spcs_package_b.bit_length() // 8) + 1), 
-                                                byteorder = 'little')
-        cs_package_b = pkcs7_unpad(pcs_package_b)
-        s_package_b = decrypt(cs_package_b, self.server_key).decode()
-        package_b = json.loads(s_package_b)
-        key_ab, initiator = package_b[0].to_bytes(32, byteorder = 'little'), package_b[1]
-        nonce_ba = securerandom.getrandbits(128)
-        if initiator == serialize_endpoint(b):
-            send(('ns-reply', cid, encrypt(json.dumps(nonce_ba), key_ab)), to = b)
-        await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = b)))
-        if json.loads(decrypt(c_nonce_mod, key_ab).decode()) == (nonce_ba - 1):
+    def receive(msg=('ns-key', cid, package_r), from_ = b):
+        session_key, initiator = decrypt(package_r, key=self.server_key)
+        nonce_r = securerandom.getrandbits(128)
+        send(('ns-reply', cid, encrypt(nonce_r, key=session_key)), to = initiator)
+        
+        await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = initiator)))
+        (nonce_ri,) = decrypt(c_nonce_mod, key=session_key)
+        if nonce_ri == (nonce_r - 1):
             s = 'secret'
-            send(('msg', cid, encrypt(s, key_ab)), to = b)
-        else:
-            output('ERROR: Key package not for sender!')
+            send(('msg', cid, encrypt(s, key=session_key)), to = b)
     #end receive(ns-key)
             
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    ps = new(P, num = n)
+    ps = new(NS_SK, num = n)
     kg_p = new(kg_server)
     new_keys = dict()
     for p in ps:
-        new_key = Random.new().read(32)
+        new_key = gen_sym_key()
         new_keys[p] = new_key
         setup(p, ((ps - {p}), new_key, kg_p))
     setup(kg_p, (new_keys, ))

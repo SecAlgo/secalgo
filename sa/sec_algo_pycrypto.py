@@ -8,14 +8,15 @@ from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
 from Crypto import Random
+from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 
-RKEY_SIZE_BITS = 1024
-RKEY_SIZE_BYTES = 128
-
+KEY_PAIR_DEFAULT_SIZE_BITS = 2048
+KEY_PAIR_DEFAULT__SIZE_BYTES = 256
+SYM_KEY_DEFAULT_SIZE_BITS = 256
 SYM_KEY_DEFAULT_SIZE_BYTES = 32
 
 def gen_key_pair():
-    return RSA.generate(RKEY_SIZE_BITS)
+    return RSA.generate(KEY_PAIR_DEFAULT_SIZE_BITS)
 #end gen_key_pair()
 
 def get_pub_key(k):
@@ -24,20 +25,14 @@ def get_pub_key(k):
 
 def gen_sym_key():
     size = SYM_KEY_DEFAULT_SIZE_BYTES
-    stack = inspect.stack()
-    frame = stack[1]
-    module_name = inspect.getmodulename(frame.filename)
-    configs = sys.modules[module_name]._config_object
+    configs = get_configs()
     if 'keysize' in configs:
         size = (configs['keysize'] // 8)
     return Random.new().read(size)
 #end gen_sym_key
 
 def encrypt(*plaintext, key):
-    stack = inspect.stack()
-    frame = stack[1]
-    module_name = inspect.getmodulename(frame.filename)
-    configs = sys.modules[module_name]._config_object
+    configs = get_configs()
     print('###############:', configs)
     if isinstance(key, _RSAobj):
         return asym_encrypt(plaintext, key)
@@ -57,24 +52,22 @@ def sym_encrypt(plaintext, key, alg = 'AES', mode = 'CTR'):
         encrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
         ciphertext =  pre + encrypter.encrypt(serial_pt)
     elif mode == 'CBC':
-        print('$$$$$$$$$$: USING CBC') 
+        print('$$$$$$$$$$: USING CBC')
+        padded_pt = pkcs7_pad(serial_pt)
         iv = Random.new().read(16)
         encrypter = AES.new(key, AES.MODE_CBC, iv)
-        ciphertext = iv + encrypter.encrypt(serial_pt)
+        ciphertext = iv + encrypter.encrypt(padded_pt)
     return ciphertext
 #end sym_encrypt()
 
 def decrypt(ciphertext, key):
-    stack = inspect.stack()
-    frame = stack[1]
-    module_name = inspect.getmodulename(frame.filename)
-    configs = sys.modules[module_name]._config_object
+    configs = get_configs()
     print('###############:', configs)
     if isinstance(key, _RSAobj):
         return asym_decrypt(ciphertext, key)
     else:
         if 'mode' in configs:
-            return sym_decrypt(ciphertext, key, mode=configs[mode])
+            return sym_decrypt(ciphertext, key, mode=configs['mode'])
         else:
             return sym_decrypt(ciphertext, key)
 #end decrypt()
@@ -88,7 +81,8 @@ def sym_decrypt(ciphertext, key, alg = 'AES', mode = 'CTR'):
     elif mode == 'CBC':
         iv = ciphertext[0:16]
         decrypter = AES.new(key, AES.MODE_CBC, iv)
-        serial_pt = decrypter.decrypt(ciphertext[16:])
+        padded_pt = decrypter.decrypt(ciphertext[16:])
+        serial_pt = pkcs7_unpad(padded_pt)
     return pickle.loads(serial_pt)
 #end sym_decrypt()
 
@@ -128,3 +122,12 @@ def verify(data, key):
     else:
         return None
 #end def verify()
+
+#utility functions
+def get_configs():
+    stack = inspect.stack()
+    frame = stack[2]
+    module_name = inspect.getmodulename(frame.filename)
+    configs = sys.modules[module_name]._config_object
+    return configs
+#end get_configs()
