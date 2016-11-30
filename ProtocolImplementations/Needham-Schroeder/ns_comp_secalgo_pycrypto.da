@@ -3,7 +3,7 @@ import random
 from Crypto import Random
 from Crypto.Random import random as securerandom
 from sa.sec_algo_pycrypto import encrypt, decrypt, gen_sym_key
-config(keysize is 128, mode is CBC)
+config(keysize is 128, mode is CFB)
 
 #Misc Global Methods
 
@@ -128,7 +128,6 @@ class NS_SK (process):
 
         await(some(received(('ns-reply', _cid, c_nonce_r), from_ = recipient)))
         (nonce_r,) = decrypt(c_nonce_r, key=session_key)
-        print('$$$$$$$$$$:', nonce_r, ':', type(nonce_r))
         send(('ns-reply2', cid, encrypt((nonce_r - 1), key=session_key)), to = recipient)
 
         await(some(received(('msg', _cid, m), from_ = recipient)))
