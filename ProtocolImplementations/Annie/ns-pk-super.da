@@ -1,0 +1,118 @@
+"""
+  (1) A -> S : (A, B)
+  (2) S -> A : sign((B, pkB), skS)
+  (3) A -> B : aenc((Na, A), pkB)
+  (4) B -> S : (B, A)
+  (5) S -> B : sign((A, pkA), skS)
+  (6) B -> A : aenc((Na, Nb), pkA)
+  (7) A -> B : aenc(Nb, pkB)
+did fix for (6):
+  (6) B -> A : aenc((Na, Nb, B), pkA)
+"""
+
+def gen_num():
+  i = 0
+  while True: 
+    i += 1
+    yield i
+gen_nonce = gen_num()
+def nonce(): return next(gen_nonce)
+
+def pk(p): return p
+def aenc(m,pk): return m
+def adec(m,sk): return m
+def sign(m,sk): return m
+def check(m,pk): return m
+
+class sender (process):
+  def setup(): pass
+  def send(m, to= None): super().send (m, to= to); output('send', m, 'to', to)
+
+class decryptor (process):
+  def setup(sk): pass
+  def receive (msg=('signed', m), from_= P):
+    send ((check(m, pk(P)), P), to= self)
+  def receive (msg=('aenc', m), from_= P):
+    send ((adec(m, sk), P), to= self)
+
+class roleS (sender, process):
+  def setup(skS): pass
+  def run(): await (False)
+  def receive (msg=(A, B), from_= A):                          # receive 1, 4
+    send (('signed', sign((B, pk(B)), skS)), to= A)            # send 2, 5
+
+class roleA (sender, decryptor, process):
+  def setup(sk, S, B): self.A = self
+  def run():
+    send ((A, B), to= S)                                       # send 1
+    await (some (received(((_B, pkB), _S), from_= self)))      # receive 2
+    Na = nonce()
+    send (('aenc', aenc((Na, A), pkB)), to= B)                 # send 3
+    await (some (received(((_Na, Nb, _B), _B), from_= self)))  # receive 6
+    send (('aenc', aenc(Nb, pkB)), to= B)                      # send 7
+
+class roleB (sender, decryptor, process):
+  def setup(sk, S): self.B = self
+  def run(): await (False)
+  def receive (msg= ((Na, A), A), from_= self):                # receive 3
+    send ((B, A), to= S)                                       # send 4
+    await (some (received(((_A, pkA), _S), from_= self)))      # receive 5
+    Nb = nonce()
+    send (('aenc', aenc((Na, Nb, B), pkA)), to= A)             # send 6
+
+def main():
+  skS = 0
+  skA = 1
+  skB = 2
+  S = new(roleS, (skS,))
+  B = new(roleB, (skB, S))
+  A = new(roleA, (skA, S, B))
+  start(S)
+  start(A)
+  start(B)
+
+# 11/13/16
+# in A:
+# the handlers allow "receive" of 2 and 6 to replace the following:
+#    await (received(m, from_= S))
+#    (=B, pkB) = check(m, pkS)
+#
+#    await (received(m, from_= B)
+#    (=Na, Nb, B) = dec(m, skA)
+#
+# changed to the following using Ashkan's idea:
+#  def receive (msg=('signed', m), from_= S):
+#    send ((check(m, pk(S)), S), to= self)
+#
+#  def receive (msg=('pub_enc', m), from_= B):
+#    send ((dec(m, skB), B), to= self)
+#
+# in B:
+#  def receive (msg=('signed', m), from_= S):
+#    send ((check(m, pk(S)), S), to= self)
+#
+#  def receive (msg=('pub_enc', m), from_= A):
+#    send ((dec(m, skB), A), to= self)
+#
+# can abstract "receive" to
+#    await receive_decrypted(m, from_= sender, by= decryptor)
+# and generate "receive" and handler automatically
+#
+# need unique id for RPC-like receive if a process can be in one sessions,
+# or possibly some msg tags like above are always sufficient.
+#
+# 11/16/16
+# can abstract "send" to 
+#    send_encrypted(m, key=key_value, to=receiver, by= encryptor)
+# and generate "send" with appropriate msg tag for 
+# receiver to decide which key to use
+#
+# even higher-level: just write global msg passing
+#
+# in B:
+#  def receive (msg=('signed', m), from_= S):
+#    send ((check(m, pk(S)), S), to= self)
+#
+#  def receive (msg=('pub_enc', m), from_= A):
+#    send ((dec(m, skB), A), to= self)
+
