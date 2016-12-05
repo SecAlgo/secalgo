@@ -2,35 +2,34 @@
 (1) A -> B: enc(sign(k, skA), pkB)
 (2) B -> A: enc(s, k)
 """
-from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify, keygen
-
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify, genkey
 
 class RoleI (process):
-    def setup(skI, R):
+    def setup(skI, R, pkR):
         pass
 
     def run():
         k = genkey('shared')
-        send(('encrypt_sign', encrypt(sign(k, key = skI), pk(R))), to = R)
+        send(('encrypt_sign', encrypt(sign(k, key = skI), key = pkR)), to = R)
         await(some(received(m, from_ = R)))
         s = decrypt(m, k)
+        output('DECRYPTED MESSAGE:', s)
 
 class RoleR (process):
-    def setup(skR):
+    def setup(skR, pkI):
         self.s = 'secret'
 
     def run():
         await(False)
 
     def receive(msg=('encrypt_sign', m), from_ = I):
-        k = verify(decrypt(m, skR), pk(I))
-        send(encrypt(s, k), to = I)
+        k = verify(decrypt(m, key = skR), key = pkI)
+        send(encrypt(s, key = k), to = I)
 
 def main():
-    skI = keygen('public')
-    skR = keygen('public')
-    R = new(RoleR, (skR, ))
-    I = new(RoleI, (skI, R))
+    skI, pkI = genkey('public')
+    skR, pkR = genkey('public')
+    R = new(RoleR, (skR, pkI))
+    I = new(RoleI, (skI, R, pkR))
     start(I)
     start(R)
-

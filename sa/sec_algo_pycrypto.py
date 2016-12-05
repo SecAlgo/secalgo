@@ -8,14 +8,22 @@ from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
 from Crypto import Random
+from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = 256
 SYM_KEY_DEFAULT_SIZE_BYTES = 32
+NONCE_DEFAULT_SIZE_BITS = 128
+
+
+def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
+    return getrandbits(size)
+#end gen_nonce
 
 def genkey(key_type, key_size = None):
+    Random.atfork()
     if key_type == 'shared':
         if key_size != None:
             return gen_sym_key(key_size)
@@ -24,10 +32,10 @@ def genkey(key_type, key_size = None):
     elif key_type == 'public':
         if key_size != None:
             private_key = gen_key_pair(key_size)
-            return private_key, get_pub_key(private_key)
+            return private_key.exportKey(), get_pub_key(private_key).exportKey()
         else:
             private_key = gen_key_pair()
-            return private_key, get_pub_key(private_key)
+            return private_key.exportKey(), get_pub_key(private_key).exportKey()
 #end genkey()
 
 def gen_key_pair(key_size = KEY_PAIR_DEFAULT_SIZE_BITS):
@@ -40,46 +48,49 @@ def get_pub_key(k):
 
 def gen_sym_key(key_size = SYM_KEY_DEFAULT_SIZE_BYTES):
     size = key_size
-    configs = get_configs()
-    if 'keysize' in configs:
-        size = (configs['keysize'] // 8)
+    #configs = get_configs()
+    #if 'keysize' in configs:
+    #    size = (configs['keysize'] // 8)
     return Random.new().read(size)
 #end gen_sym_key
 
 def encrypt(*plaintext, key):
-    configs = get_configs()
-    #print('###############:', configs)
+    Random.atfork()
+    if len(plaintext) == 1:
+        plaintext = plaintext[0]
+    #configs = get_configs()
     #may want to consider a segment_size configuration option for CFB mode
-    if isinstance(key, _RSAobj):
-        return asym_encrypt(plaintext, key)
+    #print('KEYKEYKEY:', key)
+    if b'BEGIN' in key:
+        return asym_encrypt(plaintext, RSA.importKey(key))
     else:
-        if 'mode' in configs:
-            return sym_encrypt(plaintext, key, mode=configs['mode'])
-        else:
-            return sym_encrypt(plaintext, key)
+        #if 'mode' in configs:
+        #    return sym_encrypt(plaintext, key, mode=configs['mode'])
+        #else:
+        return sym_encrypt(plaintext, key)
 #end encrypt
 
 def sym_encrypt(plaintext, key, alg = 'AES', mode = 'CTR'):
     serial_pt = pickle.dumps(plaintext)
     if mode == 'CTR':
-        print('$$$$$$$$$$: Encrypt: USING CTR')
+        #print('$$$$$$$$$$: Encrypt: USING CTR')
         pre = Random.new().read(8)
         ctr = Counter.new(64, prefix = pre)
         encrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
         ciphertext =  pre + encrypter.encrypt(serial_pt)
     elif mode == 'CBC':
-        print('$$$$$$$$$$: Encrypt: USING CBC')
+        #print('$$$$$$$$$$: Encrypt: USING CBC')
         padded_pt = pkcs7_pad(serial_pt)
         iv = Random.new().read(16)
         encrypter = AES.new(key, AES.MODE_CBC, iv)
         ciphertext = iv + encrypter.encrypt(padded_pt)
     elif mode == 'ECB':
-        print('$$$$$$$$$$: Encrypt: USING ECB')
+        #print('$$$$$$$$$$: Encrypt: USING ECB')
         padded_pt = pkcs7_pad(serial_pt)
         encrypter = AES.new(key, AES.MODE_ECB)
         ciphertext = encrypter.encrypt(padded_pt)
     elif mode == 'CFB':
-        print('$$$$$$$$$$: Encrypt: USING CFB')
+        #print('$$$$$$$$$$: Encrypt: USING CFB')
         seg_size = 8
         padded_pt = pkcs7_pad(serial_pt, seg_size)
         iv = Random.new().read(16)
@@ -100,37 +111,37 @@ def asym_encrypt(plaintext, public_key):
 #end asym_encrypt()
 
 def decrypt(ciphertext, key):
-    configs = get_configs()
-    print('###############:', configs)
-    if isinstance(key, _RSAobj):
-        return asym_decrypt(ciphertext, key)
+    Random.atfork()
+    #configs = get_configs()
+    if b'BEGIN' in key:
+        return asym_decrypt(ciphertext, RSA.importKey(key))
     else:
-        if 'mode' in configs:
-            return sym_decrypt(ciphertext, key, mode=configs['mode'])
-        else:
-            return sym_decrypt(ciphertext, key)
+        #if 'mode' in configs:
+        #    return sym_decrypt(ciphertext, key, mode=configs['mode'])
+        #else:
+        return sym_decrypt(ciphertext, key)
 #end decrypt()
 
 def sym_decrypt(ciphertext, key, alg = 'AES', mode = 'CTR'):
     if mode == 'CTR':
-        print('$$$$$$$$$$: Decrypt: USING CTR')
+        #print('$$$$$$$$$$: Decrypt: USING CTR')
         pre = ciphertext[0:8]
         ctr = Counter.new(64, prefix = pre)
         decrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
         serial_pt = decrypter.decrypt(ciphertext[8:])
     elif mode == 'CBC':
-        print('$$$$$$$$$$: Decrypt: USING CBC')
+        #print('$$$$$$$$$$: Decrypt: USING CBC')
         iv = ciphertext[0:16]
         decrypter = AES.new(key, AES.MODE_CBC, iv)
         padded_pt = decrypter.decrypt(ciphertext[16:])
         serial_pt = pkcs7_unpad(padded_pt)
     elif mode == 'ECB':
-        print('$$$$$$$$$$: Decrypt: USING ECB')
+        #print('$$$$$$$$$$: Decrypt: USING ECB')
         decrypter = AES.new(key, AES.MODE_ECB)
         padded_pt = decrypter.decrypt(ciphertext)
         serial_pt = pkcs7_unpad(padded_pt)
     elif mode == 'CFB':
-        print('$$$$$$$$$$: Encrypt: USING CFB')
+        #print('$$$$$$$$$$: Encrypt: USING CFB')
         seg_size = 8
         iv = ciphertext[0:16]
         decrypter = AES.new(key, AES.MODE_CFB, iv, segment_size = seg_size)
@@ -149,17 +160,22 @@ def asym_decrypt(ct_list, private_key):
 #end asym_decrypt()
 
 def sign(data, key):
-    sig = key.sign(SHA256.new(data).digest(), '')
+    Random.atfork()
+    im_key = RSA.importKey(key)
+    sig = im_key.sign(SHA256.new(data).digest(), '')
     result = (data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
                                     byteorder = 'little'))
-    return pickle.dumps(result)
+    s_result = pickle.dumps(result)
+    return s_result
 #end sign()
 
 #returns None when verfication fails
 def verify(data, key):
+    Random.atfork()
+    im_key = RSA.importKey(key)
     unp_data = pickle.loads(data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
+    verdict = im_key.verify(SHA256.new(unp_data[0]).digest(), sig)
     if verdict:
         return unp_data[0]
     else:
@@ -167,10 +183,14 @@ def verify(data, key):
 #end def verify()
 
 #utility functions
-def get_configs():
-    stack = inspect.stack()
-    frame = stack[3]
-    module_name = inspect.getmodulename(frame.filename)
-    configs = sys.modules[module_name]._config_object
-    return configs
+#def get_configs():
+#    configs = dict()
+#    stack = inspect.stack()
+#    #frame = stack[3]
+#    for frame in stack:
+#        print('$$$$$$$$$$:', frame.filename)
+#        module_name = inspect.getmodulename(frame.filename)
+#        print('##########:', module_name)
+#    #configs = sys.modules[module_name]._config_object
+#    return configs
 #end get_configs()

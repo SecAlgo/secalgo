@@ -1,0 +1,83 @@
+"""
+  (1) A -> S : (A, B)
+  (2) S -> A : sign((B, pkB), skS)
+  (3) A -> B : enc((Na, A), pkB)
+  (4) B -> S : (B, A)
+  (5) S -> B : sign((A, pkA), skS)
+  (6) B -> A : enc((Na, Nb), pkA)
+  (7) A -> B : enc(Nb, pkB)
+did fix for (6):
+  (6) B -> A : enc((Na, Nb, B), pkA)
+"""
+
+from sa.sec_algo_pycrypto import genkey, encrypt, decrypt
+from sa.sec_algo_pycrypto import sign, verify, gen_nonce
+import pickle
+
+class roleS (process):
+    def setup(skS, client_keys):
+        pass
+
+    def run():
+        await(False)
+
+    def receive(msg=(A, B), from_ = A):
+        pkB_set = {x for (p, x) in client_keys if p == B}
+        print('$$$$$$$$$$:', pkB_set)
+        pkB = pkB_set.pop()
+        print('##########:', pkB)
+        print('&&&&&&&&&&:', pickle.dumps((B, pkB)))
+        send(('signed', sign((B, pkB), key = skS)), to = A)
+
+class roleI (process):
+    def setup(skI, S, pkS, R):
+        self.I = self
+
+    def run():
+        send((I, R), to = S)
+        await(some(received(((_R, pkR), _S), from_ = self)))
+        nI = gen_nonce()
+        send(('pub_enc', encrypt((nI, I), key = pkR)), to = R)
+        await(some(received(((_nI, nR, _R), _R), from_ = self)))
+        send(('pub_enc', encrypt(nR, key = pkR)), to = R)
+        output('I authenticated R')
+
+    def receive(msg=('signed', m), from_ = S):
+        send((verify(m, key = pkS), S), to = self)
+
+    def receive(msg=('pub_enc', m), from_ = R):
+        send((decrypt(m, key = skI), R), to = self)
+
+class roleR (process):
+    def setup(skR, S, pkS):
+        self.R = self
+
+    def run():
+        await(False)
+
+    def receive(msg=((nI, I), I), from_ = self):
+        send((R, I), to = S)
+        await(some(received(((_I, pkI), _S), from_ = self)))
+        nR = gen_nonce()
+        send(('pub_enc', encrypt((nI, nR, R), key = pkI)), to = I)
+        output('R authenticated I')
+
+    def receive(msg=('signed', m), from_ = S):
+        send((verify(m, key = pkS), S), to = self)
+
+    def receive(msg=('pub_enc', m), from_ = I):
+        send((decrypt(m, key = skR), I), to = self)
+
+def main():
+    skS, pkS = genkey('public')
+    skI, pkI = genkey('public')
+    skR, pkR = genkey('public')
+    I = new(roleI)
+    R = new(roleR)
+    S = new(roleS)
+    setup(S, (skS, {(I, pkI), (R, pkR)}))
+    setup(I, (skI, S, pkS, R))
+    setup(R, (skR, S, pkS))
+    start(S)
+    start(R)
+    start(I)
