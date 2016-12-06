@@ -19,6 +19,7 @@ NONCE_DEFAULT_SIZE_BITS = 128
 
 
 def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
+    Random.atfork()
     return getrandbits(size)
 #end gen_nonce
 
