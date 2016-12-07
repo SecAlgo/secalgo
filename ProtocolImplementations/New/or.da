@@ -17,26 +17,18 @@ class RoleS (process):
     def receive(msg=(M, I, R, encI, encR), from_ = _R):
         send(encI, to = self)
         send(encR, to = self)
-#        await(some(received((N_I, _M, _I, _R), from_ = self),
-#                  received((N_R, _M, _I, _R), from_ = self),
-#                 has = N_R != N_I))
-        await(some(received((N_I, _M, _I, _R), from_ = self)))
-        output('BETWEENBETWEENBETWEEN')
-        await(some(received((N_R, _M, _I, _R), from_ = self),
+        await(some(received((N_I, _M, _I, _R), from_ = self),
+                   received((N_R, _M, _I, _R), from_ = self),
                    has = N_R != N_I))
-        output('2222222222:', N_R)
         K_IR = genkey('shared')
         send((M, ('encI', encrypt(N_I, K_IR, key = K_IS)),
              ('encR', encrypt(N_R, K_IR, key = K_RS))), to = R)
 
     def receive(msg=('encI', m), from_ = self):
-        output('IIIIIIIIII')
         send((decrypt(m, key = K_IS)), to = self)
 
     def receive(msg=('encR', m), from_ = self):
-        output('RRRRRRRRRR')
         send((decrypt(m, key = K_RS)), to = self)
-
     
 class RoleI (process):
     def setup(S, K_IS, R):
@@ -63,8 +55,7 @@ class RoleR (process):
         
     def receive(msg=(M, I, R, encI), from_ = I):
         N_R = gen_nonce()
-        output('1111111111:', N_R)
-        send((M, I, R, encI, ('encR', encrypt(N_R, I, R, key = K_RS))), to = S)
+        send((M, I, R, encI, ('encR', encrypt(N_R, M, I, R, key = K_RS))), to = S)
         await(some(received((_M, encI, encR), from_ = S)))
         send((M, encI), to = I)
         send(encR, to = self)
@@ -72,7 +63,6 @@ class RoleR (process):
         output('R - Key Exchange Complete')
 
     def receive(msg=('encR', m), from_ = self):
-        output('3333333333:', decrypt(m, key = K_RS))
         send((decrypt(m, key = K_RS), S), to = self)
     
 def main():

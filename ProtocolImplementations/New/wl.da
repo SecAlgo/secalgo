@@ -1,0 +1,105 @@
+"""
+Woo-Lam key distribution and mutual authentication with trusted server and
+symmetric keys.
+
+I -> R : I, N_I
+R -> I : R, N_R
+I -> R : enc((I, R, N_I, N_R), K_IS)
+R -> S : enc((I, R, N_I, N_R), K_IS), enc((I, R, N_I, N_R), K_RS)
+S -> R : enc((R, N_I, N_R, K_IR), K_IS), enc((I, N_I, N_R, K_IR), K_RS)
+R -> I : enc((R, N_I, N_R, K_IR), K_IS), enc((N_I, N_R), K_IR)
+I -> R : enc(N_2, K_IR)
+"""
+
+from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
+
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        self.I1 = None
+        self.R1 = None
+        pass
+
+    def run():
+        await(False)
+
+    def receive(msg=(encI, encR), from_ = R):
+        R1 = R
+        send(encI, to = self)
+        send(encR, to = self)
+        await(some(received(((I, _R, N_I, N_R), _I), from_ = self),
+                   received(((_I, _R, _N_I, _N_R), _R), from_ = self)))
+        K_IR = genkey('shared')
+        I1 = I
+        send((('encS', encrypt(R, N_I, N_R, K_IR, key = K_IS)), ('encS', encrypt(I, N_I, N_R, K_IR, key = K_RS))), to = R)
+
+    def receive(msg=('encI', m), from_ = self):
+        send((decrypt(m, key = K_IS), I1), to = self)
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_RS), R1), to = self) 
+        
+class RoleI (process):
+    def setup(S, K_IS, R):
+        self.I = self
+        self.K_IR = None
+
+    def run():
+        N_I = gen_nonce()
+        send((I, N_I), to = R)
+        await(some(received((_R, N_R), from_ = _R)))
+        send(('encI', ('encI', encrypt(I, R, N_I, N_R, key = K_IS))), to = R)
+        await(some(received((encS, encR), from_ = _R)))
+        send(encS, to = self)
+        await(some(received(((_R, _N_I, N_R, K), _S), from_ = self)))
+        K_IR = K
+        send(encR, to = self)
+        await(some(received(((_N_I, _N_R), _R), from_ = self)))
+        send(('encI', encrypt(N_R, key = K_IR)), to = R)
+        output('I - Key Exchange Complete')
+
+    def receive(msg=('encS', m), from_ = self):
+        send((decrypt(m, key = K_IS), S), to = self)
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_IR), R), to = self)
+
+
+class RoleR (process):
+    def setup(S, K_RS):
+        self.R = self
+        self.I1 = None
+        self.K_IR = None
+
+    def run():
+        await(False)
+
+    def receive(msg=(I, N_I), from_ = _I):
+        N_R = gen_nonce()
+        self.I1 = I
+        send((R, N_R), to = I)
+        await(some(received(('encI', encI), from_ = _I)))
+        send((encI, ('encR', encrypt(I, R, N_I, N_R, key = K_RS))), to = S)
+        await(some(received((encSI, encSR), from_ = S)))
+        send(encSR, to = self)
+        await(some(received(((_I, _N_I, _N_R, K), _S), from_ = self)))
+        K_IR = K
+        send((encSI, ('encR', encrypt(N_I, N_R, key = K_IR))), to = I)
+        await(some(received(((N_R), _I), from_ = self)))
+        output('R - Key Exchange Complete')
+
+    def receive(msg=('encS', m), from_ = self):
+        send((decrypt(m, key = K_RS), S), to = self)
+
+    def receive(msg=('encI', m), from_ = self):
+        send((decrypt(m, key = K_IR), I1), to = self)
+
+def main():
+    K_IS = genkey('shared')
+    K_RS = genkey('shared')
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)
+    
