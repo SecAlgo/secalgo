@@ -8,7 +8,7 @@ symmetric keys.
 4. R -> S : enc((I, R, N_I, N_R), K_IS), enc((I, R, N_I, N_R), K_RS)
 5. S -> R : enc((R, N_I, N_R, K_IR), K_IS), enc((I, N_I, N_R, K_IR), K_RS)
 6. R -> I : enc((R, N_I, N_R, K_IR), K_IS), enc((N_I, N_R), K_IR)
-7. I -> R : enc(N_2, K_IR)
+7. I -> R : enc(N_R, K_IR)
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
@@ -23,28 +23,21 @@ class RoleS (process):
         await(False)
 
     def receive(msg=('msg4', encI, encR), from_ = R):
-        print('$$$$$$$$$$: 8', flush = True)
         R1 = R
-        print('$$$$$$$$$$: 9', flush = True)
-        output('@@@@@@@@@@:', encI)
-        output('##########:', encR)
-        send(encI, to = self)
         send(encR, to = self)
-        await(some(received(((I, _R, N_I, N_R), _I), from_ = self),
-                   received(((_I, _R, _N_I, _N_R), _R), from_ = self)))
-        print('$$$$$$$$$$: 10', flush = True)
+        await(some(received(((I, _R, N_I, N_R), _R), from_ = self)))
+        I1 = I
+        send(encI, to = self)
+        await(some(received(((_I, _R, _N_I, _N_R), _I), from_ = self)))
         K_IR = genkey('shared')
         I1 = I
-        print('$$$$$$$$$$: 11', flush = True)
         send(('msg5', ('encS', encrypt(R, N_I, N_R, K_IR, key = K_IS)),
               ('encS', encrypt(I, N_I, N_R, K_IR, key = K_RS))), to = R)
 
     def receive(msg=('encI', m), from_ = self):
-        output('%%%%%%%%%%:', decrypt(m, key = K_IS), I1)
         send((decrypt(m, key = K_IS), I1), to = self)
 
     def receive(msg=('encR', m), from_ = self):
-        output('&&&&&&&&&&:', decrypt(m, key = K_RS), R1)
         send((decrypt(m, key = K_RS), R1), to = self) 
         
 class RoleI (process):
@@ -54,24 +47,15 @@ class RoleI (process):
 
     def run():
         N_I = gen_nonce()
-        print('$$$$$$$$$$: 1', flush = True)
         send(('msg1', I, N_I), to = R)
         await(some(received(('msg2', _R, N_R), from_ = _R)))
-        print('$$$$$$$$$$: 4', flush = True)
-        print('$$$$$$$$$$: 5', flush = True)
         send(('msg3', ('encI', encrypt(I, R, N_I, N_R, key = K_IS))), to = R)
         await(some(received(('msg6', encS, encR), from_ = _R)))
-        print('$$$$$$$$$$: 16', flush = True)
-        print('$$$$$$$$$$: 17', flush = True)
         send(encS, to = self)
         await(some(received(((_R, _N_I, N_R, K), _S), from_ = self)))
-        print('$$$$$$$$$$: 18', flush = True)
         K_IR = K
-        print('$$$$$$$$$$: 19', flush = True)
         send(encR, to = self)
         await(some(received(((_N_I, _N_R), _R), from_ = self)))
-        print('$$$$$$$$$$: 20', flush = True)
-        print('$$$$$$$$$$: 21', flush = True)
         send(('encI', encrypt(N_R, key = K_IR)), to = R)
         output('I - Key Exchange Complete')
 
@@ -92,33 +76,24 @@ class RoleR (process):
         await(False)
 
     def receive(msg=('msg1', I, N_I), from_ = _I):
-        print('$$$$$$$$$$: 2', flush = True)
         N_R = gen_nonce()
         self.I1 = I
-        print('$$$$$$$$$$: 3', flush = True)
         send(('msg2', R, N_R), to = I)
         await(some(received(('msg3', encI), from_ = _I)))
-        print('$$$$$$$$$$: 6', flush = True)
-        print('$$$$$$$$$$: 7', flush = True)
         send(('msg4', encI, ('encR', encrypt(I, R, N_I, N_R, key = K_RS))),
              to = S)
         await(some(received(('msg5', encSI, encSR), from_ = S)))
-        print('$$$$$$$$$$: 12', flush = True)
-        print('$$$$$$$$$$: 13', flush = True)
         send(encSR, to = self)
         await(some(received(((_I, _N_I, _N_R, K), _S), from_ = self)))
-        print('$$$$$$$$$$: 14', flush = True)
         K_IR = K
-        print('$$$$$$$$$$: 15', flush = True)
         send(('msg6', encSI, ('encR', encrypt(N_I, N_R, key = K_IR))), to = I)
-        await(some(received(((N_R), _I), from_ = self)))
-        print('$$$$$$$$$$: 22', flush = True)
+        await(some(received((N_R, _I), from_ = self)))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = self):
         send((decrypt(m, key = K_RS), S), to = self)
 
-    def receive(msg=('encI', m), from_ = self):
+    def receive(msg=('encI', m), from_ = I):
         send((decrypt(m, key = K_IR), I1), to = self)
 
 def main():
