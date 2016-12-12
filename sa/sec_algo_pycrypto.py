@@ -162,9 +162,10 @@ def asym_decrypt(ct_list, private_key):
 
 def sign(data, key):
     Random.atfork()
+    serial_data = pickle.dumps(data)
     im_key = RSA.importKey(key)
-    sig = im_key.sign(SHA256.new(data).digest(), '')
-    result = (data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
+    sig = im_key.sign(SHA256.new(serial_data).digest(), '')
+    result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
                                     byteorder = 'little'))
     s_result = pickle.dumps(result)
     return s_result
@@ -178,7 +179,7 @@ def verify(data, key):
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
     verdict = im_key.verify(SHA256.new(unp_data[0]).digest(), sig)
     if verdict:
-        return unp_data[0]
+        return pickle.loads(unp_data[0])
     else:
         return None
 #end def verify()
