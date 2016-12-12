@@ -6,5 +6,6 @@ security functions in order to help address the problem of security tool
 misuse among developers of secure software.
 
 12/12/2016
+
 New work is currently being done on the "new_protocols" branch. Please switch to that
 branch to see recent changes. It will be merged into the master branch soon.
