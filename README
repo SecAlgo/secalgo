@@ -1,6 +1,9 @@
-#SecAlgoProject
+#SecAlgo
 
 This directory currently contains some preliminary work for a project whose
 goal is the creation of of higher-level abstractions for encryption and other
 security functions in order to help address the problem of security tool
 misuse among developers of secure software.
+
+New work is currently being done on the "new_protocols" branch. Please switch to that
+branch to see recent changes. It will be merged into the master branch soon.
