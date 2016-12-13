@@ -16,13 +16,16 @@ identity. k is a randomly generated index for a hash function.
 from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify
 
 class RoleI (process):
-    def setup(SK_I, cert_I, R, g, G):
+    def setup(SK_I, PK_R, cert_I, R, PK_I, g, G, q):
         self.I = self
 
     def run():
         x = gen_nonce()
         g_exp_x = g**x
-        send('signed', g_exp_x, sign((g_exp_x, R), key = SK_I), cert_I)
+        send(g_exp_x, sign((g_exp_x, R), key = SK_I), cert_I)
         await(some(received()))
 
-    def received('signed', 
+    def received():
+        
+def RoleR (process):
+    def setup(SK_R, PK_I, cert_R, PK_R)
