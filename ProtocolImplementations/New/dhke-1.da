@@ -16,16 +16,39 @@ identity. k is a randomly generated index for a hash function.
 from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify
 
 class RoleI (process):
-    def setup(SK_I, PK_R, cert_I, R, PK_I, g, G, q):
+    def setup(SK_I, PK_I, cert_I, R, PK_R, g_I, G_I, q_I):
         self.I = self
 
     def run():
         x = gen_nonce()
-        g_exp_x = g**x
-        send(g_exp_x, sign((g_exp_x, R), key = SK_I), cert_I)
-        await(some(received()))
-
-    def received():
+        g_exp_x = 1
+        send((g_exp_x, sign((g_exp_x, R), key = SK_I), cert_I), to = R)
+        await(some(received((g_exp_y, k, m, cert_R), from_ = R)))
+        output('I - Authenticated Exchange of Key Material Complete')
         
-def RoleR (process):
-    def setup(SK_R, PK_I, cert_R, PK_R)
+class RoleR (process):
+    def setup(SK_R, PK_R, cert_R, PK_I):
+        self.R = self
+
+    def run():
+        await(False)
+
+    def receive(g_exp_x, m, cert_I):
+        #check signature
+        #check certificate
+        send((g_exp_y, k, sign((g_exp_x, g_exp_y, k, I), key = SK_R), cert_R), to = I)
+        output('R - Authenticated Exchange of Key Material Complete')
+
+def main():
+    SK_I, PK_I = genkey('public')
+    SK_R, PK_R = genkey('public')
+    g_I = 'g'
+    G_I = 'G'
+    q_I = 'q'
+    cert_I = 'cert_I'
+    cert_R = 'cert_R'
+    R = new(RoleR, (SK_R, PK_R, cert_R, PK_I))
+    I = new(RoleI, (SK_I, PK_I, cert_I, R, PK_R, g_I, G_I, q_I))
+    start(R)
+    start(I)
+    
