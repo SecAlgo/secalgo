@@ -10,20 +10,21 @@ from Crypto.Hash import SHA256
 from Crypto import Random
 from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
+from Crypto.Util.number import getPrime, isPrime, GCD
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = 256
 SYM_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
-
+DH_DEFAULT_SIZE_BITS = 2048
 
 def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
     return getrandbits(size)
 #end gen_nonce
 
-def genkey(key_type, key_size = None):
+def genkey(key_type, key_size = None, dh_p, dh_g):
     Random.atfork()
     if key_type == 'shared':
         if key_size != None:
@@ -37,6 +38,10 @@ def genkey(key_type, key_size = None):
         else:
             private_key = gen_key_pair()
             return private_key.exportKey(), get_pub_key(private_key).exportKey()
+    elif key_type == 'diffie-hellman' or key_type == 'dh':
+        if key_size == None:
+            key_size = DH_DEFAULT_KEY_SIZE
+        return gen_dh_key(key_size, dh_p, dh_g)
 #end genkey()
 
 def gen_key_pair(key_size = KEY_PAIR_DEFAULT_SIZE_BITS):
@@ -54,6 +59,15 @@ def gen_sym_key(key_size = SYM_KEY_DEFAULT_SIZE_BYTES):
     #    size = (configs['keysize'] // 8)
     return Random.new().read(size)
 #end gen_sym_key
+
+def gen_dh_key(key_size, dh_p, dh_g):
+    if dh_p == None:
+        while not isPrime(dh_p) and GCD(dh_g, : 
+            q = getPrime(key_size - 1)
+            dh_p = (2 * q) + 1
+            dh_g = 2
+        
+        
 
 def encrypt(*plaintext, key):
     Random.atfork()
