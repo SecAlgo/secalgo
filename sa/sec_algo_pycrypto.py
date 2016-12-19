@@ -93,10 +93,10 @@ def gen_dh_key(key_size, dh_mod_size, dh_p, dh_g):
             count2 += 1
             generator_found = True
             print('&&&&&&&&&&:', count2, 1)
-            if (dh_g ** 2) % dh_p == 1:
+            if pow(dh_g, 2, dh_p) == 1:
                 generator_found = False
             print('&&&&&&&&&&:', count2, 2)
-            if generator_found == True and (dh_g ** q) % dh_p == 1:
+            if generator_found == True and pow(dh_g, q, dh_p) == 1:
                 generator_found = False
             print('&&&&&&&&&&:', count2, 3)
             if generator_found == False:
@@ -108,7 +108,7 @@ def gen_dh_key(key_size, dh_mod_size, dh_p, dh_g):
     dh_a = getRandomNBitInteger(key_size)
 
     #generate dh_A = dh_g ** dh_a (mod dh_p) (public key derivation value)
-    dh_A = (dh_g ** dh_a) % dh_p
+    dh_A = pow(dh_g, dh_a, dh_p)
 
     #first value must remain secret, the rest is public
     return (dh_a, dh_A, dh_g, dh_p)
