@@ -62,12 +62,24 @@ def gen_sym_key(key_size = SYM_KEY_DEFAULT_SIZE_BYTES):
 
 def gen_dh_key(key_size, dh_p, dh_g):
     if dh_p == None:
-        while not isPrime(dh_p) and GCD(dh_g, : 
+        dh_p = 0
+        while not isPrime(dh_p): 
             q = getPrime(key_size - 1)
             dh_p = (2 * q) + 1
-            dh_g = 2
-        
-        
+
+    if dh_g == None:
+        dh_g = 2
+        generator_found = False
+        while (generator_found == False) and dh_g < dh_p:
+            generator_found = True
+            if (dh_g ** 2) % dh_p == 1:
+                generator_found = False
+            if generator_found == True and (dh_g ** q) % dh_p == 1:
+                generator_found = False
+            if generator_found == False:
+                dh_g += 1
+
+    
 
 def encrypt(*plaintext, key):
     Random.atfork()
