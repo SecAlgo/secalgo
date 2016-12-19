@@ -10,21 +10,23 @@ from Crypto.Hash import SHA256
 from Crypto import Random
 from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
-from Crypto.Util.number import getPrime, isPrime, GCD
+from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = 256
 SYM_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
-DH_DEFAULT_SIZE_BITS = 2048
+DH_DEFAULT_MOD_SIZE_BITS = 2048
+DH_DEFAULT_EXP_SIZE_BITS = 512
 
 def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
     return getrandbits(size)
 #end gen_nonce
 
-def genkey(key_type, key_size = None, dh_p, dh_g):
+def genkey(key_type, key_size = None,
+           dh_mod_size = None, dh_p = None, dh_g = None):
     Random.atfork()
     if key_type == 'shared':
         if key_size != None:
@@ -40,8 +42,8 @@ def genkey(key_type, key_size = None, dh_p, dh_g):
             return private_key.exportKey(), get_pub_key(private_key).exportKey()
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
-            key_size = DH_DEFAULT_KEY_SIZE
-        return gen_dh_key(key_size, dh_p, dh_g)
+            key_size = DH_DEFAULT_EXP_SIZE_BITS
+        return gen_dh_key(key_size, dh_mod_size, dh_p, dh_g)
 #end genkey()
 
 def gen_key_pair(key_size = KEY_PAIR_DEFAULT_SIZE_BITS):
@@ -60,17 +62,26 @@ def gen_sym_key(key_size = SYM_KEY_DEFAULT_SIZE_BYTES):
     return Random.new().read(size)
 #end gen_sym_key
 
-def gen_dh_key(key_size, dh_p, dh_g):
+def gen_dh_key(key_size, dh_mod_size, dh_p, dh_g):
+    #check parameters, assign defaults if necessary
+    if (dh_mod_size == None) and (dh_p == None):
+        dh_mod_size = DH_DEFAULT_MOD_SIZE_BITS
+    elif (dh_mod_size == None) and (dh_p != None):
+        dh_mod_size = size(dh_p)
+
+    print('###########:', dh_mod_size, flush = True)
+    #generate new safe prime to define finite field
     if dh_p == None:
         dh_p = 0
         while not isPrime(dh_p): 
-            q = getPrime(key_size - 1)
+            q = getPrime(dh_mod_size - 1)
             dh_p = (2 * q) + 1
 
+    #define new generator for the finite field
     if dh_g == None:
         dh_g = 2
         generator_found = False
-        while (generator_found == False) and dh_g < dh_p:
+        while (generator_found == False) and (dh_g < dh_p):
             generator_found = True
             if (dh_g ** 2) % dh_p == 1:
                 generator_found = False
@@ -79,7 +90,15 @@ def gen_dh_key(key_size, dh_p, dh_g):
             if generator_found == False:
                 dh_g += 1
 
-    
+    #generate new exponent (secret key derivation value)
+    dh_a = getRandomNBitInteger(key_size)
+
+    #generate dh_A = dh_g ** dh_a (mod dh_p) (public key derivation value)
+    dh_A = (dh_g ** dh_a) % dh_p
+
+    #first value must remain secret, the rest is public
+    return (dh_a, dh_A, dh_g, dh_p)
+#end gen_dh_key()
 
 def encrypt(*plaintext, key):
     Random.atfork()
