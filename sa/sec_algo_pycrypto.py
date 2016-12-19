@@ -69,26 +69,40 @@ def gen_dh_key(key_size, dh_mod_size, dh_p, dh_g):
     elif (dh_mod_size == None) and (dh_p != None):
         dh_mod_size = size(dh_p)
 
-    print('###########:', dh_mod_size, flush = True)
+    print('###########:', key_size, dh_mod_size, flush = True)
     #generate new safe prime to define finite field
+    #This is pretty efficient
     if dh_p == None:
         dh_p = 0
-        while not isPrime(dh_p): 
+        count = 0
+        while not isPrime(dh_p):
+            count += 1
             q = getPrime(dh_mod_size - 1)
             dh_p = (2 * q) + 1
+        print('Fresh q:', count, q, flush = True)
+        print('Fresh p:', count, dh_p, flush = True) 
 
     #define new generator for the finite field
+    #This is not, even for relatively small values of dh_mod_size
+    #This is unusably slow: at dh_g ** q (mod dh_p)
     if dh_g == None:
         dh_g = 2
         generator_found = False
+        count2 = 0
         while (generator_found == False) and (dh_g < dh_p):
+            count2 += 1
             generator_found = True
+            print('&&&&&&&&&&:', count2, 1)
             if (dh_g ** 2) % dh_p == 1:
                 generator_found = False
+            print('&&&&&&&&&&:', count2, 2)
             if generator_found == True and (dh_g ** q) % dh_p == 1:
                 generator_found = False
+            print('&&&&&&&&&&:', count2, 3)
             if generator_found == False:
                 dh_g += 1
+            print('&&&&&&&&&&:', count2, 4)
+        print('Fresh g:', count2, dh_g)
 
     #generate new exponent (secret key derivation value)
     dh_a = getRandomNBitInteger(key_size)
