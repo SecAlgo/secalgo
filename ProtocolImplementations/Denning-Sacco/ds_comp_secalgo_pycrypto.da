@@ -1,25 +1,12 @@
 import sys
 import random
-from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
-from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key, gen_sym_key
-
-
-#Misc Global Methods
-
-#I am afraid I could not figure out how to implement a true once version of
-#needed that would work in a distributed setting.
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify, genkey
 
 def needed():
     if random.random() < 0.25:
         return True
     else:
         return False
-    
-def print_public_keys(key_dict):
-    for k, v in key_dict.items():
-        print(k)
-        print(v.exportKey())
-#End Misc Global Methods
 
 class pk_server (process):
     def setup():
@@ -28,8 +15,6 @@ class pk_server (process):
     def run():
         output('pks started')
         await(False)
-        #elif timeout(5):
-        #print_public_keys(self.pk)
 
     def receive(msg=('set_pk', p, k, cid), from_ = client):
         pk[p] = k
@@ -39,106 +24,62 @@ class pk_server (process):
         await(p in self.pk.keys())
         send(('re_get_pk', self.pk[p], cid), to = client)
 
-"""
-Changes:
-1. I had to move the call to set_pk() out of setup() and into run() because
-set_pk() contains an await statement and await statements are not permitted
-within the setup() method.
-
-2. The await statements in set_pk() and get_pk() did nto work when the from_
-statement was included (that is, they never evaluated to true and all the processes
-would hang. So, I remove the from_ from each.
-
-3. I had to change the definition of get_pk inside the pk_server class in order
-to prevent cases in which a process would request the public key for another
-process that had not yet registered its key.
-
-"""
-class P (process):
-    def setup(s, pk_p, testing, test_i, test_r):
-        self.skA = gen_key_pair()
+class DS (process):
+    def setup(s, pk_p):
+        self.skI, self.pkI = genkey('public')
         self.counter = 0
-        #self.cid_gen = self.gen_cid()
-        #set_pk(self.id, gen_pk(skA))
-
+        
     def run():
         output('started')
-        set_pk(self.id, get_pub_key(self.skA))
-        if needed() and not testing:
-            b = random.choice(tuple(s))
-            s = ds(b)
+        set_pk(self.id, self.pkA)
+        if needed():
+            r = random.choice(tuple(s))
+            s = ds(r)
             output(s)
-        if testing and test_i:      
-           test_s = ds(test_r.pop())
-           output(test_s)
         await(False)
 
     def gen_cid():
         self.counter += 1
         return (self.id, self.counter)
 
-    #def gen_cid():
-    #    counter = 0
-    #    while True:
-    #        yield (self.id, counter)
-    #        counter = counter + 1
-
     def set_pk(p, k):
-        #cid = next(self.cid_gen)
         cid = self.gen_cid()
         send(('set_pk', p, k, cid), to = self.pk_p)
-        await(some(received(('re_set_pk', _cid))))
-        #await(some(received(('re_set_pk', _cid), from_ = self.pk_p)))
+        #await(some(received(('re_set_pk', _cid))))
+        await(some(received(('re_set_pk', _cid), from_ = self.pk_p)))
 
     def get_pk(p):
-        #cid = next(self.cid_gen)
         cid = self.gen_cid()
         send(('get_pk', p, cid), to = self.pk_p)
-        await(some(received(('re_get_pk', k, _cid))))
-        #await(some(received(('re_get_pk', k, _cid), from_ = self.pk_p)))
+        #await(some(received(('re_get_pk', k, _cid))))
+        await(some(received(('re_get_pk', k, _cid), from_ = self.pk_p)))
         return k
 
-    def ds(b):
-        output('DS Initiated from', self.id, 'to', b)
-        k = gen_sym_key()        
-        pkB = get_pk(b)
-        output('Sign Key:', skA)
-        send(('ds-key', encrypt(sign(k, skA), pkB)), to = b)
-        await(some(received(('msg', m), from_= b)))
-        return decrypt(m, k)
+    def ds(r):
+        output('DS Initiated from', self.id, 'to', r)
+        k = genkey('shared')
+        pkR = get_pk(r)
+        send(('ds-key', encrypt(sign(k, skI), key = pkR)), to = r)
+        await(some(received(('msg', m), from_= r)))
+        return decrypt(m, key = k)
         
-    def receive(msg=('ds-key', m), from_ = b):
-        output('Retrieving Key for:', b)
-        pkB = get_pk(b)
-        #output('Check Key:', pkB, '\n', pkB.exportKey(), '\n', 
-        #      pkB.keydata[0], '\n', pkB.keydata[1])
-        k = verify(decrypt(m, skA), pkB)
+    def receive(msg=('ds-key', m), from_ = i):
+        output('Retrieving Key for:', i)
+        pkI = get_pk(i)
+        k = verify(decrypt(m, key = skA), pkI)
         if k is not None:
-            s = "secret"
-            send(('msg', encrypt(s, k)), to = b)
+            s = 'secret'
+            send(('msg', encrypt(s, key = k)), to = i)
         else:
-            output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
+            output('VERIFICATION FAILED for DS from:', i, 'to:', self.id)
 
 def main():
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    test_run = True if (len(sys.argv) > 2 and sys.argv[2] == 'test') else False
-    print(test_run)
-    sys.stdout.flush()
     pk_p = new(pk_server)
     setup(pk_p, ())
-    if test_run:
-        i1 = new(P, num = 1)
-        i2 = new(P, num = 1)
-        r = new(P, num = 1)
-        ps = i1 | i2 | r
-        setup(i1, (i2 | r, pk_p, True, True, r))
-        setup(i2, (i1 | r, pk_p, True, True, r))
-        setup(r, (i1 | i2, pk_p, True, False, r))
-        start(pk_p)
-        start(ps)
-    else:
-        ps = new(P, num = n)
-        for p in ps:
-            setup(p, ((ps - {p}), pk_p, False, False, None))
-        start(pk_p)
-        start(ps)
+    ps = new(DS, num = n)
+    for p in ps:
+        setup(p, ((ps - {p}), pk_p))
+    start(pk_p)
+    start(ps)
+            
