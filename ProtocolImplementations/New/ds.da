@@ -1,6 +1,18 @@
 """
-(1) A -> B: enc(sign(k, skA), pkB)
-(2) B -> A: enc(s, k)
+Simplified Denning-Sacco Key Exchange Protocol
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981. p. 533-536.
+
+Immediate Source:
+Bruno Blanchett, "Security Protocol Verification: Symbolic and Computational 
+Models", ETAPS Invited Talk, 2012. 
+
+Protocol Diagram:
+  (1) A -> B: enc(sign(k, skA), pkB)
+  (2) B -> A: enc(s, k)
 """
 from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify, genkey
 
@@ -10,7 +22,7 @@ class RoleI (process):
 
     def run():
         k = genkey('shared')
-        send(('encrypt_sign', encrypt(sign(k, key = skI), key = pkR)), to = R)
+        send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
         await(some(received(m, from_ = R)))
         s = decrypt(m, k)
         output('DECRYPTED MESSAGE:', s)
@@ -23,8 +35,8 @@ class RoleR (process):
         await(False)
 
     def receive(msg=('encrypt_sign', m), from_ = I):
-        k = verify(decrypt(m, key = skR), key = pkI)
-        send(encrypt(s, key = k), to = I)
+        k = verify(decrypt(m, skR), pkI)
+        send(encrypt(s, k), to = I)
 
 def main():
     skI, pkI = genkey('public')

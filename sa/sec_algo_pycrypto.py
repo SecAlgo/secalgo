@@ -114,10 +114,8 @@ def gen_dh_key(key_size, dh_mod_size, dh_p, dh_g):
     return (dh_a, dh_A, dh_g, dh_p)
 #end gen_dh_key()
 
-def encrypt(*plaintext, key):
+def encrypt(plaintext, key):
     Random.atfork()
-    if len(plaintext) == 1:
-        plaintext = plaintext[0]
     #configs = get_configs()
     #may want to consider a segment_size configuration option for CFB mode
     #print('KEYKEYKEY:', key)

@@ -1,15 +1,25 @@
 """
-Yahalom key distribution and mutual authentication protocol using a trusted key
-server and symmetric keys.
+Yahalom Key Distribution and Mutual Authentication Protocol,
+    using a trusted key server and symmetric keys.
+Written by Christopher Kane
 
-I knows: I, R, S, K_IS
-R knows: R, S, K_RS
-S knows: S, I, R, K_IS, K_RS
+Original Source:
+Micahel Burrows, Martin Abadi, and Roger Needham, "A Logic of Authentication",
+SRC Research Report 39, Feb., 1990 (revised). (Authors learned of Yahalom
+protocol through personal correspondence from Yahalom).
 
-1. I -> R : I, N_I
-2. R -> S : R, enc((I, N_I, N_R), K_RS)
-3. S -> I : enc((R, K_IR, N_I, N_R), K_IS), enc((I, K_IR), K_RS)
-4. I -> R : enc((I, K_IR), K_RS), enc(N_R, K_IR)
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/yahalom.html
+
+Protocol Diagram:
+    -I knows: I, R, S, K_IS
+    -R knows: R, S, K_RS
+    -S knows: S, I, R, K_IS, K_RS
+  (1) I -> R : I, N_I
+  (2) R -> S : R, enc((I, N_I, N_R), K_RS)
+  (3) S -> I : enc((R, K_IR, N_I, N_R), K_IS), enc((I, K_IR), K_RS)
+  (4) I -> R : enc((I, K_IR), K_RS), enc(N_R, K_IR)
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
@@ -23,11 +33,11 @@ class RoleS (process):
 
     def receive(msg=(_R, (_I, N_I, N_R), _R), from_ = self):
         K_IR = genkey('shared')
-        send(('encSI', encrypt(R, K_IR, N_I, N_R, key = K_IS),
-              encrypt(I, K_IR, key = K_RS)), to = I)
+        send(('encSI', encrypt((R, K_IR, N_I, N_R), K_IS),
+              encrypt((I, K_IR), K_RS)), to = I)
         
     def receive(msg=('encRS', _R, m), from_ = R):
-        send((R, decrypt(m, key = K_RS), R), to = self)
+        send((R, decrypt(m, K_RS), R), to = self)
 
 class RoleI (process):
     def setup(R, S, K_IS):
@@ -39,7 +49,7 @@ class RoleI (process):
         send((I, N_I), to = R)
         await(some(received(((_R, K, _N_I, N_R), encSR, _S), from_ = self)))
         self.K_IR = K
-        send(('encSR', encSR, ('encIR', encrypt(N_R, key = K_IR))), to = R)
+        send(('encSR', encSR, ('encIR', encrypt(N_R, K_IR))), to = R)
         output('I - Key Exchange Complete')
 
     def receive(msg=('encSI', m, encSR), from_ = S):
@@ -57,14 +67,14 @@ class RoleR (process):
     def receive(msg=(I, N_I), from_ = I):
         self.I1 = I
         N_R = gen_nonce()
-        send(('encRS', R, encrypt(I, N_I, N_R, key = K_RS)), to = S)
+        send(('encRS', R, encrypt((I, N_I, N_R), K_RS)), to = S)
         await(some(received(((_I, K), _S), from_ = self)))
         self.K_IR = K
         await(some(received(((_N_R), _I), from_ = self)))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encSR', m, encIR), from_ = I):
-        send((decrypt(m, key = K_RS), S), to = self)
+        send((decrypt(m, K_RS), S), to = self)
         send(encIR, to = self)
 
     def receive(msg=('encIR', m), from_ = self):

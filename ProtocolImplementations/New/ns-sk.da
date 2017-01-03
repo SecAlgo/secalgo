@@ -1,4 +1,17 @@
 """
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
+Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
+pp. 993-999.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/nssk.html
+
+Protocol Diagram:
   (1) I -> S : (I, R, N_I)
   (2) S -> I : enc((N_I, K_IR, R, enc((K_IR, I), K_RS)), K_IS)
   (3) I -> R : enc((K_IR, I), K_RS)
@@ -16,8 +29,8 @@ class RoleS (process):
 
     def receive(msg=(I, R, N_I), from_ = I):
         K_IR = genkey('shared')
-        send(('encS', encrypt(N_I, K_IR, R,
-                ('encS', encrypt(K_IR, I, key = K_RS)), key = K_IS)), to = I)
+        send(('encS', encrypt((N_I, K_IR, R,
+                ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
 
 class RoleI (process):
     def setup(S, K_IS, R):
@@ -31,14 +44,14 @@ class RoleI (process):
         K_IR = K
         send(m, to = R)
         await(some(received(((N_R), _R), from_ = self)))
-        send(('encI', encrypt(N_R - 1, key = K_IR)), to = R)
+        send(('encI', encrypt(N_R - 1, K_IR)), to = R)
         output('I - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = S):
-        send((decrypt(m, key = K_IS), S), to = self)
+        send((decrypt(m, K_IS), S), to = self)
         
     def receive(msg=('encR', m), from_ = R):
-        send((decrypt(m, key = K_IR), R), to = self)
+        send((decrypt(m, K_IR), R), to = self)
 
 class RoleR (process):
     def setup(S, K_RS):
@@ -51,16 +64,16 @@ class RoleR (process):
     def receive(msg=((K, I), _S), from_ = self):
         K_IR = K
         N_R = gen_nonce()
-        send(('encR', encrypt(N_R, key = K_IR)), to = I)
+        send(('encR', encrypt(N_R, K_IR)), to = I)
         await(some(received(((N_R1), _I), from_ = self),
                    has = N_R1 == N_R - 1))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = I):
-        send((decrypt(m, key = K_RS), S), to = self)
+        send((decrypt(m, K_RS), S), to = self)
 
     def receive(msg=('encI', m), from_ = I):
-        send((decrypt(m, key = K_IR), I), to = self)
+        send((decrypt(m, K_IR), I), to = self)
 
 def main():
     K_IS = genkey('shared')
