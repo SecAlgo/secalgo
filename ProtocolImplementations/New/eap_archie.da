@@ -1,12 +1,18 @@
 """
-EAP Archie Protocol for mutual authentication and session establishment through
-key derivation.
+EAP Archie Mutual Authentication and Session Establishment Protocol 
+    through key derivation.
+Written by Christopher Kane
+
+Original Source:
+Jesse Walker and Richard Housley, "The EAP Archie Protocol", IETF Draft, Dec.,
+2003, pp. 1-38.
 https://tools.ietf.org/html/draft-jwalker-eap-archie-01.txt
 
-1. A -> P : S, SessionID
-2. P -> S : SessionID, P, enc(nonceP, KEK), Binding, MAC1
-3. A -> P : SessionID, enc(nonceAS, KEK), Binding, MAC2
-4. P -> S : SessionID, MAC3
+Protocol Diagram:
+  (1) A -> P : S, SessionID
+  (2) P -> A : SessionID, P, enc(nonceP, KEK), Binding, MAC1
+  (3) A -> P : SessionID, enc(nonceAS, KEK), Binding, MAC2
+  (4) P -> A : SessionID, MAC3
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
@@ -40,9 +46,8 @@ class RoleA (process):
         await(some(received(('response', session_id, P, nonce_P,
                               binding, MAC1), from_ = P)))
         AuthNonce  = gen_nonce(256)
-        nonce_A = encrypt(AuthNonce, key = KEK)
-        MAC2 = aes_cbc_mac_96(A, nonce_P, session_id, nonce_A, binding,
-                              key = KCK)
+        nonce_A = encrypt(AuthNonce, KEK)
+        MAC2 = aes_cbc_mac_96((A, nonce_P, session_id, nonce_A, binding), KCK)
         send(('confirm', session_id, nonce_A, binding, MAC2), to = P)
 
         #must check MAC
@@ -60,16 +65,16 @@ class RoleP (process):
 
     def receive(msg=('start', A, session_id), from_ = A):
         PeerNonce = gen_nonce(256)
-        nonce_P = encrypt(PeerNonce, key = KEK)
+        nonce_P = encrypt(PeerNonce, KEK)
         binding = 'uh'
-        MAC1 = aes_cbc_mac_96(A, session_id, P, nonce_P, binding, key = KCK)
+        MAC1 = aes_cbc_mac_96((A, session_id, P, nonce_P, binding), KCK)
         send(('response', session_id, P, nonce_P,
               binding, MAC1), to = A)
 
         #need to check the MAC
         await(some(received(('confirm', session_id, c_nonce_A, binding, MAC2),
                             from_ = A)))
-        MAC3 = aes_cbc_mac_96(session_id, key = KCK)
+        MAC3 = aes_cbc_mac_96((session_id,), KCK)
         send(('finish', session_id, MAC3), to = A)
         output('P - Archie Protocol Complete')
 
@@ -82,7 +87,7 @@ def main():
     start(P)
     start(A)
 
-def aes_cbc_mac_96(*values, key):
+def aes_cbc_mac_96(values, key):
     import pickle
     from Crypto.Cipher import AES
     input = b''

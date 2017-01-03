@@ -13,81 +13,81 @@ Security Protocol Open Repository
 http://www.lsv.ens-cachan.fr/Software/spore/yahalom.html
 
 Protocol Diagram:
-    -I knows: I, R, S, K_IS
-    -R knows: R, S, K_RS
-    -S knows: S, I, R, K_IS, K_RS
-  (1) I -> R : I, N_I
-  (2) R -> S : R, enc((I, N_I, N_R), K_RS)
-  (3) S -> I : enc((R, K_IR, N_I, N_R), K_IS), enc((I, K_IR), K_RS)
-  (4) I -> R : enc((I, K_IR), K_RS), enc(N_R, K_IR)
+    -A knows: A, B, S, K_AS
+    -R knows: B, S, K_BS
+    -S knows: S, A, B, K_AS, K_BS
+  (1) A -> B : A, N_A
+  (2) B -> S : B, enc((A, N_A, N_B), K_BS)
+  (3) S -> A : enc((B, K_AB, N_A, N_B), K_AS), enc((A, K_AR), K_BS)
+  (4) A -> B : enc((A, K_AR), K_BS), enc(N_B, K_AB)
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
 
 class RoleS (process):
-    def setup(I, R, K_IS, K_RS):
+    def setup(A, B, K_AS, K_BS):
         self.S = self
         
     def run():
         await(False)
 
-    def receive(msg=(_R, (_I, N_I, N_R), _R), from_ = self):
-        K_IR = genkey('shared')
-        send(('encSI', encrypt((R, K_IR, N_I, N_R), K_IS),
-              encrypt((I, K_IR), K_RS)), to = I)
+    def receive(msg=(_B, (_A, N_A, N_B), _B), from_ = self):
+        K_AB = genkey('shared')
+        send(('encSA', encrypt((B, K_AB, N_A, N_B), K_AS),
+              encrypt((A, K_AB), K_BS)), to = A)
         
-    def receive(msg=('encRS', _R, m), from_ = R):
-        send((R, decrypt(m, K_RS), R), to = self)
+    def receive(msg=('encBS', _B, m), from_ = B):
+        send((B, decrypt(m, K_BS), B), to = self)
 
-class RoleI (process):
-    def setup(R, S, K_IS):
-        self.I = self
-        self.K_IR = None
+class RoleA (process):
+    def setup(B, S, K_AS):
+        self.A = self
+        self.K_AB = None
 
     def run():
-        N_I = gen_nonce()
-        send((I, N_I), to = R)
-        await(some(received(((_R, K, _N_I, N_R), encSR, _S), from_ = self)))
-        self.K_IR = K
-        send(('encSR', encSR, ('encIR', encrypt(N_R, K_IR))), to = R)
-        output('I - Key Exchange Complete')
+        N_A = gen_nonce()
+        send((A, N_A), to = B)
+        await(some(received(((_B, K, _N_A, N_B), encSB, _S), from_ = self)))
+        self.K_AB = K
+        send(('encSB', encSB, ('encAB', encrypt(N_B, K_AB))), to = B)
+        output('A - Key Exchange Complete')
 
-    def receive(msg=('encSI', m, encSR), from_ = S):
-        send(((decrypt(m, key = K_IS), encSR, S)), to = self)
+    def receive(msg=('encSA', m, encSB), from_ = S):
+        send(((decrypt(m, key = K_AS), encSB, S)), to = self)
 
-class RoleR (process):
-    def setup(S, K_RS):
-        self.R = self
-        self.I1 = None
-        self.K_IR = None
+class RoleB (process):
+    def setup(S, K_BS):
+        self.B = self
+        self.A1 = None
+        self.K_AB = None
 
     def run():
         await(False)
 
-    def receive(msg=(I, N_I), from_ = I):
-        self.I1 = I
-        N_R = gen_nonce()
-        send(('encRS', R, encrypt((I, N_I, N_R), K_RS)), to = S)
-        await(some(received(((_I, K), _S), from_ = self)))
-        self.K_IR = K
-        await(some(received(((_N_R), _I), from_ = self)))
-        output('R - Key Exchange Complete')
+    def receive(msg=(A, N_A), from_ = A):
+        self.A1 = A
+        N_B = gen_nonce()
+        send(('encBS', B, encrypt((A, N_A, N_B), K_BS)), to = S)
+        await(some(received(((_A, K), _S), from_ = self)))
+        self.K_AB = K
+        await(some(received(((_N_B), _A), from_ = self)))
+        output('B - Key Exchange Complete')
 
-    def receive(msg=('encSR', m, encIR), from_ = I):
-        send((decrypt(m, K_RS), S), to = self)
-        send(encIR, to = self)
+    def receive(msg=('encSB', m, encAB), from_ = A):
+        send((decrypt(m, K_BS), S), to = self)
+        send(encAB, to = self)
 
-    def receive(msg=('encIR', m), from_ = self):
-        send((decrypt(m, key = K_IR), I1), to = self)
+    def receive(msg=('encAB', m), from_ = self):
+        send((decrypt(m, key = K_AB), A1), to = self)
 
 def main():
-    K_IS = genkey('shared')
-    K_RS = genkey('shared')
-    R = new(RoleR)
-    I = new(RoleI)
-    S = new(RoleS, (I, R, K_IS, K_RS))
-    setup(I, (R, S, K_IS))
-    setup(R, (S, K_RS))
+    K_AS = genkey('shared')
+    K_BS = genkey('shared')
+    B = new(RoleB)
+    A = new(RoleA)
+    S = new(RoleS, (A, B, K_AS, K_BS))
+    setup(A, (B, S, K_AS))
+    setup(B, (S, K_BS))
     start(S)
-    start(R)
-    start(I)
+    start(B)
+    start(A)

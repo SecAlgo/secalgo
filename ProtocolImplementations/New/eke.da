@@ -1,65 +1,69 @@
 """
-Encrypted Key Exchange: Password-Based Protocols Secure Against Dictionary
-Attacks, Bellovin and Merritt (1992)
+Encrypted Key Exchange Protocol
+Written by Christopher Kane
 
-1. I -> R : I, enc(PK_I, K_PW)
-2. R -> I : enc(enc(K_IR, PK_I), K_PW)
-3. I -> R : enc(C_I, K_IR)
-4. R -> I : enc((C_I, C_R), K_IR)
-5. I -> R : enc(C_R, K_IR)
+Original Source:
+S. M. Bellovin and M. Merritt, "Encrypted Key Exchange: Password-Based 
+Protocols Secure Against Dictionary Attacks", IEEE S&P, May, 1992, pp. 72-84.
+
+Protocol Diagram:
+  (1) A -> B : A, enc(PK_A, K_PW)
+  (2) B -> A : enc(enc(K_AB, PK_A), K_PW)
+  (3) A -> B : enc(C_A, K_AB)
+  (4) B -> A : enc((C_A, C_B), K_AB)
+  (5) A -> B : enc(C_B, K_AB)
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
 
-class RoleI (process):
-    def setup(R, K_PW):
-        self.I = self
-        self.K_IR = None
-        self.SK_I = None
+class RoleA (process):
+    def setup(B, K_PW):
+        self.A = self
+        self.K_AB = None
+        self.SK_A = None
         
     def run():
-        SK_I, PK_I = genkey('public')
-        send(('msg1', I, encrypt(PK_I, key = K_PW)), to = R)
-        await(some(received(((K), _R), from_ = self)))
-        K_IR = K
-        C_I = gen_nonce()
-        send(('encK_IR', encrypt(C_I, key = K_IR)), to = R)
-        await(some(received(((_C_I, C_R), _R), from_ = self)))
-        send(('encK_IR', encrypt(C_R, key = K_IR)), to = R)
-        output('I - Key Exchange Complete')
+        SK_A, PK_A = genkey('public')
+        send(('msg1', A, encrypt(PK_A, K_PW)), to = B)
+        await(some(received(((K), _B), from_ = self)))
+        K_AB = K
+        C_A = gen_nonce()
+        send(('encK_AB', encrypt(C_A, K_AB)), to = B)
+        await(some(received(((_C_A, C_B), _B), from_ = self)))
+        send(('encK_AB', encrypt(C_B, K_AB)), to = B)
+        output('A - Key Exchange Complete')
 
-    def receive(msg=('msg2', m), from_ = R):
-        temp = decrypt(m, key = K_PW)
-        send((decrypt(temp, key = SK_I), R), to = self)
+    def receive(msg=('msg2', m), from_ = B):
+        temp = decrypt(m, K_PW)
+        send((decrypt(temp, SK_A), B), to = self)
 
-    def receive(msg=('encK_IR', m), from_ = R):
-        send((decrypt(m, key = K_IR), R), to = self)
+    def receive(msg=('encK_AB', m), from_ = B):
+        send((decrypt(m, K_AB), B), to = self)
 
-class RoleR (process):
+class RoleB (process):
     def setup(K_PW):
-        self.R = self
-        self.K_IR = None
+        self.B = self
+        self.K_AB = None
 
     def run():
         await(False)
 
-    def receive(msg=('msg1', I, m), from_ = I):
-        PK_I = decrypt(m, key = K_PW)
-        K_IR = genkey('shared')
-        send(('msg2', encrypt(encrypt(K_IR, key = PK_I), key = K_PW)),
-             to = I)
-        await(some(received(((C_I), _I), from_ = self)))
-        C_R = gen_nonce()
-        send(('encK_IR', encrypt(C_I, C_R, key = K_IR)), to = I)
-        await(some(received(((_C_R), _I), from_ = self)))
-        output('R - Key Exchange Complete')
+    def receive(msg=('msg1', A, m), from_ = A):
+        PK_A = decrypt(m, K_PW)
+        K_AB = genkey('shared')
+        send(('msg2', encrypt(encrypt(K_AB, PK_A), K_PW)), to = A)
+        await(some(received(((C_A), _A), from_ = self)))
+        C_B = gen_nonce()
+        send(('encK_AB', encrypt((C_A, C_B), K_AB)), to = A)
+        await(some(received(((_C_B), _A), from_ = self)))
+        output('B - Key Exchange Complete')
 
-    def receive(msg=('encK_IR', m), from_ = I):
-        send((decrypt(m, key = K_IR), I), to = self)
+    def receive(msg=('encK_AB', m), from_ = A):
+        send((decrypt(m, K_AB), A), to = self)
 
 def main():
     K_PW = genkey('shared')
-    R = new(RoleR, (K_PW,))
-    I = new(RoleI, (R, K_PW))
-    start(R)
-    start(I)
+    B = new(RoleB, (K_PW,))
+    A = new(RoleA, (B, K_PW))
+    start(B)
+    start(A)
