@@ -5,6 +5,7 @@ Models available for Scyther, and in Gupta and Shamtikov 2005.
 
 1. I -> R : g^x, sign((g^x, R), SK_I), cert_I
 2. R -> I : g^y, k, sign(g^x, g^y, k, I), cert_R
+3. I -> R : BitGen(H_k(g^xy))
 
 g is a generator for a group G of prime order q, all decided in advance. In
 Shoup, a "description" of G and g are included in each participant's public
@@ -14,20 +15,23 @@ Certification Authority linking each participant's public key to their
 identity. k is a randomly generated index for a hash function.
 """
 from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify1 as verify
-from Crypto.Random.random import randint
+
 class RoleI (process):
     def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):
         self.I = self
 
     def run():
         dh_x, dh_X, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
-        send((dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
-        await(some(received((dh_Y, k, m, cert_R), from_ = R)))
+        send(('msg1', dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
+        await(some(received(('msg2', dh_Y, k, m, cert_R), from_ = R)))
         if verify((R, PK_R), cert_R, pk_sig_T) != None:
             if verify((dh_X, dh_Y, k, I), m, PK_R[0]) != None:
+                #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
+                #Hash function whose index is k
+                from Crypto.Hash import SHA256
+                K_IR = SHA256.new(pow(dh_Y, dh_x, PK_I[2])).digest()
+                send(('msg3', BitGen(K_IR)), to = R)
                 output('I - Authenticated Exchange of Key Material Complete')
-                #Key Derived as H_k(dh_X * dh_Y), where H_k is the Hash
-                #function whose index is k
         
 class RoleR (process):
     def setup(SK_R, PK_R, PK_I, cert_R, pk_sig_T):
@@ -36,15 +40,21 @@ class RoleR (process):
     def run():
         await(False)
 
-    def receive(msg=(dh_X, m, cert_I), from_ = I):
+    def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
         dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_R[2], dh_g = PK_R[1])
         if verify((I, PK_I), cert_I, pk_sig_T) != None:
             if verify((dh_X, R), m, PK_I[0]) != None:
-                k = randint(1, 100)
+                from Crypto.Random.random import randint
+                k = randint(1, 100) #k supposed to be bitstring
                 send((dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
-                output('R - Authenticated Exchange of Key Material Complete')
-                #Key Derived as H_k(dh_X * dh_Y), where H_k is the Hash
-                #function whose index is k
+                #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
+                #Hash function whose index is k
+                from Crypto.Hash import SHA256
+                K_IR = SHA256.new(pow(dh_X, dh_y, PK_I[2])).digest()
+                await(some(received(('msg3', m2), from_ = I)))
+                if BitGen(K_IR) == m2:
+                    output('R - Authenticated Exchange of Key Material Complete')
+
 
 def main():
     sk_sig_I, pk_sig_I = genkey('public')
@@ -64,3 +74,18 @@ def main():
     setup(I, (SK_I, PK_I, R, PK_R, cert_I, pk_sig_T))
     start(R)
     start(I)
+
+
+
+
+
+    #print('SETUP FOR R:\n',SK_R, '\n', PK_R, '\n', PK_I, '\n',
+    #      cert_R, '\n', pk_sig_T, '\n', flush = True)
+    #print('SETUP FOR R:\n', SK_I, '\n', PK_I, '\n', R, '\n',
+    #      PK_R, '\n', cert_I, '\n', pk_sig_T, '\n', flush = True)
+
+def BitGen(x):
+    import random
+    random.seed(x)
+    return random.getrandbits(256)
+    
