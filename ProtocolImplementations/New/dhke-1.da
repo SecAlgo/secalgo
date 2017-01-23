@@ -13,8 +13,8 @@ its setup. The certificates, cert_I and cert_R, are certificates granted by a
 Certification Authority linking each participant's public key to their
 identity. k is a randomly generated index for a hash function.
 """
-from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify
-
+from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify1 as verify
+from Crypto.Random.random import randint
 class RoleI (process):
     def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):
         self.I = self
@@ -23,7 +23,11 @@ class RoleI (process):
         dh_x, dh_X, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
         send((dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
         await(some(received((dh_Y, k, m, cert_R), from_ = R)))
-        output('I - Authenticated Exchange of Key Material Complete')
+        if verify((R, PK_R), cert_R, pk_sig_T) != None:
+            if verify((dh_X, dh_Y, k, I), m, PK_R[0]) != None:
+                output('I - Authenticated Exchange of Key Material Complete')
+                #Key Derived as H_k(dh_X * dh_Y), where H_k is the Hash
+                #function whose index is k
         
 class RoleR (process):
     def setup(SK_R, PK_R, PK_I, cert_R, pk_sig_T):
@@ -32,31 +36,31 @@ class RoleR (process):
     def run():
         await(False)
 
-    def receive(msg=(dh_X, m, cert_I)):
+    def receive(msg=(dh_X, m, cert_I), from_ = I):
         dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_R[2], dh_g = PK_R[1])
-        #check signature
-        #check certificate
-        send((dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
-        output('R - Authenticated Exchange of Key Material Complete')
+        if verify((I, PK_I), cert_I, pk_sig_T) != None:
+            if verify((dh_X, R), m, PK_I[0]) != None:
+                k = randint(1, 100)
+                send((dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
+                output('R - Authenticated Exchange of Key Material Complete')
+                #Key Derived as H_k(dh_X * dh_Y), where H_k is the Hash
+                #function whose index is k
 
 def main():
     sk_sig_I, pk_sig_I = genkey('public')
     sk_sig_R, pk_sig_R = genkey('public')
     sk_sig_T, pk_sig_T = genkey('public')
-    dh_grp_I = genkey('dh')
-    dh_grp_R = genkey('dh')
+    dh_grp_I = genkey('dh', 16, dh_group = 14)
+    dh_grp_R = genkey('dh', 16, dh_group = 14)
     SK_I = sk_sig_I
     SK_R = sk_sig_R
     PK_I = (pk_sig_I, dh_grp_I[2], dh_grp_I[3])
     PK_R = (pk_sig_R, dh_grp_R[2], dh_grp_R[3])
     R = new(RoleR)
     I = new(RoleI)
-    cert_I = certify(I, PK_I, sk_sig_T)
-    cert_R = certify(R, PK_R, sk_sig_T)
+    cert_I = sign((I, PK_I), sk_sig_T)
+    cert_R = sign((R, PK_R), sk_sig_T)
     setup(R, (SK_R, PK_R, PK_I, cert_R, pk_sig_T))
     setup(I, (SK_I, PK_I, R, PK_R, cert_I, pk_sig_T))
     start(R)
     start(I)
-
-def certify(id_, pk, sk_T):
-    return sign((id_, pk), sk_T)

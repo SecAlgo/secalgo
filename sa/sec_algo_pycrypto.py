@@ -19,6 +19,7 @@ SYM_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
 DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
+DH_DEFAULT_MODP_GROUP = 14
 
 def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
@@ -73,7 +74,7 @@ def gen_dh_key(key_size, dh_group, dh_mod_size, dh_p, dh_g):
     elif (dh_mod_size == None) and (dh_p != None):
         dh_mod_size = size(dh_p)
 
-    print('###########:', key_size, dh_mod_size, flush = True)
+    #print('###########:', key_size, dh_mod_size, flush = True)
     #generate new safe prime to define finite field
     #This is pretty efficient
     if dh_p == None:
@@ -244,6 +245,18 @@ def verify(data, key):
     else:
         return None
 #end def verify()
+
+def verify1(data, signed_data, key):
+    Random.atfork()
+    im_key = RSA.importKey(key)
+    unp_data = pickle.loads(signed_data)
+    sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
+    verdict = im_key.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
+    if verdict:
+        return data
+    else:
+        return None
+#end verify1()
 
 modp_groups = {
     5 :
