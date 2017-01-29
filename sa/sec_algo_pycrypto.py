@@ -88,8 +88,6 @@ def gen_dh_key(key_size, dh_group, dh_mod_size, dh_p, dh_g):
         print('Fresh p:', count, dh_p, flush = True) 
 
     #define new generator for the finite field
-    #This is not, even for relatively small values of dh_mod_size
-    #This is unusably slow: at dh_g ** q (mod dh_p)
     if dh_g == None:
         dh_g = 2
         generator_found = False
@@ -97,23 +95,27 @@ def gen_dh_key(key_size, dh_group, dh_mod_size, dh_p, dh_g):
         while (generator_found == False) and (dh_g < dh_p):
             count2 += 1
             generator_found = True
-            print('&&&&&&&&&&:', count2, 1)
+            #print('&&&&&&&&&&:', count2, 1)
             if pow(dh_g, 2, dh_p) == 1:
                 generator_found = False
-            print('&&&&&&&&&&:', count2, 2)
+            #print('&&&&&&&&&&:', count2, 2)
             if generator_found == True and pow(dh_g, q, dh_p) == 1:
                 generator_found = False
-            print('&&&&&&&&&&:', count2, 3)
+            #print('&&&&&&&&&&:', count2, 3)
             if generator_found == False:
                 dh_g += 1
-            print('&&&&&&&&&&:', count2, 4)
+            #print('&&&&&&&&&&:', count2, 4)
         print('Fresh g:', count2, dh_g)
 
-    #generate new exponent (secret key derivation value)
-    dh_x = getRandomNBitInteger(key_size)
+    if key_size != 0:
+        #generate new exponent (secret key derivation value)
+        dh_x = getRandomNBitInteger(key_size)
 
-    #generate dh_X = dh_g ** dh_x (mod dh_p) (public key derivation value)
-    dh_X = pow(dh_g, dh_x, dh_p)
+        #generate dh_X = dh_g ** dh_x (mod dh_p) (public key derivation value)
+        dh_X = pow(dh_g, dh_x, dh_p)
+    else:
+        dh_x = None
+        dh_X = None
 
     #first value must remain secret, the rest is public
     return (dh_x, dh_X, dh_g, dh_p)
