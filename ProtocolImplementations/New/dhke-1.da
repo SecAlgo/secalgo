@@ -28,8 +28,7 @@ class RoleI (process):
             if verify((dh_X, dh_Y, k, I), m, PK_R[0]) != None:
                 #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
                 #Hash function whose index is k
-                from Crypto.Hash import SHA256
-                K_IR = SHA256.new(pow(dh_Y, dh_x, PK_I[2])).digest()
+                K_IR = key_derivation(dh_Y, dh_x, PK_I[2])
                 send(('msg3', BitGen(K_IR)), to = R)
                 output('I - Authenticated Exchange of Key Material Complete')
         
@@ -41,27 +40,25 @@ class RoleR (process):
         await(False)
 
     def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
-        dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_R[2], dh_g = PK_R[1])
+        dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
         if verify((I, PK_I), cert_I, pk_sig_T) != None:
             if verify((dh_X, R), m, PK_I[0]) != None:
                 from Crypto.Random.random import randint
                 k = randint(1, 100) #k supposed to be bitstring
-                send((dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
+                send(('msg2', dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
                 #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
                 #Hash function whose index is k
-                from Crypto.Hash import SHA256
-                K_IR = SHA256.new(pow(dh_X, dh_y, PK_I[2])).digest()
+                K_IR = key_derivation(dh_X, dh_y, PK_I[2])
                 await(some(received(('msg3', m2), from_ = I)))
                 if BitGen(K_IR) == m2:
                     output('R - Authenticated Exchange of Key Material Complete')
-
 
 def main():
     sk_sig_I, pk_sig_I = genkey('public')
     sk_sig_R, pk_sig_R = genkey('public')
     sk_sig_T, pk_sig_T = genkey('public')
-    dh_grp_I = genkey('dh', 16, dh_group = 14)
-    dh_grp_R = genkey('dh', 16, dh_group = 14)
+    dh_grp_I = genkey('dh', 0, dh_mod_size = 128)
+    dh_grp_R = genkey('dh', 0, dh_mod_size = 128)
     SK_I = sk_sig_I
     SK_R = sk_sig_R
     PK_I = (pk_sig_I, dh_grp_I[2], dh_grp_I[3])
@@ -75,17 +72,18 @@ def main():
     start(R)
     start(I)
 
-
-
-
-
-    #print('SETUP FOR R:\n',SK_R, '\n', PK_R, '\n', PK_I, '\n',
-    #      cert_R, '\n', pk_sig_T, '\n', flush = True)
-    #print('SETUP FOR R:\n', SK_I, '\n', PK_I, '\n', R, '\n',
-    #      PK_R, '\n', cert_I, '\n', pk_sig_T, '\n', flush = True)
-
 def BitGen(x):
     import random
     random.seed(x)
     return random.getrandbits(256)
     
+def key_derivation(public, private, mod_p):
+    shared_secret = pow(public, private, mod_p)
+    ss_length_bits = shared_secret.bit_length()
+    ss_length_bytes = ss_length_bits // 8
+    if ss_length_bits % 8 != 0:
+        ss_length_bytes += 1
+    ss_as_bytes = shared_secret.to_bytes(ss_length_bytes, byteorder = 'little')
+    from Crypto.Hash import SHA256
+    new_key = SHA256.new(ss_as_bytes).digest()
+    return new_key
