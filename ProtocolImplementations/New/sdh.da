@@ -1,0 +1,51 @@
+'''
+Signed Diffie-Hellman Key Exchange Protocol
+    with Authentication via Public Key Signatures
+Written by Christopher Kane
+
+Source:
+Ran Canetti and Hugo Krawczyk, "Analysis of Key-Exchange Protocls and their use
+for Building Secure Channels", Proceedings of Eurocrypt 2001, LNCS v. 2045.
+
+Using the extended version: http://eprint.iacr.org/2001/040.ps, p. 22.
+
+Protocol Diagram:
+  (1) A -> B : A, s, g^x
+  (2) B -> A : B, s, g^y, sign((B, s, g^x, g^y, A), SK_sig_B)
+  (3) A -> B : A, s, sign((A, s, g^x, g^y, B), SK_sig_A)
+
+Both parties are in possession of Diffie-Hellman mod_p group information, a
+prime, 'p', and a generator, 'g'. In addition, each participant possesses a
+public and private key for a signature scheme (we will use RSA), denoted
+SK_sig_I, for participant, 'I'. Each participant possesses the public key of
+the others for this signature scheme. 's' is a session identifier (I will use
+a nonce). 
+'''
+from sa.sec_algo_pycrypto import genkey, sign, gen_nonce
+
+class RoleA(process):
+    def setup(SK_sig_A, PK_sig_A, B, PK_sig_B, p, g):
+        self.A = self
+
+    def run():
+        s = gen_nonce(128)
+        dh_x, dh_X, _, _ = genkey('dh', dh_p = p, dh_g = g)
+        send(('msg1', A, s, dh_X), to = B)
+        await(some(received(('msg2', _B, _s, dh_Y, m), from_ = B)))
+        if verify((B, s, dh_Y, dh_X, A), PK_sig_B) != None:
+            send(('msg3', A, s, sign((A, s, dh_X, dh_Y, B), SK_sig_A)), to = B)
+            K_AB = pow(dh_Y, dh_x, p)
+            dh_x = None
+            output('A - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (K_AB, s))
+
+class RoleB(process):
+    def setup(SK_sig_B, PK_sig_B, PK_sig_A, p, g):
+        self.B = B
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', A, s, dh_X), from_ = A):
+        dh_y, dh_Y, _, _ = genkey('dh', dh_p = p, dh_g = g)
+        send((B, s, dh_Y, sign(B, s, dh_X, dh_Y, 
