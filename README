@@ -5,7 +5,7 @@ goal is the creation of of higher-level abstractions for encryption and other
 security functions in order to help address the problem of security tool
 misuse among developers of secure software.
 
-Working Protocols Examples (as of 1/3/2017): 
+Working Protocols Examples (as of 1/31/2017): 
     * ProtocolImplementations/New/ds.da
     * ProtocolImplementations/New/ns-sk.da
     * ProtocolImplementations/New/ns-pk.da
