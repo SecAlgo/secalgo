@@ -1,0 +1,21 @@
+"""
+Kerberos Authentication Protocol v5
+
+
+"""
+
+from sa.sec_algo_pycrypto import genkey, gen_nonce, encrypt, decrypt
+
+class Role_AS(process):
+    def setup():
+        pass
+
+    def run():
+        await(False)
+
+    def receive(msg=('krb_as_req', pvno, msg-type, padata,
+                     req-body), from_ = C):
+        (kdc-options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
+         addresses, enc-authorization-data, additional-tickets) = req-body
+        
+        
