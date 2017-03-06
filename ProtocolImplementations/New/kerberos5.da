@@ -3,7 +3,7 @@ Kerberos Authentication Protocol v5
 
 
 """
-
+import sys, time, random
 from sa.sec_algo_pycrypto import genkey, gen_nonce, encrypt, decrypt
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
@@ -12,7 +12,7 @@ DEFAULT_AS_SKEW = 300 #five minutes
 #authentication server
 class Role_AS(process):
     def setup(client_keys, server_keys, key_TGS):
-        self.supported_etypes = set()
+        self.supported_etypes = {17, 18}
         self.max_tgt_duration = DEFAULT_TGT_DURATION
         self.skew = DEFAULT_AS_SKEW
         self.per_client_lifetimes = dict()
@@ -21,14 +21,18 @@ class Role_AS(process):
     def run():
         await(False)
 
-    def receive(msg=('krb_as_req', pvno, msg-type, padata,
-                     req-body), from_ = C):
-        (kdc-options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
-         addresses, enc-authorization-data, additional-tickets) = req-body
+    def receive(msg=('krb_as_req', pvno, msg_type, padata,
+                     req_body), from_ = C):
+        (kdc_options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
+         addresses, enc_authorization_data, additional_tickets) = req_body
         #check for repeated request
         #check for client and server
+        print('$$$$$$$$$$: 1', flush = True)
+        print('$$$$$$$$$$:', cname, C, flush = True)
         if cname in client_keys:
+            print('$$$$$$$$$$: 2', flush = True)
             if sname in server_keys:
+                print('$$$$$$$$$$: 3', flush = True)
                 #check etype list (session key must be usable by both the
                 #client and the TGS
                 #assumption AS and TGS support same etypes
@@ -37,12 +41,14 @@ class Role_AS(process):
                     if et in supported_etypes and chosen_etype == None:
                         chosen_etype = et
                 if chosen_etype != None:
+                    print('$$$$$$$$$$: 4', flush = True)
                     key_C_TGS = genkey('shared')
                     #check for preauthentication required
                     #check for preauthentication requested
                     #if postdate option is not set
                     #set starttime
                     if krb_from == None or (krb_from < (time.time() + skew)):
+                        
                         tgt_start = time.time()
                     #end if krb_from == None or startime < as time
                     #if postdate set, check that starttime is acceptable, copy
@@ -66,13 +72,13 @@ class Role_AS(process):
                     #Next build ticket
                     #(tkt-vno, realm, sname, enc-part)
                     new_tgt = (5, 'TEST', sname,
-                               encrypt(new_enc_part, key_AS_TGS))
+                               encrypt(tgt_enc_part, key_TGS))
 
                     #Build KRB-AS-REP
                     #First build encrypted part
                     #(key, last-req, nonce, key-expiration*, flags, authtime,
                     # starttime*, endtime, renew-till*, srealm, sname, caddr*)
-                    as_rep_enc_part = (key_C_TGS, (0, 0), nonce, 0, dict,
+                    as_rep_enc_part = (key_C_TGS, (0, 0), nonce, 0, dict(),
                                        tgt_start, tgt_start, tgt_end, 0, 'TEST',
                                        sname, [])
 
@@ -85,10 +91,73 @@ class Role_AS(process):
         #end if cname in client_keys
     #end receive(krb_as_req)
 
-
-class role_C(process):
-    def setup(AS, TGS, servers, key_C_AS):
+class Role_TGS(process):
+    def setup():
         pass
 
     def run():
+        await(False)
+
+class Role_C(process):
+    def setup(AS, TGS, servers, key_C_AS):
+        self.C = self
+
+    def run():
+        #select an application server to access
+        S = random.choice(tuple(servers))
+        #generate nonce
+        nonce_C_AS = gen_nonce()        
+        #send KRB_AS_REQ msg to acquire TGT from AS
+        #req-body = [kdc-options, cname*, realm, sname*, from*, till, rtime*,
+        #            nonce, etype, addresses*, enc-authorization-data*,
+        #            additional-tickets*]
+        #etype 18 = aes256
+        #etype 17 = aes128
+        req_body = [dict(), C, 'TEST', S, 0, time.time() + (5 * 3600), 0,
+                    nonce_C_AS, [18, 17], [], [], []] 
+        send(('krb_as_req', 5, 10, [], req_body), to = AS)
+        #await KRB_AS_REP containing TGT and session key
+        #check of the crealm and cname fields done through pattern match in the
+        #await statement
+        await(some(received(('krb_as_rep', 5, 11, padata, 'TEST', _C, ticket,
+                             enc_part), from_= AS)))
+        #decrypt the enc-part of the response
+        (key_C_TGS, last_req, nonce, key_expiration, flags, authtime, starttime,
+         endtime, renew_till, srealm, sname, caddr) = decrypt(enc_part, key_C_AS)
+        #check that the returned nonce matches the one sent
+        if nonce == nonce_C_AS:
+            #check returned sname and srealm match those requested
+            if sname == S and srealm == 'TEST':
+                #check host address field (caddr), if used
+                #MAY check the last-req and key_expiration fields to recommend
+                #client change password
+                output('Client - Sucessfully acquired TGT from AS')
+                output(decrypt(enc_part, key_C_AS))
+
+class Role_S(process):
+    def setup():
+        pass
+
+    def run():
+        await(False)
+
         
+def main():
+    num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+    num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 2
+    C = new(Role_C, num = num_clients)
+    S = new(Role_S, num = num_servers)
+    TGS = new(Role_TGS)
+    AS = new(Role_AS)
+    client_keys = dict()
+    for client in C:
+        key = genkey('shared')
+        setup(client, (AS, TGS, S, key))
+        client_keys[client] = key
+    server_keys = dict()
+    for server in S:
+        server_keys[server] = genkey('shared')
+    key_AS_TGS = genkey('shared')
+    setup(AS, (client_keys, server_keys, key_AS_TGS))
+    start(AS)
+    start(C)
