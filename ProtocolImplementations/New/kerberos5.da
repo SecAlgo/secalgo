@@ -8,7 +8,7 @@ from sa.sec_algo_pycrypto import genkey, gen_nonce, encrypt, decrypt
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_AS_SKEW = 300 #five minutes
-
+KRB_AP_REQ_TYPE = 14 #msg-type value for krb_ap_req messages
 #authentication server
 class Role_AS(process):
     def setup(client_keys, server_keys, key_TGS):
@@ -98,9 +98,33 @@ class Role_TGS(process):
         await(False)
 
     def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
+        #First task is to retrieve and decrypt the ticket contained in the
+        #authentication header (krb_ap_req) inside the padata field.
+        #Need to figure out which key to use to decrypt ticket.
+        #We are assuming a normal TGS exchange, and so the TGS will use the key
+        #it shares with the AS to decrypt the ticket.
+        #We are assuming that the only entry in the padata sequence is the
+        #authentication header.
+        #KRB_AP_REQ = [pvno, msg-type, ticket, authenticator]
+        _, msg_type, tgt, authenticator = padata[0]
+        #Check msg-type (should be 14)
 
+        #Unpack TGT, and then decrypt it.
+        #TICKET = [tkt-vno, realm, sname, enc-part]
+        #ENC-PART = [flags, key, crealm, cname, transited, authtime,
+        #            starttime, endtime, renew-till, caddr, authorization-data]
+        (_, realm, sname, tgt_enc_part) = tgt
+        (flags, key_C_TGS, crealm, cname, transited, authtime, starttime,
+         endtime, renew_till, caddr, authorization_data) = decrypt(tgt_enc_part, key_AS_TGS)
+
+        #Now, use session key in TGT to decrypt authenticator
+        #authenticator = [authenticator-vno, crealm, cname, cksum*, cusec,
+        #                 ctime, subkey*, seq-number*, authorization-data*]
+        (_, crealm, cname, cksum, cusec, ctime,
+         subkey, seq-number, autheorization-data) = decrypt(authenticator, key_C_TGS)
         
-
+        #Verify checksum
+        
 class Role_S(process):
     def setup():
         pass
