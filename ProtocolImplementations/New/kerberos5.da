@@ -1,5 +1,5 @@
 """
-Kerberos Authentication Protocol v5
+Kerberos Authentication Protocol v5 in DistAlgo
 Written by Christopher Kane
 
 Source:
@@ -7,12 +7,12 @@ C. Neuman, T. Yu, S. Hartman, K. Raeburn. "RFC 4120: The Kerberos Network
 Authentication Service (v5)". July, 2005.
 
 Protocol Diagram:
-  (1) C   -> AS  : KRB_AS_REQ
-  (2) AS  -> C   : KRB_AS_REP
-  (3) C   -> TGS : KRB_TGS_REQ
-  (4) TGS -> C   : KRB_TGS_REP
-  (5) C   -> S   : KRB_AP_REQ
-  (6) S   -> C   : KRB_AP_REP (only if mutual authentication used)
+  (1) C   -> AuthServer  : KRB_AS_REQ
+  (2) AuthServer  -> C   : KRB_AS_REP
+  (3) C   -> TktGrantServer : KRB_TGS_REQ
+  (4) TktGrantServer -> C   : KRB_TGS_REP
+  (5) C   -> AppServer   : KRB_AP_REQ
+  (6) AppServer   -> C   : KRB_AP_REP (only if mutual authentication used)
 
 This diagram assumes the most straightforward instance of the authentication
 protocol. It ignores the possibity of renewable tickets, postdated tickets,
@@ -35,9 +35,10 @@ DEFAULT_SKEW = 300 #five minutes
 KRB_AP_REQ_TYPE = 14 #msg-type value for krb_ap_req messages
 
 #authentication server
-class Role_AS(process):
+class Role_AuthServer(process):
+    #give citations to specification
     def setup(clients, servers, TGS, client_keys, server_keys, key_TGS):
-        self.supported_etypes = {17, 18}
+        self.supported_etypes = {17, 18} #cite and give name for constant
         self.max_tgt_duration = DEFAULT_TGT_DURATION
         self.skew = DEFAULT_SKEW
         self.per_client_lifetimes = dict()
@@ -72,6 +73,7 @@ class Role_AS(process):
         #check etype list (session key must be usable by both the
         #client and the TGS
         #assumption AS and TGS support same etypes
+        #comprehension for choosing etype
         chosen_etype = None
         for et in etype:
             if et in supported_etypes and chosen_etype == None:
@@ -107,12 +109,12 @@ class Role_AS(process):
         #First build encrypted part
         #(flags, key, crealm, cname, transited, authtime,
         # starttime, endtime, renew-till, caddr, authorization-data)
-        tgt_enc_part = [dict(), key_C_TGS, 'TEST', cname, [], tgt_start,
-                        tgt_start, tgt_end, 0, [], []]
+        tgt_enc_part = (dict(), key_C_TGS, 'TEST', cname, [], tgt_start,
+                        tgt_start, tgt_end, None, [], [])
         
         #Next build ticket
         #(tkt-vno, realm, sname, enc-part)
-        new_tgt = [5, 'TEST', sname, encrypt(tgt_enc_part, key_TGS)]
+        new_tgt = [5, 'TEST', sname, encrypt(tgt_enc_part, key = key_TGS)]
         
         #Build KRB-AS-REP
         #First build encrypted part
@@ -151,10 +153,10 @@ class Role_TGS(process):
         #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
         _, msg_type, ap_options, tgt, authenticator = padata[0]
 
-        #Check msg-type (should be 14)
+        #Check msg-type (should be 14) krb_ap_req
         if msg_type != 14:
             #send KRB_ERROR msg
-            return
+            return #replace with function to report error
 
         #Unpack TGT, and then decrypt it.
         #TICKET = [tkt-vno, realm, sname, enc-part]
@@ -273,7 +275,7 @@ class Role_TGS(process):
         send(('krb_tgs_rep', 5, 13, [], 'TEST', tgt_cname, new_ticket,
               encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)        
         
-class Role_S(process):
+class Role_AppServer(process):
     def setup(AS, TGS, key_S_AS, key_S_TGS):
         self.S = self
         self.skew = DEFAULT_SKEW
@@ -368,6 +370,8 @@ class Role_C(process):
         #await KRB_AS_REP containing TGT and session key
         #check of the crealm and cname fields done through pattern match in the
         #await statement
+        #This await condition is not correct; need to figure out the correct
+        #behavior, and then compose the right await condition
         await(some(received(('krb_as_rep', 5, 11, padata, 'TEST', _C, tgt,
                              enc_part), from_= AS)))
 
