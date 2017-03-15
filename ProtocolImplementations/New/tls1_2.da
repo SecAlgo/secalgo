@@ -3,8 +3,12 @@
 import time
 from sa.sec_algo_pycrypto import (encrypt, decrypt sign,
                                   verify, genkey, gen_nonce)
-#Protocol version number for TLS 1.2
-PROTOCOL_VERSION_1_2 = (3, 3)
+
+#Protocol version number for SSL/TLS
+PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
+PROTOCOL_VERSION_1_0 = (3, 1) #TLS 1.0
+PROTOCOL_VERSION_1_1 = (3, 2) #TLS 1.1
+PROTOCOL_VERSION_1_2 = (3, 3) #TLS 1.2
 
 #Enumerated values for the ContentType of Record Layer messages
 CHANGE_CIPHER_SPEC = 20
@@ -70,13 +74,13 @@ class TLS_Peer(process):
             #First Handshake message is the client_hello
             #Client_Hello = (client_version, random, session_id, cipher_suites,
             #                compression_methods, extensions)
-            client_hello = (PROTOCOL_VERSION_1_2,
-                            (time.time(), genkey('random', 28)), None,
-                            (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
+            body_client_hello= (PROTOCOL_VERSION_1_2,
+                                (time.time(), genkey('random', 28)), None,
+                                (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
             #This is wrapped in a Handshake type message
             #Handshake = (msg_type, length, body)
             #I will ignore length until Record layer fragmentation is working
-            handshake_ch = (CLIENT_HELLO, None, client_hello)
+            handshake_ch = (CLIENT_HELLO, None, body_client_hello)
             send(('handshake', handshake_ch), to = server)
 
             #Client end of TLS Handshake will now wait for a ServerHelloDone
@@ -118,7 +122,7 @@ class TLS_Peer(process):
             #ChangeCipherSpec = (type,)
             #where type is always equal to 1
             handshake_ccs = (1,)
-            send((handshake_ccs,), to = server)
+            send(('change_cipher_spec', handshake_ccs,), to = server)
             #Immediately after sending this message, the sender must replace
             #their current write session state with the pending write session
             #state
@@ -131,7 +135,7 @@ class TLS_Peer(process):
             verify_data = PRF(master_secret, 'client_finished', SHA256())
             finished = (verify_data,)
             handshake_fin = (FINISHED, None, finished)
-
+            send(('handshake', handshake_fin), to = server)
             #The server will also have sent, or will send, a ChangeCipherSpec
             #message causing the client to replace its current read session
             #state with its pending read session state.
@@ -141,21 +145,8 @@ class TLS_Peer(process):
             #Handshake complete
         await(False)
 
-    def receive(msg=('tls_record_msg')):
-        pass
-
-    def receive(msg=('tls_handshake_msg')):
-        pass
-
-    def receive(msg=('tls_change_cipher_spec')):
-        pass
-
-    def receive(msg=('tls_alert_msg')):
-        pass
-
-    def receive(msg=('tls_application_msg')):
-        pass
-
+    def receive(msg=('handshake', body), from_ = client):
+        
     
 def main():
     pass
