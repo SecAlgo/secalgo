@@ -92,7 +92,7 @@ class TLS_Peer(process):
             #Certificate = (certificate_list)
             #This is wrapped in a Handshake type message
             #Handshake = (msg_type, length, body)
-
+            
             #Eighth Handshake message is Client_Key_Exchange
             #Client_Key_Exchange = (exchange_keys,)
             #Format of exchange_keys structure depends upon the agreed-upon
@@ -145,7 +145,14 @@ class TLS_Peer(process):
             #Handshake complete
         await(False)
 
-    def receive(msg=('handshake', body), from_ = client):
+    #receive a ClientHello message sent in the clear
+    #Client_Hello = (client_version, random, session_id, cipher_suites,
+    #                compression_methods, extensions)
+    def receive(msg=('handshake', (CLIENT_HELLO, length,
+                                   (client_version, random, session_id,
+                                    cipher_suites, compression_methods,
+                                    extensions))), from_ = client):
+
         
     
 def main():
