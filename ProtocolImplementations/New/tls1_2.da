@@ -12,27 +12,41 @@ PROTOCOL_VERSION_1_2 = (3, 3) #TLS 1.2
 
 #Enumerated values for the ContentType of Record Layer messages
 CHANGE_CIPHER_SPEC = 20
-ALERT = 21
-HANDSHAKE = 22
-APPLICATION_DATA = 23
+ALERT              = 21
+HANDSHAKE          = 22
+APPLICATION_DATA   = 23
+
+CHANGE_CIPHER_SPEC_BODY = 1
 
 #Enumerated values for Handshake types; a byte is used for the message type in
 #Handshake messages
-HELLO_REQUEST = 0
-CLIENT_HELLO  = 1
-SERVER_HELLO  = 2
-CERTIFICATE = 11
+HELLO_REQUEST       = 0
+CLIENT_HELLO        = 1
+SERVER_HELLO        = 2
+CERTIFICATE         = 11
 SERVER_KEY_EXCHANGE = 12
 CERTIFICATE_REQUEST = 13
-SERVER_HELLO_DONE = 14
-CERTIFICATE_VERIFY = 15
+SERVER_HELLO_DONE   = 14
+CERTIFICATE_VERIFY  = 15
 CLIENT_KEY_EXCHANGE = 16
-FINISHED = 20
+FINISHED            = 20
 
+#Enumerated values for Client Certificate Types
+RSA_SIGN                  = 1
+DSS_SIGN                  = 2
+RSA_FIXED_DH              = 3
+DSS_FIXED_DH              = 4
+RSA_EPHEMERAL_DH_RESERVED = 5
+DSS_EPHEMERAL_DH_RESERVED = 6
+FORTEZZA_DMS_RESERVED     = 20
+
+#Enumerated values of cipher suites
 TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
 class TLS_Peer(process):
     def setup(peers):
+        supported_tls_versions = (PROTOCOL_VERSION_1_2,)
+        supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
         current_security_parameters = {'entity': None, 'prf_algorithm': None,
                                        'bulk_cipher_algorithm': None,
@@ -81,10 +95,9 @@ class TLS_Peer(process):
             #Handshake = (msg_type, length, body)
             #I will ignore length until Record layer fragmentation is working
             handshake_ch = (CLIENT_HELLO, None, body_client_hello)
-            send(('handshake', handshake_ch), to = server)
 
             #Client end of TLS Handshake will now wait for a ServerHelloDone
-            await(some(received(('handshake', (SERVER_HELLO_DONE, None, None)),
+            await(some(received(('handshake',(SERVER_HELLO_DONE, None, None)),
                                 from_ = server)))
             
             #Seventh, Handshake message is Certificate from the client
@@ -108,7 +121,7 @@ class TLS_Peer(process):
             #This is wrapped in a Handshake type message
             #Handshake = (msg_type, length, body)
             handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
-            send(('handshake', body_cke), to = server)
+
             
             #Ninth Handshake message is CertificateVerify from the client
             #only if necessary
@@ -121,8 +134,8 @@ class TLS_Peer(process):
             #ChangeCipherSpec is treated as a separate TLS protocol.
             #ChangeCipherSpec = (type,)
             #where type is always equal to 1
-            handshake_ccs = (1,)
-            send(('change_cipher_spec', handshake_ccs,), to = server)
+            handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
+
             #Immediately after sending this message, the sender must replace
             #their current write session state with the pending write session
             #state
@@ -135,7 +148,7 @@ class TLS_Peer(process):
             verify_data = PRF(master_secret, 'client_finished', SHA256())
             finished = (verify_data,)
             handshake_fin = (FINISHED, None, finished)
-            send(('handshake', handshake_fin), to = server)
+
             #The server will also have sent, or will send, a ChangeCipherSpec
             #message causing the client to replace its current read session
             #state with its pending read session state.
@@ -148,12 +161,103 @@ class TLS_Peer(process):
     #receive a ClientHello message sent in the clear
     #Client_Hello = (client_version, random, session_id, cipher_suites,
     #                compression_methods, extensions)
+    #Pattern match determines that the Handshake message has the right type
+    #But, the order of messages in the Handshake matters, will need a handler
+    #or something to address this.
     def receive(msg=('handshake', (CLIENT_HELLO, length,
                                    (client_version, random, session_id,
                                     cipher_suites, compression_methods,
                                     extensions))), from_ = client):
+        #In response to the ClientHello message, the server end will construct
+        #a ServerHello Response.
+        #First step is to determine the version of TLS that both client and
+        #server can use. The server will select the lower of the version
+        #requested by the client and the highest supported by the server.
+        #Server will need to maintain list of supported versions of TLS,
+        #currently this will just be 1.2
+        server_version = min(client_version, max(supported_tls_versions))
 
-        
+        #Second, server generates a random value, just as the client had done.
+        server_random = (time.time(), genkey('random', 28))
+
+        #Third, server selects a session_id for this connection, unless the
+        #client has included a non-empty session_id in an attempt to resume or
+        #duplicate a prior session.
+        #Session resumption can only be done if the server has cached the
+        #security parameters associated with the given session_id.
+        #The server can always choose to insist on a full handshake, even if it
+        #retains the cached security parameters.
+        #If the server wants to indicate that the session being established
+        #will not be cached it can return an empty session_id.
+        if session_id != None:
+            output('Client attempting abbreivated handshake.')
+            #check cache for associated security parameters.
+            #if resumption okay, make stores parameters the pending parameters
+            #then skip to (change_cipher_spec and) Finished messages
+        else:
+            #I will set session_id to none for now until renewable sessions
+            #added.
+            session_id = None
+            
+            #Fourth, pick a cipher suite usable by both server and client
+            cipher_suite = setof(suite, suite in cipher_suites,
+                                 suite in supported_cipher_suites).pop()
+
+            #Fifth, pick a compression method usable by both server and client
+            compression_method = setof(method, method in compression_methods,
+                                       method in supported_compression_methods)
+
+            #Now we can construct the ServerHello message
+            #ServerHello = (server_version, random, session_id,
+            #               cipher_suite, compression_method, extensions)
+            body_sh = (server_version, server_random, session_id,
+                       cipher_suite, compression_method, extensions)
+
+            #Which is then wrapped in a Handshake message
+            #Handshake = (msg_type, length, body)
+            handshake_sh = (SERVER_HELLO, None, body_sh)
+            
+            #The server will next send a server Certificate message,
+            #if required. This message is required whenever the agreed upon
+            #key exchange method (determined by the chosen cipher suite, uses
+            #certificates for authentication.
+            #The server will need to possess valid certificate for every kind
+            #of key exchange method it claims to support.
+            server_certificate_body = (certificate_list,)
+            handshake_sc = (CERTIFICATE, None, server_certificate_body)
+
+            #The server will send as the third Handshake message a
+            #ServerKeyExchange message, if it is required. Again this is
+            #determined by the key exchange method determined by the agreed-
+            #upon cipher suite
+            #I am currently assuming RSA for the key exchange, which does not
+            #require this message (In fact, it requires that this message not be
+            #sent.
+            #ServerKeyExchange = (params, signed_params)
+
+            #The server will then send a CertificateRequest, if it requires the
+            #client to authenticate itself with a Certificate.
+            #Whether this message is sent and the type of certificates allowed
+            #in response depend upon the cipher suite agreed upon for this
+            #session.
+            #CertificateRequest = (certificate_types,
+            #                      suported_signature_algorithms,
+            #                      certificate_authorities)
+            #We will assume the server does not require the client to
+            #authenticate itself for now.
+
+            #Finally, the server will send a HelloDone message to indicate that
+            #that it has sent all of its messages for establishing the security
+            #parameters for the session.
+            #The HelloDone message has an empty body.
+            hello_done_body = (,)
+            handshake_hd = (SERVER_HELLO_DONE, None, hello_done_body)
+
+            
+            
+            #The server will now await the ChangeCipherSpec message from the
+            #client, 
+            await(some(received((CHANGE_CIPHER_SPEC
     
 def main():
     pass
