@@ -40,6 +40,9 @@ RSA_EPHEMERAL_DH_RESERVED = 5
 DSS_EPHEMERAL_DH_RESERVED = 6
 FORTEZZA_DMS_RESERVED     = 20
 
+#Enumerated values of compression alggorithms
+NULL = 0
+
 #Enumerated values of cipher suites
 TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
@@ -58,10 +61,11 @@ class TLS_Peer(process):
                                        'mac_algorithm': None,
                                        'mac_length': None,
                                        'mac_key_length': None,
-                                       'compression_algorithm': None,
+                                       'compression_algorithm': NULL,
                                        'master_secret': None,
                                        'client_random': None,
                                        'server_random': None}
+
         pending_security_parameters = {'entity': None, 'prf_algorithm': None,
                                        'bulk_cipher_algorithm': None,
                                        'cipher_type': None,
@@ -72,15 +76,47 @@ class TLS_Peer(process):
                                        'mac_algorithm': None,
                                        'mac_length': None,
                                        'mac_key_length': None,
-                                       'compression_algorithm': None,
+                                       'compression_algorithm': NULL,
                                        'master_secret': None,
                                        'client_random': None,
                                        'server_random': None}
+        
         current_read_connection_state = None
         current_write_connection_state = None
         pending_read_connection_state = None
         pending_write_connection_state = None
 
+    def record_wrapper(content_type, tls_message):
+        version = PROTOCOL_VERSION_1_2
+        #will need to figure out how to implement proper fragmentation
+        pt_fragment = tls_message
+
+        #will need to determine length of fragment in bytes
+        pt_length = None
+
+        #First, build a TLSPlaintext message
+        #TLSPlaintext = (type, version, length, fragment
+        tls_pt = (content_type, version, pt_length, pt_fragment)
+
+        #Second, apply the configured compression algorithm.
+        #There is always an active compression algorith, but the default
+        #compression algorithm is the Null algorithm, which applies no
+        #compression
+        #TLSCompressed = (type, version, length, fragment)
+        if current_security_parameters[compression_algorithm] != NULL:
+            comp_fragment = current_security_parameters[compression_algorithm](pt_fragment)
+        else:
+            comp_fragment = pt_fragment
+        tls_comp = (content_type, version, comp_length, comp_fragment)
+
+        #Third, apply the agreed-upon encryption and MAC algorithms
+        
+        
+    def handshake_wrapper(handshake_type, body):
+        #Will need to compute body length in bytes eventually
+        #Handshake = (msg_type, length, body)
+        return (handshake_type, None, body)
+        
     def run():
         if needed():
             #TLS Handshake with randomly chosen peer as server
