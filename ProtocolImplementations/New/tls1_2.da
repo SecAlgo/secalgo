@@ -40,8 +40,34 @@ RSA_EPHEMERAL_DH_RESERVED = 5
 DSS_EPHEMERAL_DH_RESERVED = 6
 FORTEZZA_DMS_RESERVED     = 20
 
-#Enumerated values of compression alggorithms
-NULL = 0
+#Enumerated values of connection end types (ConnectionEnd)
+CONN_SERVER = 0
+CONN_CLIENT = 1
+
+#Enumerated values of psuedo-random functions (PRFAlgorithm)
+TLS_PRF_SHA256 = 0
+
+#Enumerated values of encryption algorithm types (CipherType)
+CIPHER_STREAM = 0
+CIPHER_BLOCK  = 1
+CIPHER_AEAD   = 2
+
+#Enumerated values of bulk encryption algorithms (BulkCipherAlgorithm)
+BULK_NULL = 0
+BULK_RC4  = 1
+BULK_3DES = 2
+BULK_AES  = 3
+
+#Enumerated values of MAC algorithms
+MAC_NULL = 0
+MAC_HMAC_MD5 = 1
+MAC_HMAC_SHA1 = 2
+MAC_HMAC_SHA256 = 3
+MAC_HMAC_SHA384 = 4
+MAC_HMAC_SHA512 = 5
+
+#Enumerated values of compression algorithms
+COMP_NULL = 0
 
 #Enumerated values of cipher suites
 TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
@@ -51,35 +77,37 @@ class TLS_Peer(process):
         supported_tls_versions = (PROTOCOL_VERSION_1_2,)
         supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
-        current_security_parameters = {'entity': None, 'prf_algorithm': None,
-                                       'bulk_cipher_algorithm': None,
-                                       'cipher_type': None,
-                                       'enc_key_length': None,
-                                       'block_length': None,
-                                       'fixed_iv_length': None,
-                                       'record_iv_length': None,
-                                       'mac_algorithm': None,
-                                       'mac_length': None,
-                                       'mac_key_length': None,
-                                       'compression_algorithm': NULL,
-                                       'master_secret': None,
-                                       'client_random': None,
-                                       'server_random': None}
+        current_sp = {'entity': None,
+                      'prf_algorithm': None,
+                      'bulk_cipher_algorithm': BULK_NULL,
+                      'cipher_type': CIPHER_STREAM,
+                      'enc_key_length': 0,
+                      'block_length': None,
+                      'fixed_iv_length': 0,
+                      'record_iv_length': 0,
+                      'mac_algorithm': MAC_NULL, #defaults to 
+                      'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
+                      'mac_key_length': 0,
+                      'compression_algorithm': COMP_NULL,
+                      'master_secret': None,
+                      'client_random': None,
+                      'server_random': None}
 
-        pending_security_parameters = {'entity': None, 'prf_algorithm': None,
-                                       'bulk_cipher_algorithm': None,
-                                       'cipher_type': None,
-                                       'enc_key_length': None,
-                                       'block_length': None,
-                                       'fixed_iv_length': None,
-                                       'record_iv_length': None,
-                                       'mac_algorithm': None,
-                                       'mac_length': None,
-                                       'mac_key_length': None,
-                                       'compression_algorithm': NULL,
-                                       'master_secret': None,
-                                       'client_random': None,
-                                       'server_random': None}
+        pending_sp = {'entity': None,
+                      'prf_algorithm': None,
+                      'bulk_cipher_algorithm': BULK_NULL,
+                      'cipher_type': CIPHER_STREAM,
+                      'enc_key_length': 0,
+                      'block_length': None,
+                      'fixed_iv_length': 0,
+                      'record_iv_length': 0,
+                      'mac_algorithm': MAC_NULL, #defaults to NULL (RFC 5246)
+                      'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
+                      'mac_key_length': 0,
+                      'compression_algorithm': COMP_NULL,
+                      'master_secret': None,
+                      'client_random': None,
+                      'server_random': None}
         
         current_read_connection_state = None
         current_write_connection_state = None
@@ -103,13 +131,45 @@ class TLS_Peer(process):
         #compression algorithm is the Null algorithm, which applies no
         #compression
         #TLSCompressed = (type, version, length, fragment)
-        if current_security_parameters[compression_algorithm] != NULL:
-            comp_fragment = current_security_parameters[compression_algorithm](pt_fragment)
+        if current_sp[compression_algorithm] != NULL:
+            comp_fragment = current_sp[compression_algorithm](pt_fragment)
         else:
             comp_fragment = pt_fragment
         tls_comp = (content_type, version, comp_length, comp_fragment)
 
         #Third, apply the agreed-upon encryption and MAC algorithms
+        #The type of the agreed-upon bulk encryption algorithm determines the
+        #form of the structure used to contain the ciphertext.
+        #Like compression methods, there is a NULL encryption algorithm that is
+        #used by default when a TLS connection is initialized. The NULL
+        #encryption method is treated as a stream type bulk encryption
+        #algorithm. It uses the GenericStreamCipher structure to enclose the
+        #plaintext.
+        #GenericStreamCipher = (content, MAC)
+        if current_sp[cipher_type] == CIPHER_STREAM:
+            #The Message Authentication Code (MAC) must be computed
+            #If the mac_algorithm field is NULL, then the mac_length field will
+            #also be NULL and so there is no MAC.
+            if current_sp[mac_algorithm) == MAC_NULL:
+                cipher_mac = b''
+            else:
+                cipher_mac = sign((sequence_number, content_type, version,
+                                   comp_length, comp_fragment), key = mac_key)
+            cipher_fragment = (comp_fragment, cipher_mac)
+
+            #The cipher fragment must now be encrypted, unless the agreed-upon
+            #encryption algorithm is none
+            if current_sp[bulk_cipher_algorithm] != BULK_NULL:
+                cipher_fragment = encrypt(cipher_fragment, key = encryption_key)
+        #GenericBlockCipher = (iv, encrypt(content, mac, padding, padding_length))
+        elif current_sp[cipher_type] == CIPHER_BLOCK:
+            #For block encryption we first generate an IV
+            iv = genkey('random', current_sp[record_iv_length])
+
+            #Then we generate the MAC just as above
+            
+            #padding must then be computed
+            
         
         
     def handshake_wrapper(handshake_type, body):
@@ -157,7 +217,6 @@ class TLS_Peer(process):
             #This is wrapped in a Handshake type message
             #Handshake = (msg_type, length, body)
             handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
-
             
             #Ninth Handshake message is CertificateVerify from the client
             #only if necessary
@@ -171,7 +230,6 @@ class TLS_Peer(process):
             #ChangeCipherSpec = (type,)
             #where type is always equal to 1
             handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
-
             #Immediately after sending this message, the sender must replace
             #their current write session state with the pending write session
             #state
