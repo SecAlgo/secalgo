@@ -131,6 +131,7 @@ class TLS_Peer(process):
         #compression algorithm is the Null algorithm, which applies no
         #compression
         #TLSCompressed = (type, version, length, fragment)
+        comp_length = pt_length
         if current_sp[compression_algorithm] != NULL:
             comp_fragment = current_sp[compression_algorithm](pt_fragment)
         else:
@@ -146,6 +147,7 @@ class TLS_Peer(process):
         #algorithm. It uses the GenericStreamCipher structure to enclose the
         #plaintext.
         #GenericStreamCipher = (content, MAC)
+        cipher_length = comp_length
         if current_sp[cipher_type] == CIPHER_STREAM:
             #The Message Authentication Code (MAC) must be computed
             #If the mac_algorithm field is NULL, then the mac_length field will
@@ -155,23 +157,68 @@ class TLS_Peer(process):
             else:
                 cipher_mac = sign((sequence_number, content_type, version,
                                    comp_length, comp_fragment), key = mac_key)
-            cipher_fragment = (comp_fragment, cipher_mac)
+            stream_ciphered = (comp_fragment, cipher_mac)
 
             #The cipher fragment must now be encrypted, unless the agreed-upon
             #encryption algorithm is none
             if current_sp[bulk_cipher_algorithm] != BULK_NULL:
-                cipher_fragment = encrypt(cipher_fragment, key = encryption_key)
+                cipher_fragment = encrypt(stream_ciphered, key = encryption_key)
+
         #GenericBlockCipher = (iv, encrypt(content, mac, padding, padding_length))
         elif current_sp[cipher_type] == CIPHER_BLOCK:
             #For block encryption we first generate an IV
             iv = genkey('random', current_sp[record_iv_length])
 
             #Then we generate the MAC just as above
-            
+            if current_sp[mac_algorithm) == MAC_NULL:
+                cipher_mac = b''
+            else:
+                cipher_mac = sign((sequence_number, content_type, version,
+                                   comp_length, comp_fragment), key = mac_key)
+
             #padding must then be computed
+            #In order to do explicit padding here, padding done by the library
+            #must be switched off
+            #May want the amount of padding to be application configurable
+            #because it can be used to prevent traffic analysis attacks
+            #Can't do padding here until content is encoded as bytes
+            #Will treat all messages as block length, 0 padding bytes
+            cipher_padding = b''
+            cipher_pad_length = 0
+            block_ciphered = (comp_fragment, cipher_mac,
+                               cipher_padding, cipher_pad_length)
+            cipher_fragment = (iv, encrypt(block_ciphered, key = cipher_key))
+
+        tls_cipher = (content_type, version, cipher_length, cipher_fragment)
+        return tls_cipher
+
+    def record_unwrapper(tls_cipher):
+        #First, unpack tls_cipher
+        content_type, version, cipher_length, cipher_fragment = tls_cipher
+
+        #Second, check version
+        if version != PROTOCOL_VERSION_1_2:
+            #send error
+            return
+
+        #Third, use session state and security parameters to decrypt fragment
+        #Begin by checking type of bulk encryption algorithm
+        #then, decrypt and unpack cipher block
+        if current_sp[cipher_type] == CIPHER_STREAM:
+            if current_sp[bulk_cipher_algorithm] == BULK_NULL:
+                (comp_fragment, cipher_mac) = cipher_fragment
+            else:
+                (comp_fragment, cipher_mac) = decrypt(cipher_fragment,
+                                                      key = cipher_key)
+        elif current_sp[cipher_type] == CIPHER_BLOCK:
+            (iv, block_ciphered) = cipher_fragment
+            (comp_fragment, cipher_mac, cipher_padding,
+             cipher_pad_length) = decrypt(block_ciphered, key = cipher_key)
+
+        #Third, verify the MAC
+        if not verify((sequence_number, 
+        
             
-        
-        
     def handshake_wrapper(handshake_type, body):
         #Will need to compute body length in bytes eventually
         #Handshake = (msg_type, length, body)
