@@ -1,7 +1,7 @@
 #Transport Layer Security (TLS) Protocol Version 1.2
 #single process class, no encapsulation
-import time
-from sa.sec_algo_pycrypto import (encrypt, decrypt sign,
+import time, sys
+from sa.sec_algo_pycrypto import (encrypt, decrypt, sign,
                                   verify, genkey, gen_nonce)
 
 #Protocol version number for SSL/TLS
@@ -11,10 +11,10 @@ PROTOCOL_VERSION_1_1 = (3, 2) #TLS 1.1
 PROTOCOL_VERSION_1_2 = (3, 3) #TLS 1.2
 
 #Enumerated values for the ContentType of Record Layer messages
-CHANGE_CIPHER_SPEC = 20
-ALERT              = 21
-HANDSHAKE          = 22
-APPLICATION_DATA   = 23
+TYPE_CHANGE_CIPHER_SPEC = 20
+TYPE_ALERT              = 21
+TYPE_HANDSHAKE          = 22
+TYPE_APPLICATION_DATA   = 23
 
 CHANGE_CIPHER_SPEC_BODY = 1
 
@@ -74,45 +74,45 @@ TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
 class TLS_Peer(process):
     def setup(peers):
-        supported_tls_versions = (PROTOCOL_VERSION_1_2,)
-        supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
+        self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
+        self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
-        current_sp = {'entity': None,
-                      'prf_algorithm': None,
-                      'bulk_cipher_algorithm': BULK_NULL,
-                      'cipher_type': CIPHER_STREAM,
-                      'enc_key_length': 0,
-                      'block_length': None,
-                      'fixed_iv_length': 0,
-                      'record_iv_length': 0,
-                      'mac_algorithm': MAC_NULL, #defaults to 
-                      'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
-                      'mac_key_length': 0,
-                      'compression_algorithm': COMP_NULL,
-                      'master_secret': None,
-                      'client_random': None,
-                      'server_random': None}
-
-        pending_sp = {'entity': None,
-                      'prf_algorithm': None,
-                      'bulk_cipher_algorithm': BULK_NULL,
-                      'cipher_type': CIPHER_STREAM,
-                      'enc_key_length': 0,
-                      'block_length': None,
-                      'fixed_iv_length': 0,
-                      'record_iv_length': 0,
-                      'mac_algorithm': MAC_NULL, #defaults to NULL (RFC 5246)
-                      'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
-                      'mac_key_length': 0,
-                      'compression_algorithm': COMP_NULL,
-                      'master_secret': None,
-                      'client_random': None,
-                      'server_random': None}
+        self.current_sp = {'entity': None,
+                           'prf_algorithm': None,
+                           'bulk_cipher_algorithm': BULK_NULL,
+                           'cipher_type': CIPHER_STREAM,
+                           'enc_key_length': 0,
+                           'block_length': None,
+                           'fixed_iv_length': 0,
+                           'record_iv_length': 0,
+                           'mac_algorithm': MAC_NULL, #defaults to 
+                           'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
+                           'mac_key_length': 0,
+                           'compression_algorithm': COMP_NULL,
+                           'master_secret': None,
+                           'client_random': None,
+                           'server_random': None}
         
-        current_read_connection_state = None
-        current_write_connection_state = None
-        pending_read_connection_state = None
-        pending_write_connection_state = None
+        self.pending_sp = {'entity': None,
+                           'prf_algorithm': None,
+                           'bulk_cipher_algorithm': BULK_NULL,
+                           'cipher_type': CIPHER_STREAM,
+                           'enc_key_length': 0,
+                           'block_length': None,
+                           'fixed_iv_length': 0,
+                           'record_iv_length': 0,
+                           'mac_algorithm': MAC_NULL, #defaults to NULL (RFC 5246)
+                           'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
+                           'mac_key_length': 0,
+                           'compression_algorithm': COMP_NULL,
+                           'master_secret': None,
+                           'client_random': None,
+                           'server_random': None}
+        
+        self.current_read_connection_state = None
+        self.current_write_connection_state = None
+        self.pending_read_connection_state = None
+        self.pending_write_connection_state = None
 
     def record_wrapper(content_type, tls_message):
         version = PROTOCOL_VERSION_1_2
@@ -132,8 +132,8 @@ class TLS_Peer(process):
         #compression
         #TLSCompressed = (type, version, length, fragment)
         comp_length = pt_length
-        if current_sp[compression_algorithm] != NULL:
-            comp_fragment = current_sp[compression_algorithm](pt_fragment)
+        if current_sp['compression_algorithm'] != COMP_NULL:
+            comp_fragment = current_sp['compression_algorithm'](pt_fragment)
         else:
             comp_fragment = pt_fragment
         tls_comp = (content_type, version, comp_length, comp_fragment)
@@ -148,11 +148,11 @@ class TLS_Peer(process):
         #plaintext.
         #GenericStreamCipher = (content, MAC)
         cipher_length = comp_length
-        if current_sp[cipher_type] == CIPHER_STREAM:
+        if current_sp['cipher_type'] == CIPHER_STREAM:
             #The Message Authentication Code (MAC) must be computed
             #If the mac_algorithm field is NULL, then the mac_length field will
             #also be NULL and so there is no MAC.
-            if current_sp[mac_algorithm) == MAC_NULL:
+            if current_sp['mac_algorithm'] == MAC_NULL:
                 cipher_mac = b''
             else:
                 cipher_mac = sign((sequence_number, content_type, version,
@@ -161,16 +161,18 @@ class TLS_Peer(process):
 
             #The cipher fragment must now be encrypted, unless the agreed-upon
             #encryption algorithm is none
-            if current_sp[bulk_cipher_algorithm] != BULK_NULL:
+            if current_sp['bulk_cipher_algorithm'] != BULK_NULL:
                 cipher_fragment = encrypt(stream_ciphered, key = encryption_key)
+            else:
+                cipher_fragment = stream_ciphered
 
         #GenericBlockCipher = (iv, encrypt(content, mac, padding, padding_length))
-        elif current_sp[cipher_type] == CIPHER_BLOCK:
+        elif current_sp['cipher_type'] == CIPHER_BLOCK:
             #For block encryption we first generate an IV
-            iv = genkey('random', current_sp[record_iv_length])
+            iv = genkey('random', current_sp['record_iv_length'])
 
             #Then we generate the MAC just as above
-            if current_sp[mac_algorithm) == MAC_NULL:
+            if current_sp['mac_algorithm'] == MAC_NULL:
                 cipher_mac = b''
             else:
                 cipher_mac = sign((sequence_number, content_type, version,
@@ -191,7 +193,7 @@ class TLS_Peer(process):
 
         tls_cipher = (content_type, version, cipher_length, cipher_fragment)
         return tls_cipher
-
+    
     def record_unwrapper(tls_cipher):
         #First, unpack tls_cipher
         content_type, version, cipher_length, cipher_fragment = tls_cipher
@@ -204,20 +206,35 @@ class TLS_Peer(process):
         #Third, use session state and security parameters to decrypt fragment
         #Begin by checking type of bulk encryption algorithm
         #then, decrypt and unpack cipher block
-        if current_sp[cipher_type] == CIPHER_STREAM:
-            if current_sp[bulk_cipher_algorithm] == BULK_NULL:
+        if current_sp['cipher_type'] == CIPHER_STREAM:
+            if current_sp['bulk_cipher_algorithm'] == BULK_NULL:
                 (comp_fragment, cipher_mac) = cipher_fragment
             else:
                 (comp_fragment, cipher_mac) = decrypt(cipher_fragment,
                                                       key = cipher_key)
-        elif current_sp[cipher_type] == CIPHER_BLOCK:
+        elif current_sp['cipher_type'] == CIPHER_BLOCK:
             (iv, block_ciphered) = cipher_fragment
             (comp_fragment, cipher_mac, cipher_padding,
              cipher_pad_length) = decrypt(block_ciphered, key = cipher_key)
 
+        comp_length = cipher_length
         #Third, verify the MAC
-        if not verify((sequence_number, 
-        
+        if current_sp['mac_algorithm'] != MAC_NULL:
+            if not verify((sequence_number, content_type, version,
+                           comp_length, comp_fragment),cipher_mac, key = mac_key):
+                #send message authentication error
+                return
+
+        #Fourth, apply the active decompression method
+        pt_length = comp_length
+        if current_sp['compression_algorithm'] != COMP_NULL:
+            pt_fragment = current_sp['compression_algorithm'](comp_fragment, 'decompress')
+        else:
+            pt_fragment = comp_fragment
+
+        #Now rebuild and return TLSPlaintext
+        return (content_type, version, pt_length, pt_fragment)
+                      
             
     def handshake_wrapper(handshake_type, body):
         #Will need to compute body length in bytes eventually
@@ -225,7 +242,16 @@ class TLS_Peer(process):
         return (handshake_type, None, body)
         
     def run():
-        if needed():
+        output(current_sp['compression_algorithm'])
+        tls_msg = 'I have a secret'
+        output(tls_msg)
+        tls_record = record_wrapper(TYPE_HANDSHAKE, tls_msg)
+        output(tls_record)
+        tls_recovered = record_unwrapper(tls_record)
+        output(tls_recovered)
+        
+        #if needed():
+        if False:
             #TLS Handshake with randomly chosen peer as server
             server = random.choice(tuple(peers))
             #First Handshake message is the client_hello
@@ -391,18 +417,20 @@ class TLS_Peer(process):
             #that it has sent all of its messages for establishing the security
             #parameters for the session.
             #The HelloDone message has an empty body.
-            hello_done_body = (,)
-            handshake_hd = (SERVER_HELLO_DONE, None, hello_done_body)
-
-            
+            hello_done_body = ()
+            handshake_hd = (SERVER_HELLO_DONE, None, hello_done_body)            
             
             #The server will now await the ChangeCipherSpec message from the
             #client, 
-            await(some(received((CHANGE_CIPHER_SPEC
-    
+            await(some(received((CHANGE_CIPHER_SPEC))))
+            pass
+        
 def main():
-    pass
-
+    num_peers = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    tls_peers = new(TLS_Peer, num = num_peers)
+    for tlsp in tls_peers:
+        setup(tlsp, (tls_peers - {tlsp},))
+    start(tls_peers)
 
 
 def needed():
