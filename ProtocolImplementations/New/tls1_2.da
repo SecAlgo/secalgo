@@ -73,46 +73,19 @@ COMP_NULL = 0
 TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
 class TLS_Peer(process):
-    def setup(peers):
+    def setup(ce, peer):
         self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
         self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
-        self.current_sp = {'entity': None,
-                           'prf_algorithm': None,
-                           'bulk_cipher_algorithm': BULK_NULL,
-                           'cipher_type': CIPHER_STREAM,
-                           'enc_key_length': 0,
-                           'block_length': None,
-                           'fixed_iv_length': 0,
-                           'record_iv_length': 0,
-                           'mac_algorithm': MAC_NULL, #defaults to 
-                           'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
-                           'mac_key_length': 0,
-                           'compression_algorithm': COMP_NULL,
-                           'master_secret': None,
-                           'client_random': None,
-                           'server_random': None}
-        
-        self.pending_sp = {'entity': None,
-                           'prf_algorithm': None,
-                           'bulk_cipher_algorithm': BULK_NULL,
-                           'cipher_type': CIPHER_STREAM,
-                           'enc_key_length': 0,
-                           'block_length': None,
-                           'fixed_iv_length': 0,
-                           'record_iv_length': 0,
-                           'mac_algorithm': MAC_NULL, #defaults to NULL (RFC 5246)
-                           'mac_length': 0, #default MAC = 0, (RFC 5246, p. 21)
-                           'mac_key_length': 0,
-                           'compression_algorithm': COMP_NULL,
-                           'master_secret': None,
-                           'client_random': None,
-                           'server_random': None}
-        
-        self.current_read_connection_state = None
-        self.current_write_connection_state = None
-        self.pending_read_connection_state = None
-        self.pending_write_connection_state = None
+        self.current_rsp = SecurityParameters(ce)
+        self.current_wsp = SecurityParameters(ce)
+        self.pending_rsp = SecurityParameters(ce)
+        self.pending_wsp = SecurityParameters(ce)
+          
+        self.current_read_state = ConnectionState()
+        self.current_write_state = ConnectionState()
+        self.pending_read_state = ConnectionState()
+        self.pending_write__state = ConnectionState()
 
     def record_wrapper(content_type, tls_message):
         version = PROTOCOL_VERSION_1_2
@@ -246,8 +219,7 @@ class TLS_Peer(process):
         return (handshake_type, None, body)
         
     def run():
-        #if do_handshake():
-        if False:
+        if ce == CONN_CLIENT:
             #TLS Handshake with randomly chosen peer as server
             server = random.choice(tuple(peers))
             #First Handshake message is the client_hello
@@ -442,17 +414,46 @@ class TLS_Peer(process):
             pass
         
 def main():
-    num_peers = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    tls_peers = new(TLS_Peer, num = num_peers)
-    for tlsp in tls_peers:
-        setup(tlsp, (tls_peers - {tlsp},))
-    start(tls_peers)
+    tls_server = new(TLS_Peer, (CONN_SERVER, None))
+    tls_client = new(TLS_Peer, (CONN_CLIENT, tls_server))
+    start(tls_server)
+    start(tls_client)
 
-    
-def do_handshake():
-    if random.random() < 0.25:
-        return True
+def tls_prf_sha256(secret, label, seed, output_length):
+
+
+def _p_hash(secret, seed, output_length):
+        
+def _a(n, secret, seed):
+    if n == 0:
+        return seed
     else:
-        return False
+        h = HMAC(secret, digestmod = Crypto.Hash.SHA256)
+        h.update(_a(n - 1, secret, seed))
+        return h.digest()
 
-    
+
+class SecurityParameters():
+    def __init__(ce):
+        self.connection_end = ce
+        self.prf_algorithm = TLS_PRF_SHA256
+        self.bulk_cipher_algorithm = BULK_NULL
+        self.cipher_type = CIPHER_STREAM
+        self.enc_key_length = 0
+        self.block_length = None
+        self.fixed_iv_length = 0
+        self.record_iv_length = 0
+        self.mac_algorithm = MAC_NULL
+        self.mac_length = 0
+        self.mac_key_length = 0
+        self.compression_method = COMP_NULL
+        self.master_secret = None
+        self.client_random = None
+        self.server_random = None
+
+class Connection_State():
+    def __init__():
+        self.compression_state = None
+        self.cipher_state = None
+        self.mac_key = None
+        self.sequence_number = 0
