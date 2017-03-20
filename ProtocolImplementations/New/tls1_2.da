@@ -219,7 +219,21 @@ class TLS_Peer(process):
         return (handshake_type, None, body)
         
     def run():
-        if ce == CONN_CLIENT:
+        
+        secret = b'\x9b\xbe\x43\x6b\xa9\x40\xf0\x17\xb1\x76\x52\x84\x9a\x71\xdb\x35'
+        
+        seed = b'\x9b\xbe\x43\x6b\xa9\x40\xf0\x17\xb1\x76\x52\x84\x9a\x71\xdb\x35'
+        
+        label = b'test label'
+        
+        output_length = 100
+        
+        result = tls_prf_sha256(secret, label, seed, output_length)
+        
+        print('@@@@@@@@@@\n\n', result, '\n\n@@@@@@@@@@', flush = True)
+        
+        if False:        
+        #if ce == CONN_CLIENT:
             #TLS Handshake with randomly chosen peer as server
             server = random.choice(tuple(peers))
             #First Handshake message is the client_hello
@@ -237,8 +251,8 @@ class TLS_Peer(process):
             #Client end of TLS Handshake will now wait for a ServerHelloDone
             #ServerHelloDone = 
             await(some(received(msg, from_ = server),
-                       has = (msg[0] = TYPE_HANDSHAKE and
-                              (SERVER_DONE, None, ()) = record_unwrapper(msg))))
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              (SERVER_DONE, None, ()) == record_unwrapper(msg))))
             
             #Seventh Handshake message is Certificate from the client
             #only if necessary - RFC 5246, pp. 47 and 54-56
@@ -297,7 +311,7 @@ class TLS_Peer(process):
             #Will now await the Finished message from the server.
             await(some(received(msg, from_ = server),
                        has = (msg[0] == TYPE_HANDSHAKE and
-                              (FINISHED, None, finish_data) = record_unwrapper(msg))))
+                              (FINISHED, None, finish_data) == record_unwrapper(msg))))
             #Handshake complete
         await(False)
 
@@ -419,16 +433,28 @@ def main():
     start(tls_server)
     start(tls_client)
 
+#This is the default method for generating new key material from shared secrets
+#defined in RFC 5246 for use in the TLS protocol. It relies on HMAC-SHA256
+#hashing function to generate pseudo-random bytes from given secret and seed
+#values. The amount of key material that must be generated is determined by
+#the agreed-upon cipher and mac algorithms contained in the security parameters
+#Of the current TLS connection state.
 def tls_prf_sha256(secret, label, seed, output_length):
+    return _p_hash(secret, label + seed, output_length)
 
 
 def _p_hash(secret, seed, output_length):
-    
+    from Crypto.Hash import HMAC
     result = bytearray()
     i = 1
     while len(result) < output_length:
-        h = 
+        h = HMAC.new(secret, digestmod = Crypto.Hash.SHA256)
+        h.update(_a(secret, i, seed) + seed)
+        result.extend(h.digest)
+        i += 1
+    return bytes(result[:output_length])
     
+
 def _a(n, secret, seed):
     from Crypto.Hash import HMAC
     if n == 0:
