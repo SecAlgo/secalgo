@@ -423,12 +423,18 @@ def tls_prf_sha256(secret, label, seed, output_length):
 
 
 def _p_hash(secret, seed, output_length):
-        
+    
+    result = bytearray()
+    i = 1
+    while len(result) < output_length:
+        h = 
+    
 def _a(n, secret, seed):
+    from Crypto.Hash import HMAC
     if n == 0:
         return seed
     else:
-        h = HMAC(secret, digestmod = Crypto.Hash.SHA256)
+        h = HMAC.new(secret, digestmod = Crypto.Hash.SHA256)
         h.update(_a(n - 1, secret, seed))
         return h.digest()
 
