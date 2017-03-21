@@ -59,9 +59,9 @@ BULK_3DES = 2
 BULK_AES  = 3
 
 #Enumerated values of MAC algorithms
-MAC_NULL = 0
-MAC_HMAC_MD5 = 1
-MAC_HMAC_SHA1 = 2
+MAC_NULL        = 0
+MAC_HMAC_MD5    = 1
+MAC_HMAC_SHA1   = 2
 MAC_HMAC_SHA256 = 3
 MAC_HMAC_SHA384 = 4
 MAC_HMAC_SHA512 = 5
@@ -74,19 +74,18 @@ TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
 class TLS_Peer(process):
     def setup(ce, peer):
-        #self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
-        #self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
+        self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
+        self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
-        #self.current_rsp = SecurityParameters(ce)
-        #self.current_wsp = SecurityParameters(ce)
-        #self.pending_rsp = SecurityParameters(ce)
-        #self.pending_wsp = SecurityParameters(ce)
+        self.current_rsp = Security_Parameters(ce)
+        self.current_wsp = Security_Parameters(ce)
+        self.pending_rsp = Security_Parameters(ce)
+        self.pending_wsp = Security_Parameters(ce)
           
-        #self.current_read_state = ConnectionState()
-        #self.current_write_state = ConnectionState()
-        #self.pending_read_state = ConnectionState()
-        #self.pending_write__state = ConnectionState()
-        pass
+        self.current_read_state = Connection_State()
+        self.current_write_state = Connection_State()
+        self.pending_read_state = Connection_State()
+        self.pending_write__state = Connection_State()
 
     def record_wrapper(content_type, tls_message):
         version = PROTOCOL_VERSION_1_2
@@ -220,22 +219,6 @@ class TLS_Peer(process):
         return (handshake_type, None, body)
         
     def run():
-        
-        secret = b'\x9b\xbe\x43\x6b\xa9\x40\xf0\x17\xb1\x76\x52\x84\x9a\x71\xdb\x35'
-        
-        seed = b'\x9b\xbe\x43\x6b\xa9\x40\xf0\x17\xb1\x76\x52\x84\x9a\x71\xdb\x35'
-        
-        label = b'test label'
-        
-        output_length = 100
-        
-        result = tls_prf_sha256(secret, label, seed, output_length)
-        
-        print('@@@@@@@@@@\n\n', flush = True)
-        for i in range(len(result)):
-            print(result[i], flush =  True)
-        print('\n\n@@@@@@@@@@', flush = True)
-        
         if False:        
         #if ce == CONN_CLIENT:
             #TLS Handshake with randomly chosen peer as server
@@ -474,8 +457,8 @@ def _a(n, secret, seed):
         return h.digest()
 
 
-class SecurityParameters():
-    def __init__(ce):
+class Security_Parameters():
+    def __init__(self, ce):
         self.connection_end = ce
         self.prf_algorithm = TLS_PRF_SHA256
         self.bulk_cipher_algorithm = BULK_NULL
@@ -493,7 +476,7 @@ class SecurityParameters():
         self.server_random = None
 
 class Connection_State():
-    def __init__():
+    def __init__(self):
         self.compression_state = None
         self.cipher_state = None
         self.mac_key = None
