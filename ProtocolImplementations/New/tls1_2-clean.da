@@ -1,0 +1,240 @@
+import time, sys
+from sa.sec_algo_pycrypto import (encrypt, decrypt, sign,
+                                  verify, genkey, gen_nonce)
+PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
+PROTOCOL_VERSION_1_0 = (3, 1) #TLS 1.0
+PROTOCOL_VERSION_1_1 = (3, 2) #TLS 1.1
+PROTOCOL_VERSION_1_2 = (3, 3) #TLS 1.2
+TYPE_CHANGE_CIPHER_SPEC = 20
+TYPE_ALERT              = 21
+TYPE_HANDSHAKE          = 22
+TYPE_APPLICATION_DATA   = 23
+CHANGE_CIPHER_SPEC_BODY = 1
+HELLO_REQUEST       = 0
+CLIENT_HELLO        = 1
+SERVER_HELLO        = 2
+CERTIFICATE         = 11
+SERVER_KEY_EXCHANGE = 12
+CERTIFICATE_REQUEST = 13
+SERVER_HELLO_DONE   = 14
+CERTIFICATE_VERIFY  = 15
+CLIENT_KEY_EXCHANGE = 16
+FINISHED            = 20
+RSA_SIGN                  = 1
+DSS_SIGN                  = 2
+RSA_FIXED_DH              = 3
+DSS_FIXED_DH              = 4
+RSA_EPHEMERAL_DH_RESERVED = 5
+DSS_EPHEMERAL_DH_RESERVED = 6
+FORTEZZA_DMS_RESERVED     = 20
+CONN_SERVER = 0
+CONN_CLIENT = 1
+TLS_PRF_SHA256 = 0
+CIPHER_STREAM = 0
+CIPHER_BLOCK  = 1
+CIPHER_AEAD   = 2
+BULK_NULL = 0
+BULK_RC4  = 1
+BULK_3DES = 2
+BULK_AES  = 3
+MAC_NULL        = 0
+MAC_HMAC_MD5    = 1
+MAC_HMAC_SHA1   = 2
+MAC_HMAC_SHA256 = 3
+MAC_HMAC_SHA384 = 4
+MAC_HMAC_SHA512 = 5
+COMP_NULL = 0
+TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
+class TLS_Peer(process):
+    def setup(ce, peer):
+        self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
+        self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
+        self.current_rsp = Security_Parameters(ce)
+        self.current_wsp = Security_Parameters(ce)
+        self.pending_rsp = Security_Parameters(ce)
+        self.pending_wsp = Security_Parameters(ce)
+        self.current_read_state = Connection_State()
+        self.current_write_state = Connection_State()
+        self.pending_read_state = Connection_State()
+        self.pending_write__state = Connection_State()
+    def record_wrapper(content_type, tls_message):
+        version = PROTOCOL_VERSION_1_2
+        pt_fragment = tls_message
+        pt_length = None
+        tls_pt = (content_type, version, pt_length, pt_fragment)
+        comp_length = pt_length
+        if current_sp['compression_algorithm'] != COMP_NULL:
+            comp_fragment = current_sp['compression_algorithm'](pt_fragment)
+        else:
+            comp_fragment = pt_fragment
+        tls_comp = (content_type, version, comp_length, comp_fragment)
+        cipher_length = comp_length
+        if current_sp['cipher_type'] == CIPHER_STREAM:
+            if current_sp['mac_algorithm'] == MAC_NULL:
+                cipher_mac = b''
+            else:
+                cipher_mac = sign((sequence_number, content_type, version,
+                                   comp_length, comp_fragment), key = mac_key)
+            stream_ciphered = (comp_fragment, cipher_mac)
+            if current_sp['bulk_cipher_algorithm'] != BULK_NULL:
+                cipher_fragment = encrypt(stream_ciphered, key = encryption_key)
+            else:
+                cipher_fragment = stream_ciphered
+        elif current_sp['cipher_type'] == CIPHER_BLOCK:
+            iv = genkey('random', current_sp['record_iv_length'])
+            if current_sp['mac_algorithm'] == MAC_NULL:
+                cipher_mac = b''
+            else:
+                cipher_mac = sign((sequence_number, content_type, version,
+                                   comp_length, comp_fragment), key = mac_key)
+            cipher_padding = b''
+            cipher_pad_length = 0
+            block_ciphered = (comp_fragment, cipher_mac,
+                               cipher_padding, cipher_pad_length)
+            cipher_fragment = (iv, encrypt(block_ciphered, key = cipher_key))
+
+        tls_cipher = (content_type, version, cipher_length, cipher_fragment)
+        return tls_cipher
+    
+    def record_unwrapper(tls_cipher):
+        content_type, version, cipher_length, cipher_fragment = tls_cipher
+        if version != PROTOCOL_VERSION_1_2:
+            return
+        if current_sp['cipher_type'] == CIPHER_STREAM:
+            if current_sp['bulk_cipher_algorithm'] == BULK_NULL:
+                (comp_fragment, cipher_mac) = cipher_fragment
+            else:
+                (comp_fragment, cipher_mac) = decrypt(cipher_fragment,
+                                                      key = cipher_key)
+        elif current_sp['cipher_type'] == CIPHER_BLOCK:
+            (iv, block_ciphered) = cipher_fragment
+            (comp_fragment, cipher_mac, cipher_padding,
+             cipher_pad_length) = decrypt(block_ciphered, key = cipher_key)
+        comp_length = cipher_length
+        if current_sp['mac_algorithm'] != MAC_NULL:
+            if not verify((sequence_number, content_type, version,
+                           comp_length, comp_fragment),cipher_mac, key = mac_key):
+                return
+        pt_length = comp_length
+        if current_sp['compression_algorithm'] != COMP_NULL:
+            pt_fragment = current_sp['compression_algorithm'](comp_fragment, 'decompress')
+        else:
+            pt_fragment = comp_fragment
+        return pt_fragment
+    def run():
+        if peer != None:
+            current_rsp.connection_end = CONN_CLIENT
+            current_wsp.connection_end = CONN_CLIENT
+            pending_rsp.connection_end = CONN_CLIENT
+            pending_wsp.connection_end = CONN_CLIENT
+            body_client_hello= (PROTOCOL_VERSION_1_2,
+                                (time.time(), genkey('random', 28)), None,
+                                (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
+            handshake_ch = (CLIENT_HELLO, None, body_client_hello)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_ch), to = server)
+            await(some(received(msg, from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              (SERVER_HELLO, None, body_sh) == record_unwrapper(msg))))
+            await(some(received(msg, from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              (SERVER_DONE, None, ()) == record_unwrapper(msg))))
+            pre_master_secret = (PROTOCOL_VERSION_1_2, genkey('random', 46))
+            exchange_keys = (encrypt(pre_master_secret,
+                                     key = server_public_key),)
+            body_cke = (encrypted_pre_master_secret,)
+            handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_cke), to = server)
+            handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
+            send(record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
+                 to = server)
+            verification_data = PRF(master_secret, 'client_finished', SHA256())
+            finished = (verification_data,)
+            handshake_fin = (FINISHED, None, finished)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_fin), to = server)
+            await(some(received(msg, from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              (FINISHED, None, finish_data) == record_unwrapper(msg))))
+        await(False)
+    def receive(msg=(TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
+                     None, cipher_fragment), from_ = client):
+        handshake_msg = record_unwrapper(TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
+                                         None, cipher_fragment)
+        if (CLIENT_HELLO, _, _) != handshake_msg:
+            return
+        (client_version, random, session_id,
+         cipher_suites, compression_methods, extensions) = handshake_msg
+        server_version = min(client_version, max(supported_tls_versions))
+        server_random = (time.time(), genkey('random', 28))
+        if session_id != None:
+            output('Client attempting abbreivated handshake.')
+        else:
+            session_id = None
+            cipher_suite = setof(suite, suite in cipher_suites,
+                                 suite in supported_cipher_suites).pop()
+            compression_method = setof(method, method in compression_methods,
+                                       method in supported_compression_methods)
+            body_sh = (server_version, server_random, session_id,
+                       cipher_suite, compression_method, extensions)
+            handshake_sh = (SERVER_HELLO, None, body_sh)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_sh), to = client)
+            server_certificate_body = (certificate_list,)
+            handshake_sc = (CERTIFICATE, None, server_certificate_body)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_sc), to = client)
+            hello_done_body = ()
+            handshake_hd = (SERVER_HELLO_DONE, None, hello_done_body)
+            send(record_wrapper(TYPE_HANDSHAKE, handshake_hd), to = client)
+            await(some(received((CHANGE_CIPHER_SPEC))))
+            pass
+def main():
+    tls_server = new(TLS_Peer)
+    tls_client = new(TLS_Peer)
+    setup(tls_server, (CONN_SERVER, None))
+    setup(tls_client, (CONN_CLIENT, tls_server))
+    start(tls_server)
+    start(tls_client)
+def tls_prf_sha256(secret, label, seed, output_length):
+    return _p_hash(secret, label + seed, output_length)
+def _p_hash(secret, seed, output_length):
+    from Crypto.Hash import HMAC
+    from Crypto.Hash import SHA256
+    result = bytearray()
+    i = 1
+    while len(result) < output_length:
+        h = HMAC.new(secret, digestmod = SHA256)
+        h.update(_a(i, secret, seed))
+        h.update(seed)
+        result.extend(h.digest())
+        i += 1
+    return bytes(result[:output_length])
+def _a(n, secret, seed):
+    from Crypto.Hash import HMAC
+    from Crypto.Hash import SHA256
+    if n == 0:
+        return seed
+    else:
+        h = HMAC.new(secret, digestmod = SHA256)
+        h.update(_a(n - 1, secret, seed))
+        return h.digest()
+class Security_Parameters():
+    def __init__(self, ce):
+        self.connection_end = ce
+        self.prf_algorithm = TLS_PRF_SHA256
+        self.bulk_cipher_algorithm = BULK_NULL
+        self.cipher_type = CIPHER_STREAM
+        self.enc_key_length = 0
+        self.block_length = None
+        self.fixed_iv_length = 0
+        self.record_iv_length = 0
+        self.mac_algorithm = MAC_NULL
+        self.mac_length = 0
+        self.mac_key_length = 0
+        self.compression_method = COMP_NULL
+        self.master_secret = None
+        self.client_random = None
+        self.server_random = None
+class Connection_State():
+    def __init__(self):
+        self.compression_state = None
+        self.cipher_state = None
+        self.mac_key = None
+        self.sequence_number = 0
