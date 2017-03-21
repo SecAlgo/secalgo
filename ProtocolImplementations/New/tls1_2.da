@@ -1,5 +1,63 @@
-#Transport Layer Security (TLS) Protocol Version 1.2
-#single process class, no encapsulation
+#  Transport Layer Security (TLS) Protocol Version 1.2
+#  single process class, Record layer as method
+#
+#  Source:
+#  T. Dierks, E. Rescorla.
+#  "RFC: 5246 - The Transport Layer Security (TLS) Protocol, Version 1.2".
+#  August, 2008.
+#
+#  TLS Handshake Protocol Diagram (RFC 5246, p. 36)
+#    (01) Client -> Server : ClientHello
+#    (02) Server -> Client : ServerHello
+#    (03) Server -> Client : Certificate*
+#    (04) Server -> Client : ServerKeyExchange*
+#    (05) Server -> Client : CertificateRequest*
+#    (06) Server -> Client : ServerHelloDone
+#    (07) Client -> Server : Certificate*
+#    (08) Client -> Server : ClientKeyExchange
+#    (09) Client -> Server : CertificateVerify*
+#    (10) Client -> Server : [ChangeCipherSpec]
+#    (11) Client -> Server : Finished
+#    (12) Server -> Client : [ChangeCipherSpec]
+#    (13) Server -> Client : Finished
+#
+#  * indicates optional, or situation-dependent messages that are not always
+#  sent.
+#
+#  The ChangeCipherSpec messages are in square brackets because, even though
+#  sending these messages is a necessary part of the TLS Handshake protocol,
+#  they are not Handshake content type messages according to the specification.
+#  (ChangeCipherSpec messages have their own distinct content type.)
+#
+#  Messages 01 - 09 of the Handshake protocol are used to agree upon encryption,
+#  authentication, and compression algorithms that will be used to protect
+#  future messages, exchange the values that will be used by each side of the
+#  exchange to generate key material that will be used for the agreed-upon
+#  encryption and authentication methods, and to authenticate the
+#  identity of each participant. Public key encryption is used to protect the
+#  confidentiality of the shared secret used to generate the new, shared key
+#  material and accomplish the authentication of the participants in the
+#  Handshake.
+
+#  Once that is complete (after message 09), each side will
+#  independently use the shared secret and other values to generate new
+#  encryption and authentication keys. Together the agreed-upon cryptographic
+#  and compression methods along with the newly generated keys form the pending
+#  connection state.
+
+#  The ChangeCipherSpec messages (10 and 12) are sent to inform the other peer
+#  that the pending connection state should replace the current connection
+#  state--that the sender is now going to use the just negotiated cryptographic
+#  methods and keys to protect all future messages, so the receiver must begin
+#  using those methods and keys to read all future messages from the sender.
+#
+#  The Finished messages (11 and 13) contain verifiable information that is
+#  protected by the newly activated encryption and authentication methods,
+#  using the newly generated shared keys. They are used to prove that each
+#  participant in the Handshake has switched to the new connection state
+#  successfully. The TLS peers are now free to share protected application
+#  data.
+
 import time, sys
 from sa.sec_algo_pycrypto import (encrypt, decrypt, sign,
                                   verify, genkey, gen_nonce)
@@ -213,16 +271,17 @@ class TLS_Peer(process):
         return pt_fragment
                       
             
-    def handshake_wrapper(handshake_type, body):
-        #Will need to compute body length in bytes eventually
-        #Handshake = (msg_type, length, body)
-        return (handshake_type, None, body)
-        
     def run():
-        if False:        
-        #if ce == CONN_CLIENT:
-            #TLS Handshake with randomly chosen peer as server
-            server = random.choice(tuple(peers))
+        if peer != None:
+            #TLS Handshake with peer as server
+            #Set the connection_end in the security parameters to indicate that
+            #this is the client
+            current_rsp.connection_end = CONN_CLIENT
+            current_wsp.connection_end = CONN_CLIENT
+            pending_rsp.connection_end = CONN_CLIENT
+            pending_wsp.connection_end = CONN_CLIENT
+
+
             #First Handshake message is the client_hello
             #Client_Hello = (client_version, random, session_id, cipher_suites,
             #                compression_methods, extensions)
@@ -231,15 +290,26 @@ class TLS_Peer(process):
                                 (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
             #This is wrapped in a Handshake type message
             #Handshake = (msg_type, length, body)
-            #I will ignore length until Record layer fragmentation is working
+            #I will ignore length until data serialization and Record layer
+            #fragmentation are working
             handshake_ch = (CLIENT_HELLO, None, body_client_hello)
             send(record_wrapper(TYPE_HANDSHAKE, handshake_ch), to = server)
+
+            #Client will await a ServerHello response
+            await(some(received(msg, from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              (SERVER_HELLO, None, body_sh) == record_unwrapper(msg))))
+
+            
             
             #Client end of TLS Handshake will now wait for a ServerHelloDone
-            #ServerHelloDone = 
+            #ServerHelloDone = ()
             await(some(received(msg, from_ = server),
                        has = (msg[0] == TYPE_HANDSHAKE and
                               (SERVER_DONE, None, ()) == record_unwrapper(msg))))
+
+            
+
             
             #Seventh Handshake message is Certificate from the client
             #only if necessary - RFC 5246, pp. 47 and 54-56
@@ -302,7 +372,7 @@ class TLS_Peer(process):
             #Handshake complete
         await(False)
 
-    #Receives Handshake type tls messages, but the messages are still enclosed
+    #Receives Handshake type TLS messages, but the messages are still enclosed
     #within the Record layer structure
     def receive(msg=(TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
                      None, cipher_fragment), from_ = client):
