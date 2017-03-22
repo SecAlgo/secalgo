@@ -1,0 +1,35 @@
+# Transport Layer Security (TLS) 1.2 Protocol
+# Using send-to-self
+
+import sys, time
+
+class TLS_Peer(process):
+    def setup(peer):
+        self.handshake_step = 0
+        pass
+
+    def send_record():
+        pass
+
+    def send_handshake():
+        send(record)
+    
+    def run():
+        if peer != None:
+            initiate_handshake(peer):
+        await(False)
+
+    def initiate_handshake(server):
+        # send ClientHello to begin Handshake
+        handshake_step = 1
+        # ClientHello = Struct{client_version, random, session_id,
+        #                      cipher_suites, compression_methods, extensions}
+        # Random = Struct{gmt_unix_time, random_bytes[28]}
+        client_hello = (PROTOCOL_VERSION_1_2,
+                        (time.time(), genkey('random', keysize = 28)), None,
+                        (TLS_RSA_WITH_AES_256_CBC_SHA256,), (COMP_NULL,), None)
+        send_handshake(CLIENT_HELLO, client_hello, to = server)
+        await(some(received(((SERVER_DONE, None, ()), server), from_ = self))
+              and handshake_step > 2)
+
+    def receive(msg=(TYPE_HANDSHAKE), from_ = server)
