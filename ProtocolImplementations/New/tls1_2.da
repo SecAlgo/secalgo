@@ -132,6 +132,7 @@ TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
 
 class TLS_Peer(process):
     def setup(ce, peer):
+        self.max_hs_id = 0
         self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
         self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
         #SecurityParameters defined on p. 17 of RFC 5246
@@ -273,118 +274,124 @@ class TLS_Peer(process):
             
     def run():
         if peer != None:
-            #TLS Handshake with peer as server
-            #Set the connection_end in the security parameters to indicate that
-            #this is the client
-            current_rsp.connection_end = CONN_CLIENT
-            current_wsp.connection_end = CONN_CLIENT
-            pending_rsp.connection_end = CONN_CLIENT
-            pending_wsp.connection_end = CONN_CLIENT
+            initiate_handshake(peer)
+        else:
+            await(False)
 
-
-            #First Handshake message is the client_hello
-            #Client_Hello = (client_version, random, session_id, cipher_suites,
-            #                compression_methods, extensions)
-            body_client_hello= (PROTOCOL_VERSION_1_2,
-                                (time.time(), genkey('random', 28)), None,
-                                (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
-            #This is wrapped in a Handshake type message
-            #Handshake = (msg_type, length, body)
-            #I will ignore length until data serialization and Record layer
-            #fragmentation are working
-            handshake_ch = (CLIENT_HELLO, None, body_client_hello)
-            send(record_wrapper(TYPE_HANDSHAKE, handshake_ch), to = server)
-
-            #Client will await a ServerHello response
-            await(some(received(msg, from_ = server),
-                       has = (msg[0] == TYPE_HANDSHAKE and
-                              (SERVER_HELLO, None, body_sh) == record_unwrapper(msg))))
-
-            
-            
-            #Client end of TLS Handshake will now wait for a ServerHelloDone
-            #ServerHelloDone = ()
-            await(some(received(msg, from_ = server),
-                       has = (msg[0] == TYPE_HANDSHAKE and
-                              (SERVER_DONE, None, ()) == record_unwrapper(msg))))
-
-            
-
-            
-            #Seventh Handshake message is Certificate from the client
-            #only if necessary - RFC 5246, pp. 47 and 54-56
-            #Certificate = (certificate_list)
-            #This is wrapped in a Handshake type message
-            #Handshake = (msg_type, length, body)
-            
-            #Eighth Handshake message is Client_Key_Exchange
-            #Client_Key_Exchange = (exchange_keys,)
-            #Format of exchange_keys structure depends upon the agreed-upon
-            #public key encryption algorithm
-            #For RSA:
-            #PreMasterSecret = (client_version, random[46])
-            pre_master_secret = (PROTOCOL_VERSION_1_2, genkey('random', 46))
-            #Which is contained in an EncryptedPreMasterSecret
-            #EncryptedPreMasterSecret = (pre_master_secret,)
-            exchange_keys = (encrypt(pre_master_secret,
-                                     key = server_public_key),)
-            body_cke = (encrypted_pre_master_secret,)
-            #This is wrapped in a Handshake type message
-            #Handshake = (msg_type, length, body)
-            handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
-            send(record_wrapper(TYPE_HANDSHAKE, handshake_cke), to = server)
-            
-            #Ninth Handshake message is CertificateVerify from the client
-            #only if necessary
-            #CertificateVerify = (digitally_signed(handshake_messages),)
-            #This is wrapped in a Handshake type message
-            #Handshake = (msg_type, length, body)
-
-            #Tenth Handshake message is ChangeCipherSpec
-            #This is not really a Handshake protocol message.
-            #ChangeCipherSpec is treated as a separate TLS protocol.
-            #ChangeCipherSpec = (type,)
-            #where type is always equal to 1
-            handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
-            send(record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
-                 to = server)
-            #Immediately after sending this message, the sender must replace
-            #their current write session state with the pending write session
-            #state
-
-            #Eleventh Handshake message is Finished from the client
-            #Finished = (verify_data,)
-            #verify_data = PRF(master_secret, finished_label,
-            #                  Hash(handshake_messages))
-            #finished_label = "client finished", when sent by client
-            verification_data = PRF(master_secret, 'client_finished', SHA256())
-            finished = (verification_data,)
-            handshake_fin = (FINISHED, None, finished)
-            send(record_wrapper(TYPE_HANDSHAKE, handshake_fin), to = server)
-            
-            #The server will also have sent, or will send, a ChangeCipherSpec
-            #message causing the client to replace its current read session
-            #state with its pending read session state.
-            #Will now await the Finished message from the server.
-            await(some(received(msg, from_ = server),
-                       has = (msg[0] == TYPE_HANDSHAKE and
-                              (FINISHED, None, finish_data) == record_unwrapper(msg))))
-            #Handshake complete
-        await(False)
-
+    def initiate_handshake(peer):
+        handshake_id = (self, max_hs_id)
+        max_hs_id += 1
+        #TLS Handshake with peer as server
+        #Set the connection_end in the security parameters to indicate that
+        #this is the client
+        current_rsp.connection_end = CONN_CLIENT
+        current_wsp.connection_end = CONN_CLIENT
+        pending_rsp.connection_end = CONN_CLIENT
+        pending_wsp.connection_end = CONN_CLIENT
+        
+        #First Handshake message is the client_hello
+        #Client_Hello = (client_version, random, session_id, cipher_suites,
+        #                compression_methods, extensions)
+        body_client_hello= (PROTOCOL_VERSION_1_2,
+                            (time.time(), genkey('random', 28)), None,
+                            (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
+        #This is wrapped in a Handshake type message
+        #Handshake = (msg_type, length, body)
+        #I will ignore length until data serialization and Record layer
+        #fragmentation are working
+        handshake_ch = (CLIENT_HELLO, None, body_client_hello)
+        send((record_wrapper(TYPE_HANDSHAKE, handshake_ch, handshake_id)),
+             to = server)
+        
+        #Client will await a ServerHello response
+        await(some(received((msg, _handshake_id), from_ = server),
+                   has = (msg[0] == TYPE_HANDSHAKE and
+                          (SERVER_HELLO, None, body_sh) == record_unwrapper(msg))))
+        
+        
+        
+        #Client end of TLS Handshake will now wait for a ServerHelloDone
+        #ServerHelloDone = ()
+        await(some(received(msg, from_ = server),
+                   has = (msg[0] == TYPE_HANDSHAKE and
+                          (SERVER_DONE, None, ()) == record_unwrapper(msg))))
+        
+        
+        
+        
+        #Seventh Handshake message is Certificate from the client
+        #only if necessary - RFC 5246, pp. 47 and 54-56
+        #Certificate = (certificate_list)
+        #This is wrapped in a Handshake type message
+        #Handshake = (msg_type, length, body)
+        
+        #Eighth Handshake message is Client_Key_Exchange
+        #Client_Key_Exchange = (exchange_keys,)
+        #Format of exchange_keys structure depends upon the agreed-upon
+        #public key encryption algorithm
+        #For RSA:
+        #PreMasterSecret = (client_version, random[46])
+        pre_master_secret = (PROTOCOL_VERSION_1_2, genkey('random', 46))
+        #Which is contained in an EncryptedPreMasterSecret
+        #EncryptedPreMasterSecret = (pre_master_secret,)
+        exchange_keys = (encrypt(pre_master_secret,
+                                 key = server_public_key),)
+        body_cke = (encrypted_pre_master_secret,)
+        #This is wrapped in a Handshake type message
+        #Handshake = (msg_type, length, body)
+        handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
+        send(record_wrapper(TYPE_HANDSHAKE, handshake_cke), to = server)
+        
+        #Ninth Handshake message is CertificateVerify from the client
+        #only if necessary
+        #CertificateVerify = (digitally_signed(handshake_messages),)
+        #This is wrapped in a Handshake type message
+        #Handshake = (msg_type, length, body)
+        
+        #Tenth Handshake message is ChangeCipherSpec
+        #This is not really a Handshake protocol message.
+        #ChangeCipherSpec is treated as a separate TLS protocol.
+        #ChangeCipherSpec = (type,)
+        #where type is always equal to 1
+        handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
+        send(record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
+             to = server)
+        #Immediately after sending this message, the sender must replace
+        #their current write session state with the pending write session
+        #state
+        
+        #Eleventh Handshake message is Finished from the client
+        #Finished = (verify_data,)
+        #verify_data = PRF(master_secret, finished_label,
+        #                  Hash(handshake_messages))
+        #finished_label = "client finished", when sent by client
+        verification_data = PRF(master_secret, 'client_finished', SHA256())
+        finished = (verification_data,)
+        handshake_fin = (FINISHED, None, finished)
+        send(record_wrapper(TYPE_HANDSHAKE, handshake_fin), to = server)
+        
+        #The server will also have sent, or will send, a ChangeCipherSpec
+        #message causing the client to replace its current read session
+        #state with its pending read session state.
+        #Will now await the Finished message from the server.
+        await(some(received(msg, from_ = server),
+                   has = (msg[0] == TYPE_HANDSHAKE and
+                          (FINISHED, None, finish_data) == record_unwrapper(msg))))
+        #Handshake complete
+        
     #Receives Handshake type TLS messages, but the messages are still enclosed
     #within the Record layer structure
     def receive(msg=(TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
                      None, cipher_fragment), from_ = client):
         handshake_msg = record_unwrapper(TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
                                          None, cipher_fragment)
-
+            
         #Handshake messages must be recieved in the proper order. Handling of
         #other types of Handshake messages are handled further into the receive
         #handler. So only receipt of the ClientHello will continue from here.
         if (CLIENT_HELLO, _, _) != handshake_msg:
             return
-
+            
         #Unpack the Client Hello
         #Client_Hello = (client_version, random, session_id, cipher_suites,
         #                compression_methods, extensions)
