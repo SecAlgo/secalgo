@@ -29,7 +29,7 @@ def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
 def genkey(key_type, key_size = None,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
     Random.atfork()
-    if key_type == 'shared':
+    if key_type == 'shared' or key_type == 'random':
         if key_size != None:
             return gen_sym_key(key_size)
         else:
