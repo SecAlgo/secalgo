@@ -1,74 +1,73 @@
-#  Transport Layer Security (TLS) Protocol Version 1.2
-#  single process class, Record layer as method
+# Transport Layer Security (TLS) Protocol Version 1.2
+# single process class, Record layer as method
 #
 #  Source:
-#  T. Dierks, E. Rescorla.
-#  "RFC: 5246 - The Transport Layer Security (TLS) Protocol, Version 1.2".
-#  August, 2008.
+# T. Dierks, E. Rescorla.
+# "RFC: 5246 - The Transport Layer Security (TLS) Protocol, Version 1.2".
+# August, 2008.
 #
-#  TLS Handshake Protocol Diagram (RFC 5246, p. 36)
-#    (01) Client -> Server : ClientHello
-#    (02) Server -> Client : ServerHello
-#    (03) Server -> Client : Certificate*
-#    (04) Server -> Client : ServerKeyExchange*
-#    (05) Server -> Client : CertificateRequest*
-#    (06) Server -> Client : ServerHelloDone
-#    (07) Client -> Server : Certificate*
-#    (08) Client -> Server : ClientKeyExchange
-#    (09) Client -> Server : CertificateVerify*
-#    (10) Client -> Server : [ChangeCipherSpec]
-#    (11) Client -> Server : Finished
-#    (12) Server -> Client : [ChangeCipherSpec]
-#    (13) Server -> Client : Finished
+# TLS Handshake Protocol Diagram (RFC 5246, p. 36)
+#   (01) Client -> Server : ClientHello
+#   (02) Server -> Client : ServerHello
+#   (03) Server -> Client : Certificate*
+#   (04) Server -> Client : ServerKeyExchange*
+#   (05) Server -> Client : CertificateRequest*
+#   (06) Server -> Client : ServerHelloDone
+#   (07) Client -> Server : Certificate*
+#   (08) Client -> Server : ClientKeyExchange
+#   (09) Client -> Server : CertificateVerify*
+#   (10) Client -> Server : [ChangeCipherSpec]
+#   (11) Client -> Server : Finished
+#   (12) Server -> Client : [ChangeCipherSpec]
+#   (13) Server -> Client : Finished
 #
-#  * indicates optional, or situation-dependent messages that are not always
-#  sent.
+# * indicates optional, or situation-dependent messages that are not always
+# sent.
 #
-#  The ChangeCipherSpec messages are in square brackets because, even though
-#  sending these messages is a necessary part of the TLS Handshake protocol,
-#  they are not Handshake content type messages according to the specification.
-#  (ChangeCipherSpec messages have their own distinct content type.)
+# The ChangeCipherSpec messages are in square brackets because, even though
+# sending these messages is a necessary part of the TLS Handshake protocol,
+# they are not Handshake content type messages according to the specification.
+# (ChangeCipherSpec messages have their own distinct content type.)
 #
-#  Messages 01 - 09 of the Handshake protocol are used to agree upon encryption,
-#  authentication, and compression algorithms that will be used to protect
-#  future messages, exchange the values that will be used by each side of the
-#  exchange to generate key material that will be used for the agreed-upon
-#  encryption and authentication methods, and to authenticate the
-#  identity of each participant. Public key encryption is used to protect the
-#  confidentiality of the shared secret used to generate the new, shared key
-#  material and accomplish the authentication of the participants in the
-#  Handshake.
+# Messages 01 - 09 of the Handshake protocol are used to agree upon encryption,
+# authentication, and compression algorithms that will be used to protect
+# future messages, exchange the values that will be used by each side of the
+# exchange to generate key material that will be used for the agreed-upon
+# encryption and authentication methods, and to authenticate the
+# identity of each participant. Public key encryption is used to protect the
+# confidentiality of the shared secret used to generate the new, shared key
+# material and accomplish the authentication of the participants in the
+# Handshake.
 
-#  Once that is complete (after message 09), each side will
-#  independently use the shared secret and other values to generate new
-#  encryption and authentication keys. Together the agreed-upon cryptographic
-#  and compression methods along with the newly generated keys form the pending
-#  connection state.
+# Once that is complete (after message 09), each side will
+# independently use the shared secret and other values to generate new
+# encryption and authentication keys. Together the agreed-upon cryptographic
+# and compression methods along with the newly generated keys form the pending
+# connection state.
 
-#  The ChangeCipherSpec messages (10 and 12) are sent to inform the other peer
-#  that the pending connection state should replace the current connection
-#  state--that the sender is now going to use the just negotiated cryptographic
-#  methods and keys to protect all future messages, so the receiver must begin
-#  using those methods and keys to read all future messages from the sender.
+# The ChangeCipherSpec messages (10 and 12) are sent to inform the other peer
+# that the pending connection state should replace the current connection
+# state--that the sender is now going to use the just negotiated cryptographic
+# methods and keys to protect all future messages, so the receiver must begin
+# using those methods and keys to read all future messages from the sender.
 #
-#  The Finished messages (11 and 13) contain verifiable information that is
-#  protected by the newly activated encryption and authentication methods,
-#  using the newly generated shared keys. They are used to prove that each
-#  participant in the Handshake has switched to the new connection state
-#  successfully. The TLS peers are now free to share protected application
-#  data.
+# The Finished messages (11 and 13) contain verifiable information that is
+# protected by the newly activated encryption and authentication methods,
+# using the newly generated shared keys. They are used to prove that each
+# participant in the Handshake has switched to the new connection state
+# successfully. The TLS peers are now free to share protected application
+# data.
 
 import time, sys
 from sa.sec_algo_pycrypto import (encrypt, decrypt, sign,
                                   verify, genkey, gen_nonce)
-
-#Protocol version number for SSL/TLS
+# Protocol version number for SSL/TLS
 PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
 PROTOCOL_VERSION_1_0 = (3, 1) #TLS 1.0
 PROTOCOL_VERSION_1_1 = (3, 2) #TLS 1.1
 PROTOCOL_VERSION_1_2 = (3, 3) #TLS 1.2
 
-#Enumerated values for the ContentType of Record Layer messages
+# Enumerated values for the ContentType of Record Layer messages
 TYPE_CHANGE_CIPHER_SPEC = 20
 TYPE_ALERT              = 21
 TYPE_HANDSHAKE          = 22
@@ -76,8 +75,8 @@ TYPE_APPLICATION_DATA   = 23
 
 CHANGE_CIPHER_SPEC_BODY = 1
 
-#Enumerated values for Handshake types; a byte is used for the message type in
-#Handshake messages
+# Enumerated values for Handshake types; a byte is used for the message type in
+# Handshake messages
 HELLO_REQUEST       = 0
 CLIENT_HELLO        = 1
 SERVER_HELLO        = 2
@@ -89,7 +88,7 @@ CERTIFICATE_VERIFY  = 15
 CLIENT_KEY_EXCHANGE = 16
 FINISHED            = 20
 
-#Enumerated values for Client Certificate Types
+# Enumerated values for Client Certificate Types
 RSA_SIGN                  = 1
 DSS_SIGN                  = 2
 RSA_FIXED_DH              = 3
@@ -98,25 +97,25 @@ RSA_EPHEMERAL_DH_RESERVED = 5
 DSS_EPHEMERAL_DH_RESERVED = 6
 FORTEZZA_DMS_RESERVED     = 20
 
-#Enumerated values of connection end types (ConnectionEnd)
+# Enumerated values of connection end types (ConnectionEnd)
 CONN_SERVER = 0
 CONN_CLIENT = 1
 
-#Enumerated values of psuedo-random functions (PRFAlgorithm)
+# Enumerated values of psuedo-random functions (PRFAlgorithm)
 TLS_PRF_SHA256 = 0
 
-#Enumerated values of encryption algorithm types (CipherType)
+# Enumerated values of encryption algorithm types (CipherType)
 CIPHER_STREAM = 0
 CIPHER_BLOCK  = 1
 CIPHER_AEAD   = 2
 
-#Enumerated values of bulk encryption algorithms (BulkCipherAlgorithm)
+# Enumerated values of bulk encryption algorithms (BulkCipherAlgorithm)
 BULK_NULL = 0
 BULK_RC4  = 1
 BULK_3DES = 2
 BULK_AES  = 3
 
-#Enumerated values of MAC algorithms
+# Enumerated values of MAC algorithms
 MAC_NULL        = 0
 MAC_HMAC_MD5    = 1
 MAC_HMAC_SHA1   = 2
@@ -124,18 +123,43 @@ MAC_HMAC_SHA256 = 3
 MAC_HMAC_SHA384 = 4
 MAC_HMAC_SHA512 = 5
 
-#Enumerated values of compression algorithms
+# Enumerated values of compression algorithms
 COMP_NULL = 0
 
-#Enumerated values of cipher suites
+# Enumerated values of cipher suites
 TLS_RSA_WITH_AES_256_CBC_SHA256 = (0, 61)
+
+# Enumerated values of SignatureAlgorithms
+ANONYMOUS = 0
+RSA       = 1
+DSA       = 2
+ECDSA     = 3
+
+# Enumerated values of HashAlgorithms
+NONE   = 0
+MD5    = 1
+SHA1   = 2
+SHA224 = 3
+SHA256 = 4
+SHA384 = 5
+SHA512 = 6
+
+#Constants for Key Exchange Algorithms
+KE_NULL    = 0
+KE_RSA     = 1
+KE_DH_DSS  = 2
+KE_DH_RSA  = 3
+KE_DHE_DSS = 4
+KE_DHE_DSS = 5
+KE_DH_ANON = 6
+
 
 class TLS_Peer(process):
     def setup(ce, peer):
         self.max_hs_id = 0
         self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
         self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
-        #SecurityParameters defined on p. 17 of RFC 5246
+        # SecurityParameters defined on p. 17 of RFC 5246
         self.current_rsp = Security_Parameters(ce)
         self.current_wsp = Security_Parameters(ce)
         self.pending_rsp = Security_Parameters(ce)
@@ -144,25 +168,25 @@ class TLS_Peer(process):
         self.current_read_state = Connection_State()
         self.current_write_state = Connection_State()
         self.pending_read_state = Connection_State()
-        self.pending_write__state = Connection_State()
+        self.pending_write__state = Connection_State()        
 
     def record_wrapper(content_type, tls_message):
         version = PROTOCOL_VERSION_1_2
-        #will need to figure out how to implement proper fragmentation
+        # will need to figure out how to implement proper fragmentation
         pt_fragment = tls_message
 
-        #will need to determine length of fragment in bytes
+        # will need to determine length of fragment in bytes
         pt_length = None
 
-        #First, build a TLSPlaintext message
-        #TLSPlaintext = (type, version, length, fragment
+        # First, build a TLSPlaintext message
+        # TLSPlaintext = (type, version, length, fragment
         tls_pt = (content_type, version, pt_length, pt_fragment)
 
-        #Second, apply the configured compression algorithm.
-        #There is always an active compression algorith, but the default
-        #compression algorithm is the Null algorithm, which applies no
-        #compression
-        #TLSCompressed = (type, version, length, fragment)
+        # Second, apply the configured compression algorithm.
+        # There is always an active compression algorith, but the default
+        # compression algorithm is the Null algorithm, which applies no
+        # compression
+        # TLSCompressed = (type, version, length, fragment)
         comp_length = pt_length
         if current_sp['compression_algorithm'] != COMP_NULL:
             comp_fragment = current_sp['compression_algorithm'](pt_fragment)
@@ -170,20 +194,20 @@ class TLS_Peer(process):
             comp_fragment = pt_fragment
         tls_comp = (content_type, version, comp_length, comp_fragment)
 
-        #Third, apply the agreed-upon encryption and MAC algorithms
-        #The type of the agreed-upon bulk encryption algorithm determines the
-        #form of the structure used to contain the ciphertext.
-        #Like compression methods, there is a NULL encryption algorithm that is
-        #used by default when a TLS connection is initialized. The NULL
-        #encryption method is treated as a stream type bulk encryption
-        #algorithm. It uses the GenericStreamCipher structure to enclose the
-        #plaintext.
-        #GenericStreamCipher = (content, MAC)
+        # Third, apply the agreed-upon encryption and MAC algorithms
+        # The type of the agreed-upon bulk encryption algorithm determines the
+        # form of the structure used to contain the ciphertext.
+        # Like compression methods, there is a NULL encryption algorithm that
+        # is used by default when a TLS connection is initialized. The NULL
+        # encryption method is treated as a stream type bulk encryption
+        # algorithm. It uses the GenericStreamCipher structure to enclose the
+        # plaintext.
+        # GenericStreamCipher = (content, MAC)
         cipher_length = comp_length
         if current_sp['cipher_type'] == CIPHER_STREAM:
-            #The Message Authentication Code (MAC) must be computed
-            #If the mac_algorithm field is NULL, then the mac_length field will
-            #also be NULL and so there is no MAC.
+            # The Message Authentication Code (MAC) must be computed
+            # If the mac_algorithm field is NULL, then the mac_length field
+            # will also be NULL and so there is no MAC.
             if current_sp['mac_algorithm'] == MAC_NULL:
                 cipher_mac = b''
             else:
@@ -191,32 +215,33 @@ class TLS_Peer(process):
                                    comp_length, comp_fragment), key = mac_key)
             stream_ciphered = (comp_fragment, cipher_mac)
 
-            #The cipher fragment must now be encrypted, unless the agreed-upon
-            #encryption algorithm is none
+            # The cipher fragment must now be encrypted, unless the agreed-upon
+            # encryption algorithm is none
             if current_sp['bulk_cipher_algorithm'] != BULK_NULL:
                 cipher_fragment = encrypt(stream_ciphered, key = encryption_key)
             else:
                 cipher_fragment = stream_ciphered
 
-        #GenericBlockCipher = (iv, encrypt(content, mac, padding, padding_length))
+        # GenericBlockCipher = (iv, encrypt(content, mac, padding,
+        # padding_length))
         elif current_sp['cipher_type'] == CIPHER_BLOCK:
-            #For block encryption we first generate an IV
+            # For block encryption we first generate an IV
             iv = genkey('random', current_sp['record_iv_length'])
 
-            #Then we generate the MAC just as above
+            # Then we generate the MAC just as above
             if current_sp['mac_algorithm'] == MAC_NULL:
                 cipher_mac = b''
             else:
                 cipher_mac = sign((sequence_number, content_type, version,
                                    comp_length, comp_fragment), key = mac_key)
 
-            #padding must then be computed
-            #In order to do explicit padding here, padding done by the library
-            #must be switched off
-            #May want the amount of padding to be application configurable
-            #because it can be used to prevent traffic analysis attacks
-            #Can't do padding here until content is encoded as bytes
-            #Will treat all messages as block length, 0 padding bytes
+            # Padding must then be computed
+            # In order to do explicit padding here, padding done by the library
+            # must be switched off
+            # May want the amount of padding to be application configurable
+            # because it can be used to prevent traffic analysis attacks
+            # Can't do padding here until content is encoded as bytes
+            # Will treat all messages as block length, 0 padding bytes
             cipher_padding = b''
             cipher_pad_length = 0
             block_ciphered = (comp_fragment, cipher_mac,
@@ -227,17 +252,17 @@ class TLS_Peer(process):
         return tls_cipher
     
     def record_unwrapper(tls_cipher):
-        #First, unpack tls_cipher
+        # First, unpack tls_cipher
         content_type, version, cipher_length, cipher_fragment = tls_cipher
 
-        #Second, check version
+        # Second, check version
         if version != PROTOCOL_VERSION_1_2:
             #send error
             return
 
-        #Third, use session state and security parameters to decrypt fragment
-        #Begin by checking type of bulk encryption algorithm
-        #then, decrypt and unpack cipher block
+        # Third, use session state and security parameters to decrypt fragment
+        # Begin by checking type of bulk encryption algorithm
+        # then, decrypt and unpack cipher block
         if current_sp['cipher_type'] == CIPHER_STREAM:
             if current_sp['bulk_cipher_algorithm'] == BULK_NULL:
                 (comp_fragment, cipher_mac) = cipher_fragment
@@ -250,25 +275,27 @@ class TLS_Peer(process):
              cipher_pad_length) = decrypt(block_ciphered, key = cipher_key)
 
         comp_length = cipher_length
-        #Third, verify the MAC
+
+        # Third, verify the MAC
         if current_sp['mac_algorithm'] != MAC_NULL:
             if not verify((sequence_number, content_type, version,
-                           comp_length, comp_fragment),cipher_mac, key = mac_key):
+                           comp_length, comp_fragment),cipher_mac,
+                          key = mac_key):
                 #send message authentication error
                 return
 
-        #Fourth, apply the active decompression method
+        # Fourth, apply the active decompression method
         pt_length = comp_length
         if current_sp['compression_algorithm'] != COMP_NULL:
             pt_fragment = current_sp['compression_algorithm'](comp_fragment, 'decompress')
         else:
             pt_fragment = comp_fragment
 
-        #Now strip Record layer fields and return enclosed TLS message
-        #Stripping the Record layer fields is acceptable because they are
-        #never encrypted and only the Record layer requires them to determine
-        #which higher-level TLS protocol is being run on top of the Record
-        #layer.
+        # Now strip Record layer fields and return enclosed TLS message
+        # Stripping the Record layer fields is acceptable because they are
+        # never encrypted and only the Record layer requires them to determine
+        # which higher-level TLS protocol is being run on top of the Record
+        # layer.
         return pt_fragment
                       
             
@@ -279,104 +306,183 @@ class TLS_Peer(process):
             await(False)
 
     def initiate_handshake(peer):
+        print('$$$$$$$$$$:', 1, flush = True)
+        # handshake_id's are not a part of the protocol. I added them to make
+        # writing correct awaits easier. These are the same sorts of session
+        # id's we have used elsewhere--a tuple of a process id and a counter
+        # value
         handshake_id = (self, max_hs_id)
         max_hs_id += 1
-        #TLS Handshake with peer as server
-        #Set the connection_end in the security parameters to indicate that
-        #this is the client
+
+        # TLS Handshake with peer as server
+        # Set the connection_end in the security parameters to indicate that
+        # this is the client
         current_rsp.connection_end = CONN_CLIENT
         current_wsp.connection_end = CONN_CLIENT
         pending_rsp.connection_end = CONN_CLIENT
         pending_wsp.connection_end = CONN_CLIENT
         
-        #First Handshake message is the client_hello
-        #Client_Hello = (client_version, random, session_id, cipher_suites,
-        #                compression_methods, extensions)
+        # First Handshake message is the client_hello
+        # Client_Hello = (client_version, random, session_id, cipher_suites,
+        #                 compression_methods, extensions)
         body_client_hello= (PROTOCOL_VERSION_1_2,
                             (time.time(), genkey('random', 28)), None,
                             (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
-        #This is wrapped in a Handshake type message
-        #Handshake = (msg_type, length, body)
-        #I will ignore length until data serialization and Record layer
-        #fragmentation are working
+        print('$$$$$$$$$$:', 2, flush = True)
+        # This is wrapped in a Handshake type message
+        # Handshake = (msg_type, length, body)
+        # I will ignore length until data serialization and Record layer
+        # fragmentation are working
         handshake_ch = (CLIENT_HELLO, None, body_client_hello)
-        send((record_wrapper(TYPE_HANDSHAKE, handshake_ch, handshake_id)),
+        send((record_wrapper(TYPE_HANDSHAKE, handshake_ch), handshake_id),
              to = server)
-        
-        #Client will await a ServerHello response
+        print('$$$$$$$$$$:', 3, flush = True)
+        # Client will await a ServerHello response
         await(some(received((msg, _handshake_id), from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
-                          (SERVER_HELLO, None, body_sh) == record_unwrapper(msg))))
+                          ((SERVER_HELLO, None, body_sh) ==
+                           record_unwrapper(msg)))))
+        print('$$$$$$$$$$:', 4, flush = True)
+        output('##########:', body_sh)
         
+        # SERVER_HELLO = Struct{server_version, random, session_id,
+        #                       cipher_suite, compression_method, extensions}
+        (server_version, server_random, session_id,
+         cipher_suite, compression_method, extensions) = body_sh
+        if server_version != PROTOCOL_VERSION_1_2:
+            # send alert
+            return
+        key_exchange_algorithm = update_pending_parameters(cipher_suite,
+                                                           compresion_method)
+
+        # if the key exchange algorithm requires certificates for
+        # authentication, then the server must send a Certificate message
+        # CERTIFICATE = P{certificate_list}
+        if key_exchange_alg not in {KE_NULL, KE_DH_ANON}:
+            await(some(received((msg, _handshake_id), from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              ((CERTIFICATE, None, body_cert) ==
+                               record_unwrapper(msg)))))
+
+            # Now the server's certificate must be verified, so that the stored
+            # public key information can be used to protect the premaster secret.
+            # CERTIFICATE = Struct{certificate_list}
+            # Each certificate is a tuple:
+            # (id, public_key, sign((id, public_key), key = sk_T)))
+            # where T is some trusted authority.d
+            (certificate_list) = body_cert
+            verdict = True
+            for i, cert in enumerate(certificate_list):
+                if i < len(certificate_list - 1):
+                    if not verify((cert[0], cert[1]), cert[2],
+                                  key = certificate_list[i + 1][1]):
+                        verdict = False
+                else:
+                    # final (root) certificate is self-signed
+                    if not verify((cert[0], cert[1]), cert[2], key = cert[1]):
+                        verdict = False
+            if not verdict:
+                #send alert
+                return
+            
+        # ...if the key exchange algorithm requires additional input from the
+        # server to enable establishment of the premaster secret, then the
+        # client must await a SERVER_KEY_EXCHANGE message from the server
+        # Our current options for key exchange do not require this message.
+        if key_exchange_algorithm not in {KE_NULL, KE_RSA, KE_DH_DSS, KE_DH_RSA}:
+            await(some(received((msg, _handshake_id), from_ = server),
+                       has = (msg[0] == TYPE_HANDSHAKE and
+                              ((SERVER_KEY_EXCHANGE, None, body_ske) ==
+                               record_unwrapper(msg)))))
+            pass
         
+        # ...if the server wishes to authenticate the client during a
+        # non-anonymous handshake, then the server may send a
+        # CERTIFICATE_REQUEST message. Given that the above condition is
+        # satisfied, then this message is genuinely optional, not sure how to
+        # construct an await for it.
+        # Going to ignore this message for now.
+        if key_exchange_algorithm not in {KE_NULL, KE_DH_ANON}:
+            if await(some(received((msg, _handshake_id), from_ = server),
+                          has = (msg[0] == TYPE_HANDSHAKE and
+                                 ((CERTIFICATE_REQUEST, None, body_cr) ==
+                                  record_unwrapper(msg))))):
+                # ...Handle CertificateRequest
+                pass
+            elif await(some(received((msg, _handshake_id), from_ = server),
+                            has = (msg[0] == TYPE_HANDSHAKE and
+                                   (SERVER_DONE, None, ()) ==
+                                   record_unwrapper(msg)))):
+                #UGLY
+                #This case will be handled in the unconditional await below.
+                pass
         
-        #Client end of TLS Handshake will now wait for a ServerHelloDone
-        #ServerHelloDone = ()
-        await(some(received(msg, from_ = server),
+        # Client end of TLS Handshake will now wait for a ServerHelloDone
+        # ServerHelloDone = Struct{}
+        await(some(received((msg, _handshake_id), from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
                           (SERVER_DONE, None, ()) == record_unwrapper(msg))))
         
         
+        # Seventh Handshake message is Certificate from the client
+        # only if necessary - RFC 5246, pp. 47 and 54-56
+        # Certificate = (certificate_list)
+        # This is wrapped in a Handshake type message
+        # Handshake = (msg_type, length, body)
         
-        
-        #Seventh Handshake message is Certificate from the client
-        #only if necessary - RFC 5246, pp. 47 and 54-56
-        #Certificate = (certificate_list)
-        #This is wrapped in a Handshake type message
-        #Handshake = (msg_type, length, body)
-        
-        #Eighth Handshake message is Client_Key_Exchange
-        #Client_Key_Exchange = (exchange_keys,)
-        #Format of exchange_keys structure depends upon the agreed-upon
-        #public key encryption algorithm
-        #For RSA:
-        #PreMasterSecret = (client_version, random[46])
+        # Eighth Handshake message is Client_Key_Exchange
+        # Client_Key_Exchange = (exchange_keys,)
+        # Format of exchange_keys structure depends upon the agreed-upon
+        # public key encryption algorithm
+        # For RSA:
+        # PreMasterSecret = (client_version, random[46])
         pre_master_secret = (PROTOCOL_VERSION_1_2, genkey('random', 46))
-        #Which is contained in an EncryptedPreMasterSecret
-        #EncryptedPreMasterSecret = (pre_master_secret,)
+        # Which is contained in an EncryptedPreMasterSecret
+        # EncryptedPreMasterSecret = (pre_master_secret,)
         exchange_keys = (encrypt(pre_master_secret,
                                  key = server_public_key),)
         body_cke = (encrypted_pre_master_secret,)
-        #This is wrapped in a Handshake type message
-        #Handshake = (msg_type, length, body)
+        # This is wrapped in a Handshake type message
+        # Handshake = (msg_type, length, body)
         handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
         send(record_wrapper(TYPE_HANDSHAKE, handshake_cke), to = server)
         
-        #Ninth Handshake message is CertificateVerify from the client
-        #only if necessary
-        #CertificateVerify = (digitally_signed(handshake_messages),)
-        #This is wrapped in a Handshake type message
-        #Handshake = (msg_type, length, body)
+        # Ninth Handshake message is CertificateVerify from the client
+        # only if necessary
+        # CertificateVerify = (digitally_signed(handshake_messages),)
+        # This is wrapped in a Handshake type message
+        # Handshake = (msg_type, length, body)
         
-        #Tenth Handshake message is ChangeCipherSpec
-        #This is not really a Handshake protocol message.
-        #ChangeCipherSpec is treated as a separate TLS protocol.
-        #ChangeCipherSpec = (type,)
-        #where type is always equal to 1
+        # Tenth Handshake message is ChangeCipherSpec
+        # This is not really a Handshake protocol message.
+        # ChangeCipherSpec is treated as a separate TLS protocol.
+        # ChangeCipherSpec = (type,)
+        # where type is always equal to 1
         handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
         send(record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
              to = server)
-        #Immediately after sending this message, the sender must replace
-        #their current write session state with the pending write session
-        #state
+        # Immediately after sending this message, the sender must replace
+        # their current write session state with the pending write session
+        # state
         
-        #Eleventh Handshake message is Finished from the client
-        #Finished = (verify_data,)
-        #verify_data = PRF(master_secret, finished_label,
-        #                  Hash(handshake_messages))
-        #finished_label = "client finished", when sent by client
+        # Eleventh Handshake message is Finished from the client
+        # Finished = (verify_data,)
+        # verify_data = PRF(master_secret, finished_label,
+        #                   Hash(handshake_messages))
+        # finished_label = "client finished", when sent by client
         verification_data = PRF(master_secret, 'client_finished', SHA256())
         finished = (verification_data,)
         handshake_fin = (FINISHED, None, finished)
         send(record_wrapper(TYPE_HANDSHAKE, handshake_fin), to = server)
         
-        #The server will also have sent, or will send, a ChangeCipherSpec
-        #message causing the client to replace its current read session
-        #state with its pending read session state.
-        #Will now await the Finished message from the server.
+        # The server will also have sent, or will send, a ChangeCipherSpec
+        # message causing the client to replace its current read session
+        # state with its pending read session state.
+        # Will now await the Finished message from the server.
         await(some(received(msg, from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
-                          (FINISHED, None, finish_data) == record_unwrapper(msg))))
+                          ((FINISHED, None, finish_data) ==
+                          record_unwrapper(msg)))))
         #Handshake complete
         
     #Receives Handshake type TLS messages, but the messages are still enclosed
