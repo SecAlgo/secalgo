@@ -4,6 +4,7 @@ import pickle
 import inspect
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
+from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
@@ -135,7 +136,7 @@ def encrypt(plaintext, key):
         return sym_encrypt(plaintext, key)
 #end encrypt
 
-def sym_encrypt(plaintext, key, alg = 'AES', mode = 'CTR'):
+def sym_encrypt(plaintext, key, alg = 'AES', mode = 'CBC'):
     serial_pt = pickle.dumps(plaintext)
     if mode == 'CTR':
         #print('$$$$$$$$$$: Encrypt: USING CTR')
@@ -226,38 +227,82 @@ def asym_decrypt(ct_list, private_key):
 
 def sign(data, key):
     Random.atfork()
+    if b'BEGIN' in key:
+        return pubkey_sign(data, RSA.importKey(key))
+    else:
+        return mac_sign(data, key)
+#end sign()
+
+def mac_sign(data, key):
+    Random.atfork()
     serial_data = pickle.dumps(data)
-    im_key = RSA.importKey(key)
-    sig = im_key.sign(SHA256.new(serial_data).digest(), '')
+    h = HMAC.new(key, serial_data, SHA256)
+    sig = h.digest()
+    result = (serial_data, sig)
+    s_result = pickle.dumps(result)
+    return s_result
+#end mac_sign()    
+        
+def pubkey_sign(data, key):
+    Random.atfork()
+    serial_data = pickle.dumps(data)
+    sig = key.sign(SHA256.new(serial_data).digest(), '')
     result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
                                     byteorder = 'little'))
     s_result = pickle.dumps(result)
     return s_result
-#end sign()
+#end pubkey_sign()
 
-#returns None when verfication fails
 def verify(data, key):
     Random.atfork()
-    im_key = RSA.importKey(key)
+    if b'BEGIN' in key:
+        return pubkey_verify(data, RSA.importKey(key))
+    else:
+        return mac_verify(data, key)
+
+def verify1(data, signed_data, key):
+    Random.atfork()
+    if b'BEGIN' in key:
+        return pubkey_verify1(data, signed_data, RSA.importKey(key))
+    else:
+        return mac_verify1(data, signed_data, key)
+#end verify1()
+
+def mac_verify(data, key):
+    Random.atfork()
+    serial_data, sig = pickle.loads(data)
+    verdict = (sig == HMAC.new(key, serial_data, SHA256).digest())
+    if verdict:
+        return pickle.loads(serial_data)
+    else:
+        return none
+#end mac_verify()
+
+def mac_verify1(data, signed_data, key):
+    Random.atfork()
+    serial_data, sig = pickle.loads(signed_data)
+    verdict = (sig == HMAC.new(key, pickle.dumps(data), SHA256).digest())
+    return verdict
+#end mac_verify1()
+    
+#returns None when verfication fails
+def pubkey_verify(data, key):
+    Random.atfork()
     unp_data = pickle.loads(data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = im_key.verify(SHA256.new(unp_data[0]).digest(), sig)
+    verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
     if verdict:
         return pickle.loads(unp_data[0])
     else:
         return None
-#end def verify()
+#end pubkey_verify()
 
-def verify1(data, signed_data, key):
+def pubkey_verify1(data, signed_data, key):
     Random.atfork()
-    im_key = RSA.importKey(key)
     unp_data = pickle.loads(signed_data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = im_key.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
-    if verdict:
-        return data
-    else:
-        return None
+    verdict = key.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
+    return verdict
 #end verify1()
 
 modp_groups = {
