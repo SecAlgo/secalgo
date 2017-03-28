@@ -188,7 +188,7 @@ def decrypt(ciphertext, key):
         return sym_decrypt(ciphertext, key)
 #end decrypt()
 
-def sym_decrypt(ciphertext, key, alg = 'AES', mode = 'CTR'):
+def sym_decrypt(ciphertext, key, alg = 'AES', mode = 'CBC'):
     if mode == 'CTR':
         #print('$$$$$$$$$$: Decrypt: USING CTR')
         pre = ciphertext[0:8]
