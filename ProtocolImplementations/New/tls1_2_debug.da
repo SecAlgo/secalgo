@@ -235,6 +235,16 @@ class TLS_Peer(process):
         self.pending_write_state = Connection_State()        
 
     def record_wrapper(content_type, tls_message):
+        #print('Wrap params:\n',
+        #      current_wsp.connection_end, current_wsp.prf_algorithm,
+        #      current_wsp.bulk_cipher_algorithm, current_wsp.cipher_type,
+        #      current_wsp.enc_key_length, current_wsp.block_length,
+        #      current_wsp.fixed_iv_length, current_wsp.record_iv_length,
+        #      current_wsp.mac_algorithm, current_wsp.mac_length,
+        #      current_wsp.mac_key_length, current_wsp.compression_method,
+        #      current_wsp.master_secret, current_wsp.client_random,
+        #      current_wsp.server_random)
+        #content_type = 25
         version = PROTOCOL_VERSION_1_2
         # will need to figure out how to implement proper fragmentation
         pt_fragment = tls_message
@@ -319,9 +329,20 @@ class TLS_Peer(process):
                                     key = current_write_state.cipher_state[0]))
 
         tls_cipher = (content_type, version, cipher_length, cipher_fragment)
+        #print(tls_cipher)
         return tls_cipher
     
     def record_unwrapper(tls_cipher):
+        #print('Unwrap params:\n',
+        #      current_rsp.connection_end, current_rsp.prf_algorithm,
+        #      current_rsp.bulk_cipher_algorithm, current_rsp.cipher_type,
+        #      current_rsp.enc_key_length, current_rsp.block_length,
+        #      current_rsp.fixed_iv_length, current_rsp.record_iv_length,
+        #      current_rsp.mac_algorithm, current_rsp.mac_length,
+        #      current_rsp.mac_key_length, current_rsp.compression_method,
+        #      current_rsp.master_secret, current_rsp.client_random,
+        #      current_rsp.server_random)
+        #print('TLS Cipher:\n', tls_cipher, flush = True)
         # First, unpack tls_cipher
         content_type, version, cipher_length, cipher_fragment = tls_cipher
 
@@ -340,19 +361,29 @@ class TLS_Peer(process):
                 (comp_fragment, cipher_mac) = decrypt(cipher_fragment,
                                     key = current_read_state.cipher_state[0])
         elif current_rsp.cipher_type == CIPHER_BLOCK:
+            #print('**********:', 1, flush = True)
             (iv, block_ciphered) = cipher_fragment
+            #print('**********:', 2, flush = True)
             (comp_fragment, cipher_mac,
              cipher_padding, cipher_pad_length) = decrypt(block_ciphered,
                                     key = current_read_state.cipher_state[0])
+            #print('**********:', 3, flush = True)
+            #print(comp_fragment, flush = True)
+            #print(len(comp_fragment[2][0]))
         comp_length = cipher_length
+        
+
         # Third, verify the MAC
         if current_rsp.mac_algorithm != MAC_NULL:
+            #print('**********:', 4, flush = True)
             if not verify((current_read_state.sequence_number, content_type,
                            version, comp_length, comp_fragment), cipher_mac,
                           key = current_read_state.mac_key):
+                #print('**********:', 51, flush = True)
                 #send message authentication error
                 output('MAC VERIFICATION ERROR')
                 return
+            #print('**********:', 52, flush = True)
 
         # Fourth, apply the active decompression method
         pt_length = comp_length
@@ -367,6 +398,7 @@ class TLS_Peer(process):
         # never encrypted and only the Record layer requires them to determine
         # which higher-level TLS protocol is being run on top of the Record
         # layer.
+        #print('Unwrap pt_fragment:\n', pt_fragment)
         return pt_fragment
 
     def update_pending_parameters(cipher_suite, comp_method, crand, srand):
@@ -436,6 +468,7 @@ class TLS_Peer(process):
     
     def initiate_handshake(server):
         output('CLIENT - begin Handshake')
+        print('$$$$$$$$$$:', 1, flush = True)
         # handshake_id's are not a part of the protocol. I added them to make
         # writing correct awaits easier. These are the same sorts of session
         # id's we have used elsewhere--a tuple of a process id and a counter
@@ -459,7 +492,7 @@ class TLS_Peer(process):
         client_random = (time.time(), genkey('random', 28))
         body_ch = (PROTOCOL_VERSION_1_2, client_random, None,
                    (TLS_RSA_WITH_AES_256_CBC_SHA256,), (0,), None)
-
+        print('$$$$$$$$$$:', 2, flush = True)
         # This is wrapped in a Handshake type message
         # Handshake = (msg_type, length, body)
         # I will ignore length until data serialization and Record layer
@@ -469,6 +502,7 @@ class TLS_Peer(process):
         msg_counter += 1
         send((record_wrapper(TYPE_HANDSHAKE, handshake_ch), handshake_id,
               msg_counter), to = server)
+        print('$$$$$$$$$$:', 3, flush = True)
 
         # Client will await a ServerHello response
         await(some(received((msg, _handshake_id, counter), from_ = server),
@@ -479,6 +513,7 @@ class TLS_Peer(process):
         handshake_sh = record_unwrapper(msg)
         handshake_messages.append(handshake_sh)
         (_, _, body_sh) = handshake_sh
+        print('$$$$$$$$$$:', 4, flush = True)
                 
         # Now the ServerHello can be unpacked.
         # SERVER_HELLO = Struct{server_version, random, session_id,
@@ -492,6 +527,7 @@ class TLS_Peer(process):
                                                      compression_method,
                                                      client_random[1],
                                                      server_random[1])
+        print('$$$$$$$$$$:', 5, flush = True)
         
         # if the key exchange algorithm requires certificates for
         # authentication, then the server must send a Certificate message
@@ -505,6 +541,7 @@ class TLS_Peer(process):
             handshake_sc = record_unwrapper(msg)
             handshake_messages.append(handshake_sc)
             (_, _, body_cert) = handshake_sc
+            print('$$$$$$$$$$:', 6, flush = True)
 
             # Now the server's certificate must be verified, so that the stored
             # public key information can be used to protect the premaster
@@ -529,6 +566,7 @@ class TLS_Peer(process):
                 output('CLIENT - CERTIFICATE AUTHENTICATION FAILURE')
                 return
             server_public_key = cert_list[0][1]
+            print('$$$$$$$$$$:', 7, flush = True)
             
         # ...if the key exchange algorithm requires additional input from the
         # server to enable establishment of the premaster secret, then the
@@ -541,6 +579,7 @@ class TLS_Peer(process):
                               (SERVER_KEY_EXCHANGE ==
                                record_unwrapper(msg)[0]))))
             msg_counter = counter
+            print('$$$$$$$$$$:', 8, flush = True)
             pass
 
         # ...if the server wishes to authenticate the client during a
@@ -557,6 +596,7 @@ class TLS_Peer(process):
                                   record_unwrapper(msg)[0])))):
                 msg_counter = counter
                 # ...Handle CertificateRequest
+                print('$$$$$$$$$$:', 9, flush = True)
                 pass
             elif some(received((msg, _handshake_id, counter), from_ = server),
                       has = (msg[0] == TYPE_HANDSHAKE and
@@ -564,6 +604,7 @@ class TLS_Peer(process):
                              SERVER_HELLO_DONE == record_unwrapper(msg)[0])):
                 #UGLY
                 #This case will be handled in the unconditional await below.
+                print('$$$$$$$$$$:', 10, flush = True)
                 pass
         
         # Client end of TLS Handshake will now wait for a ServerHelloDone
@@ -575,6 +616,7 @@ class TLS_Peer(process):
         msg_counter = counter
         handshake_shd = record_unwrapper(msg)
         handshake_messages.append(handshake_shd)
+        print('$$$$$$$$$$:', 11, flush = True)
         
         # Seventh Handshake message is Certificate from the client
         # only if necessary - RFC 5246, pp. 47 and 54-56
@@ -591,7 +633,6 @@ class TLS_Peer(process):
         # The total length of the premaster secret is 48 bytes when the two
         # bytes of the version are included.
         pre_master_secret = (PROTOCOL_VERSION_1_2, genkey('random', 46))
-
         # Which is contained in an EncryptedPreMasterSecret
         # EncryptedPreMasterSecret = (pre_master_secret,)
         encrypted_pre_master_secret = (encrypt(pre_master_secret,
@@ -604,6 +645,7 @@ class TLS_Peer(process):
         msg_counter += 1
         send((record_wrapper(TYPE_HANDSHAKE, handshake_cke), handshake_id,
               msg_counter), to = server)
+        print('$$$$$$$$$$:', 12, flush = True)
 
         # Once the premaster secret is generated by the client, it can then use
         # it to generate the master secret and the keys that will be used in
@@ -635,7 +677,8 @@ class TLS_Peer(process):
         msg_counter += 1
         send((record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
               handshake_id, msg_counter), to = server)
-        
+        print('$$$$$$$$$$:', 13, flush = True)
+
         # Immediately after sending this message, the sender must replace
         # their current write session state with the pending write session
         # state.
@@ -653,18 +696,34 @@ class TLS_Peer(process):
         for m in handshake_messages:
             shm += pickle.dumps(m)
 
+        print('\n CLIENT PRF ARGUMENTS -\n')
+        print(current_wsp.master_secret)
+        print('\n')
+        print(shm)
+        print('\n')
+        print(SHA256.new(shm).digest())
+        print('\n')
+
         verification_data = tls_prf_sha256(current_wsp.master_secret,
                                            b'client finished',
                                            SHA256.new(shm).digest(),
                                            VERIFY_DATA_LENGTH)
 
+        print('\nCLIENT -', verification_data, '\n',
+              len(verification_data), flush = True)
+        print('Client - HandshakeMessages:\n', flush = True)
+        for m in handshake_messages:
+            print(m, '\n', flush = True)
+
         finished = (verification_data,)
         handshake_cfin = (FINISHED, None, finished)
+        #print(handshake_cfin)
         handshake_messages.append(handshake_cfin)
         shm += pickle.dumps(handshake_cfin)
         msg_counter += 1
         send((record_wrapper(TYPE_HANDSHAKE, handshake_cfin), handshake_id,
               msg_counter), to = server)
+        print('$$$$$$$$$$:', 14, flush = True)
         
         # The server will also have sent, or will send, a ChangeCipherSpec
         # message causing the client to replace its current read session
@@ -676,6 +735,7 @@ class TLS_Peer(process):
         # Actual work associated with receiving this message will be done in a
         # separate receive handler to respect that ChangeCipherSpec messages
         # are not actually Handshake messages.
+        print('$$$$$$$$$$:', 15, flush = True)
         
         # Will now await the Finished message from the server.
         await(some(received((msg, _handshake_id, counter), from_ = server),
@@ -684,6 +744,7 @@ class TLS_Peer(process):
                           FINISHED == record_unwrapper(msg)[0])))
         msg_counter = counter
         (_, _, (finish_data,)) = record_unwrapper(msg)
+        print('$$$$$$$$$$:', 16, flush = True)
 
         # Content of server's Finished message must be verified in order to
         # complete the Handshake
@@ -715,6 +776,7 @@ class TLS_Peer(process):
         if CLIENT_HELLO != handshake_msg[0]:
             return
         output('SEVER - begin Handshake')
+        print('&&&&&&&&&&&:', 1, flush = True)
 
         # Will first set the connection end in the security parameters to
         # indicate that this peer is acting as the server
@@ -752,11 +814,13 @@ class TLS_Peer(process):
         # If the server wants to indicate that the session being established
         # will not be cached it can return an empty session_id.
         if session_id != None:
+            print('&&&&&&&&&&&:', 2, flush = True)
             output('Client attempting abbreivated handshake.')
             # ...check cache for associated security parameters.
             # if resumption okay, make stores parameters the pending parameters
             # then skip to (change_cipher_spec and) Finished messages
         else:
+            print('&&&&&&&&&&&:', 3, flush = True)
             # I will set session_id to none for now until renewable sessions
             # added.
             session_id = None
@@ -782,6 +846,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_HANDSHAKE, handshake_sh), handshake_id,
                   msg_counter), to = client)
+            print('&&&&&&&&&&&:', 4, flush = True)
 
             # Now the server can update the security parameters to reflect the
             # choices made concerning cipher suite and compression method, and
@@ -804,6 +869,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_HANDSHAKE, handshake_sc), handshake_id,
                   msg_counter), to = client)
+            print('&&&&&&&&&&&:', 5, flush = True)
             
             # The server will send as the third Handshake message a
             # ServerKeyExchange message, if it is required. Again this is
@@ -835,6 +901,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_HANDSHAKE, handshake_shd), handshake_id,
                   msg_counter), to = client)
+            print('&&&&&&&&&&&:', 6, flush = True)
 
             # The server now awaits for several messages from the client.
             # The first would be the ClientCertificate message, but only if the
@@ -853,6 +920,7 @@ class TLS_Peer(process):
                               (CLIENT_KEY_EXCHANGE ==
                                record_unwrapper(msg)[0]))))
             msg_counter = counter
+            print('&&&&&&&&&&:', 7, flush = True)
             handshake_cke = record_unwrapper(msg)
             handshake_messages.append(handshake_cke)
             (_, _, body_cke) = handshake_cke
@@ -886,7 +954,7 @@ class TLS_Peer(process):
                    has = (msg[0] == TYPE_CHANGE_CIPHER_SPEC and
                           counter > msg_counter)))
             msg_counter = counter
-
+            print('&&&&&&&&&&&:', 8, flush = True)
             # Actual work associated with receiving this message will be done
             # in a separate receive handler to respect that ChangeCipherSpec
             # messages are not actually Handshake messages.
@@ -900,6 +968,7 @@ class TLS_Peer(process):
             msg_counter = counter
             handshake_cfin = record_unwrapper(msg)
             (_, _, (finish_data,)) = handshake_cfin
+            print('&&&&&&&&&&&:', 9, flush = True)
 
             # Now the content of the client's Finished message must be verified
             # to prove to the server the client is using the negotiated
@@ -908,15 +977,30 @@ class TLS_Peer(process):
             for m in handshake_messages:
                 shm += pickle.dumps(m)
 
+            print('\n SERVER PRF ARGUMENTS -\n')
+            print(current_rsp.master_secret)
+            print('\n')
+            print(shm)
+            print('\n')
+            print(SHA256.new(shm).digest())
+            print('\n')
+            print('\nSERVER -', finish_data, len(finish_data), '\n', flush = True)
+
             server_data = tls_prf_sha256(current_rsp.master_secret,
                                          b'client finished',
                                          SHA256.new(shm).digest(),
                                          VERIFY_DATA_LENGTH)
 
+            print('\nSERVER -', server_data, len(server_data), '\n', flush = True)
+            print('\nSERVER - HandshakeMessages:\n', flush = True)
+            for m in handshake_messages:
+                print(m, '\n', flush = True)
+
             if server_data != finish_data:
                 # ...send alert
                 output('SERVER - Handshake failed')
                 return
+            print('&&&&&&&&&&:', 10, flush = True)
             handshake_messages.append(handshake_cfin)
             shm += pickle.dumps(handshake_cfin)
 
@@ -931,6 +1015,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
                   handshake_id, msg_counter), to = client)
+            print('&&&&&&&&&&:', 11, flush = True)
 
             # Immediately after sending this message, the sender must replace
             # their current write session state with the pending write session
@@ -958,6 +1043,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
                   handshake_id, msg_counter), to = client)
+            print('&&&&&&&&&&:', 12)
             output('SERVER - Handshake Complete')
 
     # This is the handler for ChangeCipherSpec messages.
