@@ -1,0 +1,44 @@
+from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
+class RoleA (process):
+    def setup(B, K_PW):
+        self.A = self
+        self.K_AB = None
+        self.SK_A = None
+    def run():
+        SK_A, PK_A = genkey('public')
+        send(('msg1', A, encrypt(PK_A, K_PW)), to = B)
+        await(some(received(((K), _B), from_ = self)))
+        K_AB = K
+        C_A = gen_nonce()
+        send(('encK_AB', encrypt(C_A, K_AB)), to = B)
+        await(some(received(((_C_A, C_B), _B), from_ = self)))
+        send(('encK_AB', encrypt(C_B, K_AB)), to = B)
+        output('A - Key Exchange Complete')
+    def receive(msg=('msg2', m), from_ = B):
+        temp = decrypt(m, K_PW)
+        send((decrypt(temp, SK_A), B), to = self)
+    def receive(msg=('encK_AB', m), from_ = B):
+        send((decrypt(m, K_AB), B), to = self)
+class RoleB (process):
+    def setup(K_PW):
+        self.B = self
+        self.K_AB = None
+    def run():
+        await(False)
+    def receive(msg=('msg1', A, m), from_ = A):
+        PK_A = decrypt(m, K_PW)
+        K_AB = genkey('shared')
+        send(('msg2', encrypt(encrypt(K_AB, PK_A), K_PW)), to = A)
+        await(some(received(((C_A), _A), from_ = self)))
+        C_B = gen_nonce()
+        send(('encK_AB', encrypt((C_A, C_B), K_AB)), to = A)
+        await(some(received(((_C_B), _A), from_ = self)))
+        output('B - Key Exchange Complete')
+    def receive(msg=('encK_AB', m), from_ = A):
+        send((decrypt(m, K_AB), A), to = self)
+def main():
+    K_PW = genkey('shared')
+    B = new(RoleB, (K_PW,))
+    A = new(RoleA, (B, K_PW))
+    start(B)
+    start(A)
