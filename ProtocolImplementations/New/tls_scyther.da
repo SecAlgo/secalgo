@@ -2,7 +2,7 @@ import sys, time, pickle
 from Crypto.Hash import HMAC, SHA256, SHA384, SHA512
 from sa.sec_algo_pycrypto import (genkey, gen_nonce, encrypt, decrypt,
      			  	  sign, verify1 as verify)
-
+    
 class Role_A(process): #the TLS client/initiator
     def setup(B, cert_A, sk_A, pk_T): pass
 
