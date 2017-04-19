@@ -34,6 +34,7 @@ class roleR (process):
         await(some(received(((_I, pkI), _S), from_ = self)))
         nR = gen_nonce()
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
+        await(some(received(((_nR,), _I), from_ = self)))
         output('R authenticated I')
     def receive(msg=('signed', m), from_ = S):
         send((verify(m, pkS), S), to = self)

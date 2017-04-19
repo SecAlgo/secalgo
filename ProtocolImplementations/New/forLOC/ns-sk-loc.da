@@ -6,8 +6,7 @@ class RoleS (process):
         await(False)
     def receive(msg=(I, R, N_I), from_ = I):
         K_IR = genkey('shared')
-        send(('encS', encrypt((N_I, K_IR, R,
-                ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
+        send(('encS', encrypt((N_I, K_IR, R, ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
 class RoleI (process):
     def setup(S, K_IS, R):
         self.I = self
@@ -35,8 +34,7 @@ class RoleR (process):
         K_IR = K
         N_R = gen_nonce()
         send(('encR', encrypt(N_R, K_IR)), to = I)
-        await(some(received(((N_R1), _I), from_ = self),
-                   has = N_R1 == N_R - 1))
+        await(some(received(((N_R1), _I), from_ = self), has = N_R1 == N_R - 1))
         output('R - Key Exchange Complete')
     def receive(msg=('encS', m), from_ = I):
         send((decrypt(m, K_RS), S), to = self)

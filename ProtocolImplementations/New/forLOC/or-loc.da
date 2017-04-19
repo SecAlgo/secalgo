@@ -7,12 +7,9 @@ class RoleS (process):
     def receive(msg=(M, I, R, encI, encR), from_ = _R):
         send(encI, to = self)
         send(encR, to = self)
-        await(some(received((N_I, _M, _I, _R), from_ = self),
-                   received((N_R, _M, _I, _R), from_ = self),
-                   has = N_R != N_I))
+        await(some(received((N_I, _M, _I, _R), from_ = self), received((N_R, _M, _I, _R), from_ = self), has = N_R != N_I))
         K_IR = genkey('shared')
-        send((M, ('encI', encrypt((N_I, K_IR), K_IS)),
-             ('encR', encrypt((N_R, K_IR), K_RS))), to = R)
+        send((M, ('encI', encrypt((N_I, K_IR), K_IS)), ('encR', encrypt((N_R, K_IR), K_RS))), to = R)
     def receive(msg=('encI', m), from_ = self):
         send((decrypt(m, K_IS)), to = self)
     def receive(msg=('encR', m), from_ = self):
