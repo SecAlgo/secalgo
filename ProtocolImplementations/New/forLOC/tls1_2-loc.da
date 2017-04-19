@@ -247,8 +247,7 @@ class TLS_Peer(process):
             pending_read_state.mac_key = key_block[:first_slice]
             pending_write_state.mac_key = key_block[first_slice:second_slice]
             pending_read_state.cipher_state = [key_block[second_slice:third_slice]]
-            pending_write_state.cipher_state = [key_block[third_slice:]]
-    
+            pending_write_state.cipher_state = [key_block[third_slice:]]    
     def initiate_handshake(server):
         output('CLIENT - begin Handshake')
         handshake_id = (self, max_hs_id)
