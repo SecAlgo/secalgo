@@ -18,8 +18,8 @@ Protocol Diagram:
     -S knows: S, A, B, K_AS, K_BS
   (1) A -> B : A, N_A
   (2) B -> S : B, enc((A, N_A, N_B), K_BS)
-  (3) S -> A : enc((B, K_AB, N_A, N_B), K_AS), enc((A, K_AR), K_BS)
-  (4) A -> B : enc((A, K_AR), K_BS), enc(N_B, K_AB)
+  (3) S -> A : enc((B, K_AB, N_A, N_B), K_AS), enc((A, K_AB), K_BS)
+  (4) A -> B : enc((A, K_AB), K_BS), enc(N_B, K_AB)
 """
 
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce

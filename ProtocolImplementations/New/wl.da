@@ -27,7 +27,6 @@ class RoleS (process):
     def setup(K_IS, K_RS):
         self.I1 = None
         self.R1 = None
-        pass
 
     def run():
         await(False)
@@ -40,7 +39,6 @@ class RoleS (process):
         send(encI, to = self)
         await(some(received(((_I, _R, _N_I, _N_R), _I), from_ = self)))
         K_IR = genkey('shared')
-        I1 = I
         send(('msg5', ('encS', encrypt((R, N_I, N_R, K_IR), K_IS)),
               ('encS', encrypt((I, N_I, N_R, K_IR), K_RS))), to = R)
 
