@@ -1,48 +1,17 @@
-"""
-Needham-Schroeder Public Key Mutual Authentication Protocol
-Written by Christopher Kane
-
-Original Source:
-Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
-Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
-pp. 993-999.
-
-Immediate Source:
-Security Protocol Open Repository
-http://www.lsv.ens-cachan.fr/Software/spore/nspk.html
-
-Protocol Diagram:
-  (1) A -> S : (A, B)
-  (2) S -> A : sign((B, pkB), skS)
-  (3) A -> B : enc((Na, A), pkB)
-  (4) B -> S : (B, A)
-  (5) S -> B : sign((A, pkA), skS)
-  (6) B -> A : enc((Na, Nb), pkA)
-  (7) A -> B : enc(Nb, pkB)
-
-did fix for (6):
-  (6) B -> A : enc((Na, Nb, B), pkA)
-"""
-
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt
 from sa.sec_algo_pycrypto import sign, verify, gen_nonce
-
 class roleS (process):
     def setup(skS, client_keys):
         pass
-
     def run():
         await(False)
-
     def receive(msg=(A, B), from_ = A):
         pkB_set = {x for (p, x) in client_keys if p == B}
         pkB = pkB_set.pop()
         send(('signed', sign((B, pkB), skS)), to = A)
-
 class roleI (process):
     def setup(skI, S, pkS, R):
         self.I = self
-
     def run():
         send((I, R), to = S)
         await(some(received(((_R, pkR), _S), from_ = self)))
@@ -51,20 +20,15 @@ class roleI (process):
         await(some(received(((_nI, nR, _R), _R), from_ = self)))
         send(('pub_enc', encrypt(nR, pkR)), to = R)
         output('I authenticated R')
-
     def receive(msg=('signed', m), from_ = S):
         send((verify(m, pkS), S), to = self)
-
     def receive(msg=('pub_enc', m), from_ = R):
         send((decrypt(m, skI), R), to = self)
-
 class roleR (process):
     def setup(skR, S, pkS):
         self.R = self
-
     def run():
         await(False)
-
     def receive(msg=((nI, I), I), from_ = self):
         send((R, I), to = S)
         await(some(received(((_I, pkI), _S), from_ = self)))
@@ -72,13 +36,10 @@ class roleR (process):
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
         await(some(received(((_nR,), _I), from_ = self)))
         output('R authenticated I')
-
     def receive(msg=('signed', m), from_ = S):
         send((verify(m, pkS), S), to = self)
-
     def receive(msg=('pub_enc', m), from_ = I):
         send((decrypt(m, skR), I), to = self)
-
 def main():
     skS, pkS = genkey('public')
     skI, pkI = genkey('public')
@@ -92,3 +53,4 @@ def main():
     start(S)
     start(R)
     start(I)
+    
