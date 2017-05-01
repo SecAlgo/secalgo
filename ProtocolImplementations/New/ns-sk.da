@@ -18,7 +18,10 @@ Protocol Diagram:
   (4) R -> I : enc(N_R, K_IR)
   (5) I -> R : enc(N_R - 1, K_IR)
 """
-from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
+import time
+import json
+from sa.sec_algo_pycrypto import *
+
 
 class RoleS (process):
     def setup(K_IS, K_RS):
@@ -54,7 +57,7 @@ class RoleI (process):
         send((decrypt(m, K_IR), R), to = self)
 
 class RoleR (process):
-    def setup(S, K_RS):
+    def setup(S, K_RS, start_time):
         self.R = self
         self.K_IR = None
 
@@ -68,6 +71,9 @@ class RoleR (process):
         await(some(received(((N_R1), _I), from_ = self),
                    has = N_R1 == N_R - 1))
         output('R - Key Exchange Complete')
+        total_time = time.time() - start_time
+        timing_data = ("ns-sk", total_time)
+        print(json.dumps(timing_data))
 
     def receive(msg=('encS', m), from_ = I):
         send((decrypt(m, K_RS), S), to = self)
@@ -76,10 +82,11 @@ class RoleR (process):
         send((decrypt(m, K_IR), I), to = self)
 
 def main():
+    start_time = time.time()
     K_IS = genkey('shared')
     K_RS = genkey('shared')
     S = new(RoleS, (K_IS, K_RS))
-    R = new(RoleR, (S, K_RS))
+    R = new(RoleR, (S, K_RS, start_time))
     I = new(RoleI, (S, K_IS, R))
     start(S)
     start(R)
