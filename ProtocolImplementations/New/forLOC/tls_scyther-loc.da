@@ -1,0 +1,68 @@
+import sys, time, pickle
+from Crypto.Hash import HMAC, SHA256, SHA384, SHA512
+from sa.sec_algo_pycrypto import (genkey, gen_nonce, encrypt, decrypt,
+     			  	  sign, verify1 as verify)
+class Role_A(process): #the TLS client/initiator
+    def setup(B, cert_A, sk_A, pk_T): pass
+    def run():
+        na = genkey('random', 28)
+        sid_A = None
+        pa = (('TLS_RSA_WITH_AES_256_CBC_SHA256',),)
+        pms = bytes((3, 3)) + genkey('random', 46)
+        send((1, self, na, sid_A, pa), to = B)
+        await(some(received((2, nb, sid_B, pb), from_ = B), has = pb in pa))
+        await(some(received((3, cert_B), from_ = B), has = (verify((cert_B[0], cert_B[1]), cert_B[2], key = pk_T) != None)))
+        send((4, cert_A), to = B)
+        send((5, encrypt(pms, key = cert_B[1])), to = B)
+        send((6, sign(SHA256.new(pickle.dumps((nb, B, pms))).digest(), key = sk_A)), to = B)
+        h = HMAC.new(pms, b'master secret' + na + nb, digestmod = SHA384)
+        M = h.digest()
+        h = HMAC.new(M, b'key expansion' + na + nb, digestmod = SHA512)
+        client_key = h.digest()[:32]
+        server_key = h.digest()[32:]        
+        hd = (self, na, sid_A, pa, nb, sid_B, pb, cert_A, cert_B, encrypt(pms, key = cert_B[1]))
+        shd = b''
+        for x in hd:
+            shd += pickle.dumps(x)
+        send((7, encrypt(SHA256.new(shd).digest(), key = client_key)), to = B)
+        await(some(received((8, fin), from_ = B), has = (SHA256.new(shd).digest() == decrypt(fin, key = server_key))))
+        output('Client done')
+
+class Role_B(process):
+    def setup(cert_B, sk_B, pk_T):
+        self.name = 'B'
+
+    def run():
+        await(some(received((1, A, na, sid_A, pa), from_ = A)))
+        nb = genkey('random', 28)
+        pb = pa[0]
+        sid_B = gen_nonce(32)
+        send((2, nb, sid_B, pb), to = A)
+        send((3, cert_B), to = A)
+        await(some(received((4, cert_A), from_ = A), has = (verify((cert_A[0], cert_A[1]), cert_A[2], key = pk_T) != None)))
+        await(some(received((5, pms_enc), from_ = A)))
+        pms = decrypt(pms_enc, key = sk_B)
+        await(some(received((6, cv_sig), from_ = A), has = (verify(SHA256.new(pickle.dumps((nb, self, pms))).digest(), cv_sig, key = cert_A[1]) != None)))
+        h = HMAC.new(pms, b'master secret' + na + nb, digestmod = SHA384)
+        M = h.digest()
+        h = HMAC.new(M, b'key expansion' + na + nb, digestmod = SHA512)
+        client_key = h.digest()[:32]
+        server_key = h.digest()[32:]        
+        hd = (A, na, sid_A, pa, nb, sid_B, pb, cert_A, cert_B, pms_enc)
+        shd = b''
+        for x in hd:
+            shd += pickle.dumps(x)
+        await(some(received((7, fin), from_ = A), has = (SHA256.new(shd).digest() == decrypt(fin, key = client_key))))
+        send((8, encrypt(SHA256.new(shd).digest(), key = server_key)), to = A)
+        output('Server done')
+def main():
+    config(channel = 'reliable')
+    sk_T, pk_T = genkey('public')
+    sk_B, pk_B = genkey('public')
+    sk_A, pk_A = genkey('public')
+    cert_B = ('B', pk_B, sign(('B', pk_B), key = sk_T))
+    cert_A = ('A', pk_A, sign(('A', pk_A), key = sk_T))
+    B = new(Role_B, (cert_B, sk_B, pk_T))
+    A = new(Role_A, (B, cert_A, sk_A, pk_T))
+    start(B)
+    start(A)
