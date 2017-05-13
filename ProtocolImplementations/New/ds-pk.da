@@ -1,0 +1,87 @@
+"""
+Denning-Sacco Public Key Key Exchange Protocols
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981, p. 533-536.
+
+Protocol Diagram:
+  (1) A -> S: (A, B)
+  (2) S -> A: (CA, CB)
+  (3) A -> B: (CA, CB, enc(sign((K, T), SK_A), PK_B))
+
+CA and CB are certificates containing the name and public key of A and B
+respecitively signed by the key server S. Certificates look like this:
+  CX == (X, PK_X, T, sign((X, PK_X, T), SK_S))
+T is a timestamp. Denning and Sacco give no details concerning the format of
+the timestamp, and, though they discuss how the timestamp can be validated,
+they do not explain how this validation should be incorporated into the
+protocol.
+"""
+
+import sys, time
+from sa.sec_algo_pycrypto import *
+
+class roleA(process):
+    def setup(B, S, sk_A, pk_A, pk_S):
+        pass
+
+    def run():
+        send(('msg01', self, B), to = S)
+        await(some(received(('msg02', (A, _pk_A, t_A, sig_A),
+                             (_B, pk_B, t_B, sig_B)), from_ = S),
+                   has = (A == self)))
+        if (verify1((A, pk_A, t_A), sig_A, pk_S) and
+            verify1((B, pk_B, t_B), sig_B, pk_S)):
+            k_AB = genkey('shared')
+            t_AB = time.time()
+            send(('msg03', (A, pk_A, t_A, sig_A), (B, pk_B, t_B, sig_B),
+                  encrypt(((k_AB, t_AB), sign((k_AB, t_AB), sk_A)), pk_B)),
+                 to = B)
+            output('Initiator: Key Exchange Complete')
+        else:
+            output('Initiator: Could not verify certificates')
+
+class roleB(process):
+    def setup(S, sk_B, pk_B, pk_S):
+        pass
+
+    def run():
+        await(some(received(('msg03', (A, pk_A, t_A, sig_A),
+                             (B, _pk_B, t_B, sig_B),
+                             encrypted_key), from_ = A), has = (B == self)))
+        if (verify1((A, pk_A, t_A), sig_A, pk_S) and
+            verify1((B, pk_B, t_B), sig_B, pk_S)):
+            (k_AB, t_AB), sig_AB = decrypt(encrypted_key, sk_B)
+            if verify1((k_AB, t_AB), sig_AB, pk_A):
+                output('Recipient: Key Exchange Complete')
+            else:
+                output('Recipient: Could not verify signature on shared key')
+        else:
+            output('Recipient: Could not verify certificates')
+
+class roleS(process):
+    def setup(sk_S, pk_S, client_keys):
+        pass
+
+    def run():
+        await(some(received(('msg01', A, B), from_ = A)))
+        pk_A = {x for (p, x) in client_keys if p == A}.pop()
+        pk_B = {x for (p, x) in client_keys if p == B}.pop()
+        t_A = t_B = time.time()
+        send(('msg02', (A, pk_A, t_A, sign((A, pk_A, t_A), sk_S)),
+              (B, pk_B, t_B, sign((B, pk_B, t_B), sk_S))), to = A)
+        output('Server: Certificates Sent')
+
+def main():
+    sk_S, pk_S = genkey('public')
+    sk_A, pk_A = genkey('public')
+    sk_B, pk_B = genkey('public')
+    S = new(roleS)
+    B = new(roleB, (S, sk_B, pk_B, pk_S))
+    A = new(roleA, (B, S, sk_A, pk_A, pk_S))
+    setup(S, (sk_S, pk_S, {(A, pk_A), (B, pk_B)}))
+    start(S)
+    start(B)
+    start(A)
