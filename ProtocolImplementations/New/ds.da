@@ -10,6 +10,9 @@ Immediate Source:
 Bruno Blanchett, "Security Protocol Verification: Symbolic and Computational 
 Models", ETAPS Invited Talk, 2012. 
 
+This simplified version removes the keyserver used to distribute the public keys
+for A and B.
+
 Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
