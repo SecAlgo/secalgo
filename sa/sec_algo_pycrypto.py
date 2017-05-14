@@ -4,6 +4,7 @@ import pickle
 import json
 import resource
 import time
+import __main__
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto.Hash import HMAC
@@ -24,27 +25,29 @@ DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 
-default_declaration = {'sym_cipher' : 'AES',
-                       'sym_mode' : 'CBC',
-                       'sym_key_size' : SYM_KEY_DEFAULT_SIZE_BITS,
-                       'pub_cipher' : 'RSA',
-                       'pub_key_size' : KEY_PAIR_DEFAULT_SIZE_BITS,
-                       'nonce_size' : NONCE_DEFAULT_SIZE_BITS,
-                       'dh_grp' : DH_DEFAULT_MODP_GROUP,
-                       'dh_mod_size' : DH_DEFAULT_MOD_SIZE_BITS,
-                       'dh_exp_size' : DH_DEFAULT_EXP_SIZE_BITS,
-                       'benchmark' : False,
-                       'label' : 0}
+config_fn = 'config.sac'
 
-current_declaration = default_declaration
+default_configuration = {'sym_cipher' : 'AES',
+                         'sym_mode' : 'CBC',
+                         'sym_key_size' : SYM_KEY_DEFAULT_SIZE_BITS,
+                         'pub_cipher' : 'RSA',
+                         'pub_key_size' : KEY_PAIR_DEFAULT_SIZE_BITS,
+                         'nonce_size' : NONCE_DEFAULT_SIZE_BITS,
+                         'dh_grp' : DH_DEFAULT_MODP_GROUP,
+                         'dh_mod_size' : DH_DEFAULT_MOD_SIZE_BITS,
+                         'dh_exp_size' : DH_DEFAULT_EXP_SIZE_BITS,
+                         'benchmark' : False}
 
-declarations = [default_declaration]
+with open(config_fn, 'w') as f:
+    json.dump(default_configuration, f)
 
-def security_declaration(**declarations):
-    global current_declaration
-    for k, v in declarations.items():
-        if current_declaration[k] != None:
-            current_declaration[k] = v
+def configure(**configs):
+    with open(config_fn, 'r+') as f:
+        current_configuration = json.load(f)
+        for k, v in configs.items():
+            if current_declaration[k] != None:
+                current_declaration[k] = v
+        json.dump(current_configuration, f)
 #end security_declarations()
 
 def dec_timer(func):
@@ -56,14 +59,14 @@ def dec_timer(func):
         timing_data = (func.__name__, total_time)
         print(json.dumps(timing_data))
         return result
-    if current_declaration['benchmark']:
+    if current_configuration['benchmark']:
         return timer
     else:
         return func
 #end timer()
 
 @dec_timer
-def gen_nonce(size = current_declaration['nonce_size']):
+def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
     return getrandbits(size)
 #end gen_nonce
@@ -71,19 +74,21 @@ def gen_nonce(size = current_declaration['nonce_size']):
 @dec_timer
 def genkey(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if key_type == 'shared' or key_type == 'random':
         if key_size == None:
-            key_size = (current_declaration['sym_key_size'] // 8)
+            key_size = (current_configuration['sym_key_size'] // 8)
         return gen_sym_key(key_size)
     elif key_type == 'public':
         if key_size == None:
-            key_size = current_declaration['pub_key_size']
+            key_size = current_configuration['pub_key_size']
         private_key = gen_key_pair(key_size)
         return private_key.exportKey(), get_pub_key(private_key).exportKey()
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
-            key_size = current_declaration['dh_exp_size']
+            key_size = current_configuration['dh_exp_size']
         return gen_dh_key(key_size, use_dh_group,
                           dh_group, dh_mod_size, dh_p, dh_g)
 #end genkey()
@@ -101,12 +106,12 @@ def gen_sym_key(key_size):
     return Random.new().read(size)
 #end gen_sym_key
 
-def gen_dh_key(key_size = current_declaration['dh_exp_size'],
-               use_group = True, dh_group = current_declaration['dh_grp'],
+def gen_dh_key(key_size = current_configuration['dh_exp_size'],
+               use_group = True, dh_group = current_configuration['dh_grp'],
                dh_mod_size = None, dh_p = None, dh_g = None):
     if use_group == True:        
         if dh_group == None:
-            dh_group = current_declaration['dh_grp']
+            dh_group = current_configuration['dh_grp']
         dh_p = modp_groups[dh_group]['p']
         dh_g = modp_groups[dh_group]['g']
         dh_mod_size = size(dh_p)
@@ -115,7 +120,7 @@ def gen_dh_key(key_size = current_declaration['dh_exp_size'],
         if dh_p != None:
             dh_mod_size = size(dh_p)
         else:
-            dh_mod_size = current_declaration['dh_mod_size']
+            dh_mod_size = current_configuration['dh_mod_size']
 
         # print('###########:', key_size, dh_mod_size, flush = True)
         # generate new safe prime to define finite field
@@ -173,8 +178,8 @@ def encrypt(plaintext, key):
         return sym_encrypt(plaintext, key)
 #end encrypt
 
-def sym_encrypt(plaintext, key, alg = current_declaration['sym_cipher'],
-                mode = current_declaration['sym_mode']):
+def sym_encrypt(plaintext, key, alg = current_configuration['sym_cipher'],
+                mode = current_configuration['sym_mode']):
     serial_pt = pickle.dumps(plaintext)
     if mode == 'CTR':
         #print('$$$$$$$$$$: Encrypt: USING CTR')
@@ -226,8 +231,8 @@ def decrypt(ciphertext, key):
         return sym_decrypt(ciphertext, key)
 #end decrypt()
 
-def sym_decrypt(ciphertext, key, alg = current_declaration['sym_cipher'],
-                mode = current_declaration['sym_mode']):
+def sym_decrypt(ciphertext, key, alg = current_configuration['sym_cipher'],
+                mode = current_configuration['sym_mode']):
     if mode == 'CTR':
         #print('$$$$$$$$$$: Decrypt: USING CTR')
         pre = ciphertext[0:8]
