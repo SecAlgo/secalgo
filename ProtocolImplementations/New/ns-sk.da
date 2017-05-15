@@ -71,7 +71,7 @@ class RoleR (process):
         await(some(received(((N_R1), _I), from_ = self),
                    has = N_R1 == N_R - 1))
         output('R - Key Exchange Complete')
-        total_time = time.time() - start_time
+        total_time = time.process_time() - start_time
         timing_data = ("ns-sk", total_time)
         print(json.dumps(timing_data))
 
@@ -82,7 +82,7 @@ class RoleR (process):
         send((decrypt(m, K_IR), I), to = self)
 
 def main():
-    start_time = time.time()
+    start_time = time.process_time()
     K_IS = genkey('shared')
     K_RS = genkey('shared')
     S = new(RoleS, (K_IS, K_RS))
