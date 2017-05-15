@@ -4,7 +4,6 @@ import pickle
 import json
 import resource
 import time
-import __main__
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto.Hash import HMAC
@@ -25,6 +24,8 @@ DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 
+benchmark = True
+
 config_fn = 'config.sac'
 
 default_configuration = {'sym_cipher' : 'AES',
@@ -35,19 +36,19 @@ default_configuration = {'sym_cipher' : 'AES',
                          'nonce_size' : NONCE_DEFAULT_SIZE_BITS,
                          'dh_grp' : DH_DEFAULT_MODP_GROUP,
                          'dh_mod_size' : DH_DEFAULT_MOD_SIZE_BITS,
-                         'dh_exp_size' : DH_DEFAULT_EXP_SIZE_BITS,
-                         'benchmark' : False}
+                         'dh_exp_size' : DH_DEFAULT_EXP_SIZE_BITS}
 
 with open(config_fn, 'w') as f:
     json.dump(default_configuration, f)
 
 def configure(**configs):
-    with open(config_fn, 'r+') as f:
-        current_configuration = json.load(f)
+    with open(config_fn, 'r') as f1:
+        current_configuration = json.load(f1)
         for k, v in configs.items():
-            if current_declaration[k] != None:
-                current_declaration[k] = v
-        json.dump(current_configuration, f)
+            if current_configuration[k] != None:
+                current_configuration[k] = v
+    with open(config_fn, 'w') as f2:
+        json.dump(current_configuration, f2)
 #end security_declarations()
 
 def dec_timer(func):
@@ -59,7 +60,7 @@ def dec_timer(func):
         timing_data = (func.__name__, total_time)
         print(json.dumps(timing_data))
         return result
-    if current_configuration['benchmark']:
+    if benchmark:
         return timer
     else:
         return func
@@ -84,17 +85,27 @@ def genkey(key_type, key_size = None, use_dh_group = True, dh_group = None,
     elif key_type == 'public':
         if key_size == None:
             key_size = current_configuration['pub_key_size']
-        private_key = gen_key_pair(key_size)
+            alg = current_configuration['pub_cipher']
+        private_key = gen_key_pair(key_size, alg)
         return private_key.exportKey(), get_pub_key(private_key).exportKey()
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
             key_size = current_configuration['dh_exp_size']
+        if use_dh_group:
+            if dh_group == None:
+                dh_group = current_configuration['dh_grp']
+        else:
+            if dh_mod_size == None:
+                dh_mod_size = current_configuration['dh_mod_size']            
         return gen_dh_key(key_size, use_dh_group,
                           dh_group, dh_mod_size, dh_p, dh_g)
 #end genkey()
 
-def gen_key_pair(key_size):
-    return RSA.generate(key_size)
+def gen_key_pair(key_size, alg):
+    if alg == 'RSA':
+        return RSA.generate(key_size)
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end gen_key_pair()
 
 def get_pub_key(k):
@@ -106,9 +117,7 @@ def gen_sym_key(key_size):
     return Random.new().read(size)
 #end gen_sym_key
 
-def gen_dh_key(key_size = current_configuration['dh_exp_size'],
-               use_group = True, dh_group = current_configuration['dh_grp'],
-               dh_mod_size = None, dh_p = None, dh_g = None):
+def gen_dh_key(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     if use_group == True:        
         if dh_group == None:
             dh_group = current_configuration['dh_grp']
@@ -168,18 +177,20 @@ def gen_dh_key(key_size = current_configuration['dh_exp_size'],
 
 @dec_timer
 def encrypt(plaintext, key):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        return asym_encrypt(plaintext, RSA.importKey(key))
+        if current_configuration['pub_cipher'] == 'RSA':
+            pub_key = RSA.importKey(key)
+        return asym_encrypt(plaintext, pub_key,
+                            current_configuration['pub_cipher'])
     else:
-        #if 'mode' in configs:
-        #    return sym_encrypt(plaintext, key, mode=configs['mode'])
-        #else:
-        return sym_encrypt(plaintext, key)
+        return sym_encrypt(plaintext, key, current_configuration['sym_cipher'],
+                           current_configuration['sym_mode'])
 #end encrypt
 
-def sym_encrypt(plaintext, key, alg = current_configuration['sym_cipher'],
-                mode = current_configuration['sym_mode']):
+def sym_encrypt(plaintext, key, alg, mode):
     serial_pt = pickle.dumps(plaintext)
     if mode == 'CTR':
         #print('$$$$$$$$$$: Encrypt: USING CTR')
@@ -208,7 +219,7 @@ def sym_encrypt(plaintext, key, alg = current_configuration['sym_cipher'],
     return ciphertext
 #end sym_encrypt()
 
-def asym_encrypt(plaintext, public_key):
+def asym_encrypt(plaintext, public_key, alg):
     serial_pt = pickle.dumps(plaintext)
     frag_counter = (len(serial_pt) // KEY_PAIR_DEFAULT_SIZE_BYTES) + 1
     ct_list = []
@@ -221,18 +232,21 @@ def asym_encrypt(plaintext, public_key):
 
 @dec_timer
 def decrypt(ciphertext, key):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        return asym_decrypt(ciphertext, RSA.importKey(key))
+        if current_configuration['pub_cipher'] == 'RSA':
+            pub_key = RSA.importKey(key)
+        return asym_decrypt(ciphertext, pub_key,
+                            current_configuration['pub_cipher'])
     else:
-        #if 'mode' in configs:
-        #    return sym_decrypt(ciphertext, key, mode=configs['mode'])
-        #else:
-        return sym_decrypt(ciphertext, key)
+        
+        return sym_decrypt(ciphertext, key, current_configuration['sym_cipher'],
+                           current_configuration['sym_mode'])
 #end decrypt()
 
-def sym_decrypt(ciphertext, key, alg = current_configuration['sym_cipher'],
-                mode = current_configuration['sym_mode']):
+def sym_decrypt(ciphertext, key, alg, mode):
     if mode == 'CTR':
         #print('$$$$$$$$$$: Decrypt: USING CTR')
         pre = ciphertext[0:8]
@@ -260,7 +274,7 @@ def sym_decrypt(ciphertext, key, alg = current_configuration['sym_cipher'],
     return pickle.loads(serial_pt)
 #end sym_decrypt()
 
-def asym_decrypt(ct_list, private_key):
+def asym_decrypt(ct_list, private_key, alg):
     serial_pt = b''
     for ciphertext in ct_list:
         serial_pt += private_key.decrypt(ciphertext)
@@ -271,9 +285,13 @@ def asym_decrypt(ct_list, private_key):
 
 @dec_timer
 def sign(data, key):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        return pubkey_sign(data, RSA.importKey(key))
+        if current_configuration['pub_cipher'] == 'RSA':
+            pub_key = RSA.importKey(key)
+        return pubkey_sign(data, pub_key, current_configuration['pub_cipher'])
     else:
         return mac_sign(data, key)
 #end sign()
@@ -288,7 +306,7 @@ def mac_sign(data, key):
     return s_result
 #end mac_sign()    
         
-def pubkey_sign(data, key):
+def pubkey_sign(data, key, alg):
     Random.atfork()
     serial_data = pickle.dumps(data)
     sig = key.sign(SHA256.new(serial_data).digest(), '')
@@ -300,17 +318,26 @@ def pubkey_sign(data, key):
 
 @dec_timer
 def verify(data, key):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        return pubkey_verify(data, RSA.importKey(key))
+        if current_configuration['pub_cipher'] == 'RSA':
+            pub_key = RSA.importKey(key)
+        return pubkey_verify(data, pub_key, current_configuration['pub_cipher'])
     else:
         return mac_verify(data, key)
 
 @dec_timer
 def verify1(data, signed_data, key):
+    with open(config_fn, 'r') as f:
+        current_configuration = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        return pubkey_verify1(data, signed_data, RSA.importKey(key))
+        if current_configuration['pub_cipher'] == 'RSA':
+            pub_key = RSA.importKey(key)
+        return pubkey_verify1(data, signed_data, pub_key,
+                              current_configuration['pub_cipher'])
     else:
         return mac_verify1(data, signed_data, key)
 #end verify1()
@@ -333,7 +360,7 @@ def mac_verify1(data, signed_data, key):
 #end mac_verify1()
     
 #returns None when verfication fails
-def pubkey_verify(data, key):
+def pubkey_verify(data, key, alg):
     Random.atfork()
     unp_data = pickle.loads(data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
@@ -344,7 +371,7 @@ def pubkey_verify(data, key):
         return None
 #end pubkey_verify()
 
-def pubkey_verify1(data, signed_data, key):
+def pubkey_verify1(data, signed_data, key, alg):
     Random.atfork()
     unp_data = pickle.loads(signed_data)
     sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )

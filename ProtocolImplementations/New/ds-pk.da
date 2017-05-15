@@ -22,6 +22,7 @@ protocol.
 
 import sys, time
 from sa.sec_algo_pycrypto import *
+configure(sym_mode = 'CTR', sym_key_size = 192)
 
 class roleA(process):
     def setup(B, S, sk_A, pk_A, pk_S):
