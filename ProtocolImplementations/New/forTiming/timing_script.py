@@ -25,27 +25,28 @@ protocols = [
              'ns-pk-ft',
              'or-ft',
              'wl-ft',
-             #'ya-ft',
+             'ya-ft',
              'dhke-1-ft',
-             #'eap_archie-ft.da',
+             #'eap_archie-ft',
              #'eke-ft.da',
-             #'iso9798-3-4-ft.da',
+             #'iso9798-3-4-ft',
              'sdh-ft',
-             'tls1_2-ft'
-             #'kerberos-ft.da',
+             'tls1_2-ft',
+             'kerberos5-ft'
             ]
 
 p_main_skip = {
-               'ds-ft'     : 2,
-               'ds-pk-ft'  : 3,
-               'ns-sk-ft'  : 2,
-               'ns-pk-ft'  : 3,
-               'or-ft'     : 2,
-               'wl-ft'     : 2,
-               'ya-ft'     : 2,
-               'dhke-1-ft' : 7,
-               'sdh-ft'    : 3,
-               'tls1_2-ft' : 4
+               'ds-ft'        : 2,
+               'ds-pk-ft'     : 3,
+               'ns-sk-ft'     : 2,
+               'ns-pk-ft'     : 3,
+               'or-ft'        : 2,
+               'wl-ft'        : 2,
+               'ya-ft'        : 2,
+               'dhke-1-ft'    : 7,
+               'sdh-ft'       : 3,
+               'tls1_2-ft'    : 4,
+               'kerberos5-ft' : 4
               }
                  
 def time_exp01(iter_num):
