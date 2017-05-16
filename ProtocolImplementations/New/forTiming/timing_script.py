@@ -1,6 +1,6 @@
-import sys, os, subprocess
+0;136;0cimport sys, os, subprocess
 
-full_path = '/home/Christopher/secalgo/ProtocolImplementations/New/forTiming'
+full_path = '/home/christopher/secalgo/ProtocolImplementations/New/forTiming/'
 
 protocol_files = ['ds-ft.da', 'ds-pk-ft.da', 'ns-sk-ft.da', 'ns-pk-ft.da',
                   'or-ft.da', 'wl-ft.da', 'ya-ft.da',  'dhke-1-ft.da', 
@@ -10,7 +10,8 @@ protocol_files = ['ds-ft.da', 'ds-pk-ft.da', 'ns-sk-ft.da', 'ns-pk-ft.da',
 def time_exp01():
     for fn in protocol_files:
         child = subprocess.Popen(['python3', '-m', 'da', full_path + fn], 
-                                 bufsize= -1, stdout = subprocess.PIPE,
+                                 bufsize= -1,
+                                 stdout = subprocess.PIPE,
                                  stderr = subprocess.PIPE, 
                                  universal_newlines = True)
         stdout, stderr = child.communicate()
