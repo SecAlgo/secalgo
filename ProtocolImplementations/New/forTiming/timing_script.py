@@ -1,4 +1,4 @@
-import sys, os, subprocess, time
+import sys, os, subprocess, time, json
 
 full_path = '/home/christopher/secalgo/ProtocolImplementations/New/forTiming/'
 result_path = '/home/christopher/secalgo/results/'
@@ -37,9 +37,9 @@ p_main_skip = {
                #'ya-ft' : 2,
                }
                  
-def time_exp01():
+def time_exp01(iter_num):
     print('Timing Experiment 01', flush = True)
-    for i in range(10):
+    for i in range(iter_num):
         print('Iteration ' + str(i + 1) + ':', flush = True)
         for p in protocols:
             print('Running:', p, flush = True)
@@ -62,21 +62,31 @@ def time_exp01():
     print('Completed Timing Experiment 01', flush = True)
 #end time_exp01()
 
-def parse_exp01()
+def parse_exp01(iter_num)
     for p in protocols:
+        library_time = 0
+        protocol_time = 0
         function_skip = p_main_skip[p]
-        for i in range(10):
+        for i in range(iter_num):
+            skip_counter = 0
             with open(result_path + p + '_' + str(i + 1) + results_ext, 'r') as f:
-                for read_line in f:
-                    skip_counter = 0
+                for read_line in f:                    
                     data_line = json.loads(read_line)
-                    if data_line[0] == 'genkey' and skip_counter < function_skip:
-                        skip_counter += 1
-                    
-                
-      
+                    if data_line[0] in sec_algo_functions:
+                        if data_line[0] == 'genkey' and skip_counter < function_skip:
+                            skip_counter += 1
+                        else:
+                            library_time += (data_line[2] - data_line[1])
+                    else:
+                        protocol_time += (data_line[3] - data_line[2])
+        library_time_avg = (library_time / iter_num)
+        protocol_time_avg = (protocol_time / iter_num)
+        ratio = (library_time_avg / protocol_time_avg)
+        print(json.dumps([p, protocol_time_avg, library_time_avg, ratio]))
 #end parse_exp01()
 
 
 if __name__ == '__main__':
-    time_exp01()
+    iter_num = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    time_exp01(iter_num)
+    parse_exp01(iter_num)

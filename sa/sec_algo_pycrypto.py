@@ -54,18 +54,8 @@ def configure(**configs):
 def dec_timer(func):
     def timer(*args):
         start_time = time.process_time()
-        #start_data = resource.getrusage(resource.RUSAGE_SELF)
         result = func(*args)
-        end_time = time.process_time()
-        #end_data = resource.getrusage(resource.RUSAGE_SELF)
-        total_time = end_time - start_time
-        #total_time_res = ((end_data.ru_utime - start_data.ru_utime) +
-        #                  (end_data.ru_stime - start_data.ru_stime))
-        timing_data = (func.__name__, start_time, end_time, total_time)
-        #timing_data = (func.__name__, start_time, end_time, total_time,
-        #               start_data.ru_utime, end_data.ru_utime,
-        #               start_data.ru_stime, end_data.ru_stime, total_time_res)
-        print(json.dumps(timing_data))
+        print(json.dumps([func.__name__, start_time, time.process_time()])
         return result
     if benchmark:
         return timer
