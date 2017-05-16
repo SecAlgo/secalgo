@@ -35,7 +35,7 @@ class RoleS (process):
         K_IR = genkey('shared')
         send(('encS', encrypt((N_I, K_IR, R,
                 ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
-        print(json.dumps([self.start_time, time.process_time()]))
+        print(json.dumps(['ns-sk-ft', 'roleS', self.start_time, time.process_time()]))
 
 class RoleI (process):
     def setup(S, K_IS, R):
@@ -52,7 +52,7 @@ class RoleI (process):
         send(m, to = R)
         await(some(received(((N_R), _R), from_ = self)))
         send(('encI', encrypt(N_R - 1, K_IR)), to = R)
-        print(json.dumps([self.start_time, time.process_time()]))
+        print(json.dumps(['ns-sk-ft', 'roleI', self.start_time, time.process_time()]))
         output('I - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = S):
@@ -78,7 +78,7 @@ class RoleR (process):
         send(('encR', encrypt(N_R, K_IR)), to = I)
         await(some(received(((N_R1), _I), from_ = self),
                    has = N_R1 == N_R - 1))
-        print(json.dumps([self.start_time, time.process_time()]))
+        print(json.dumps(['ns-sk-ft', 'roleR', self.start_time, time.process_time()]))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = I):
