@@ -7,29 +7,36 @@ da_ext = '.da'
 results_ext = '_results.txt'
 error_ext = '_results.log'
 
-sec_algo_functions('genkey', 'encrypt', 'decrypt', 'sign', 'verify', 'verify1'
-                   'gen_nonce')
+sec_algo_functions = (
+                      'genkey',
+                      'encrypt',
+                      'decrypt',
+                      'sign',
+                      'verify',
+                      'verify1',
+                      'gen_nonce'
+                     )
 
 protocols = [
-                  'ds-ft',
-                  #'ds-pk-ft',
-                  #'ns-sk-ft',
-                  #'ns-pk-ft',
-                  #'or-ft',
-                  #'wl-ft',
-                  #'ya-ft',
-                  #'dhke-1-ft',
-                  #'eap_archie-ft.da',
-                  #'eke-ft.da',
-                  #'iso9798-3-4-ft.da'
-                  #'sdh-ft',
-                  #'tls1_2-ft.da',
-                  #'kerberos-ft.da',
-                 ]
+             'ds-ft',
+             'ds-pk-ft',
+             #'ns-sk-ft',
+             #'ns-pk-ft',
+             #'or-ft',
+             #'wl-ft',
+             #'ya-ft',
+             #'dhke-1-ft',
+             #'eap_archie-ft.da',
+             #'eke-ft.da',
+             #'iso9798-3-4-ft.da'
+             #'sdh-ft',
+             #'tls1_2-ft.da',
+             #'kerberos-ft.da',
+            ]
 
 p_main_skip = {
                'ds-ft' : 2,
-               #'ds-pk-ft' : 2,
+               'ds-pk-ft' : 2,
                #'ns-sk-ft' : 2,
                #'ns-pk-ft' : 3,
                #'or-ft' : 2,
@@ -62,27 +69,43 @@ def time_exp01(iter_num):
     print('Completed Timing Experiment 01', flush = True)
 #end time_exp01()
 
-def parse_exp01(iter_num)
+def parse_exp01(iter_num):
     for p in protocols:
-        library_time = 0
-        protocol_time = 0
+        print('Results for:', p)
+        total_library_time = 0
+        total_protocol_time = 0
+        iter_result_list = []
         function_skip = p_main_skip[p]
         for i in range(iter_num):
+            library_time = 0
+            protocol_time = 0
             skip_counter = 0
             with open(result_path + p + '_' + str(i + 1) + results_ext, 'r') as f:
                 for read_line in f:                    
                     data_line = json.loads(read_line)
+                    print(data_line, flush = True)
                     if data_line[0] in sec_algo_functions:
+                        print('library', flush = True)
                         if data_line[0] == 'genkey' and skip_counter < function_skip:
+                            print('skip', flush = True)
                             skip_counter += 1
                         else:
                             library_time += (data_line[2] - data_line[1])
                     else:
+                        print('protocol', flush = True)
                         protocol_time += (data_line[3] - data_line[2])
-        library_time_avg = (library_time / iter_num)
-        protocol_time_avg = (protocol_time / iter_num)
-        ratio = (library_time_avg / protocol_time_avg)
-        print(json.dumps([p, protocol_time_avg, library_time_avg, ratio]))
+            ratio = (library_time / protocol_time)
+            iter_result = [(i + 1), p, protocol_time, library_time, ratio]
+            iter_result_list.append(iter_result)
+            print(json.dumps(iter_result))
+        for ir in iter_result_list:
+            total_library_time += ir[3]
+            total_protocol_time += ir[2]
+        avg_library_time = total_library_time / iter_num
+        avg_protocol_time = total_protocol_time / iter_num
+        avg_ratio = avg_library_time / avg_protocol_time
+        print(json.dumps(['avg', p, avg_protocol_time, avg_library_time, avg_ratio ]))
+
 #end parse_exp01()
 
 

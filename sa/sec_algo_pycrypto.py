@@ -55,7 +55,7 @@ def dec_timer(func):
     def timer(*args):
         start_time = time.process_time()
         result = func(*args)
-        print(json.dumps([func.__name__, start_time, time.process_time()])
+        print(json.dumps([func.__name__, start_time, time.process_time()]))
         return result
     if benchmark:
         return timer
