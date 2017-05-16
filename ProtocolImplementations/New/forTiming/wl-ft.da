@@ -25,10 +25,12 @@ from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
 
 class RoleS (process):
     def setup(K_IS, K_RS):
+        self.start_time = 0
         self.I1 = None
         self.R1 = None
 
     def run():
+        self.start_time = time.process_time()
         await(False)
 
     def receive(msg=('msg4', encI, encR), from_ = R):
@@ -41,6 +43,8 @@ class RoleS (process):
         K_IR = genkey('shared')
         send(('msg5', ('encS', encrypt((R, N_I, N_R, K_IR), K_IS)),
               ('encS', encrypt((I, N_I, N_R, K_IR), K_RS))), to = R)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
 
     def receive(msg=('encI', m), from_ = self):
         send((decrypt(m, K_IS), I1), to = self)
@@ -50,10 +54,12 @@ class RoleS (process):
         
 class RoleI (process):
     def setup(S, K_IS, R):
+        self.start_time = 0
         self.I = self
         self.K_IR = None
 
     def run():
+        self.start_time = time.process_time()
         N_I = gen_nonce()
         send(('msg1', I, N_I), to = R)
         await(some(received(('msg2', _R, N_R), from_ = _R)))
@@ -65,6 +71,8 @@ class RoleI (process):
         send(encR, to = self)
         await(some(received(((_N_I, _N_R), _R), from_ = self)))
         send(('encI', encrypt(N_R, K_IR)), to = R)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('I - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = self):
@@ -76,11 +84,13 @@ class RoleI (process):
 
 class RoleR (process):
     def setup(S, K_RS):
+        self.start_time = 0
         self.R = self
         self.I1 = None
         self.K_IR = None
 
     def run():
+        self.start_time = time.process_time()
         await(False)
 
     def receive(msg=('msg1', I, N_I), from_ = _I):
@@ -95,6 +105,8 @@ class RoleR (process):
         K_IR = K
         send(('msg6', encSI, ('encR', encrypt((N_I, N_R), K_IR))), to = I)
         await(some(received((N_R, _I), from_ = self)))
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = self):

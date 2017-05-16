@@ -17,6 +17,7 @@ Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
 """
+import time
 from sa.sec_algo_pycrypto import *
 configure(sym_mode = 'CFB')
 
