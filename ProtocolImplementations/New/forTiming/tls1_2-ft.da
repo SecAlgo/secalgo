@@ -974,10 +974,11 @@ class TLS_Peer(process):
         pending_read_state = Connection_State()
 
     def run():
-        self.start_time = time.process_time()
         if peer != None:
+            self.start_time = time.process_time()
             initiate_handshake(peer)
         else:
+            self.start_time = time.process_time()
             if await(False): pass
             elif timeout(5): pass
         
