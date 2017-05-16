@@ -40,8 +40,7 @@ class roleA(process):
             send(('msg03', (A, pk_A, t_A, sig_A), (B, pk_B, t_B, sig_B),
                   encrypt(((k_AB, t_AB), sign((k_AB, t_AB), sk_A)), pk_B)),
                  to = B)
-            total_time = time.process_time() - self.start_time
-            print(json.dumps(total_time))
+            print(json.dumps([self.start_time, time.process_time()]))
             output('Initiator: Key Exchange Complete')
         else:
             output('Initiator: Could not verify certificates')
@@ -59,8 +58,7 @@ class roleB(process):
             verify1((B, pk_B, t_B), sig_B, pk_S)):
             (k_AB, t_AB), sig_AB = decrypt(encrypted_key, sk_B)
             if verify1((k_AB, t_AB), sig_AB, pk_A):
-                total_time = time.process_time() - self.start_time
-                print(json.dumps(total_time))
+                print(json.dumps([self.start_time, time.process_time()]))
                 output('Recipient: Key Exchange Complete')
             else:
                 output('Recipient: Could not verify signature on shared key')
@@ -79,8 +77,7 @@ class roleS(process):
         t_A = t_B = time.time()
         send(('msg02', (A, pk_A, t_A, sign((A, pk_A, t_A), sk_S)),
               (B, pk_B, t_B, sign((B, pk_B, t_B), sk_S))), to = A)
-        total_time = time.process_time() - self.start_time
-        print(json.dumps(total_time))
+        print(json.dumps([self.start_time, time.process_time()]))
         output('Server: Certificates Sent')
 
 def main():

@@ -40,8 +40,7 @@ class roleS (process):
         pkB_set = {x for (p, x) in client_keys if p == B}
         pkB = pkB_set.pop()
         send(('signed', sign((B, pkB), skS)), to = A)
-        total_time = time.process_time() - self.start_time
-        print(json.dumps(total_time))
+        print(json.dumps([self.start_time, time.process_time()]))
 
 class roleI (process):
     def setup(skI, S, pkS, R):
@@ -55,9 +54,8 @@ class roleI (process):
         nI = gen_nonce()
         send(('pub_enc', encrypt((nI, I), pkR)), to = R)
         await(some(received(((_nI, nR, _R), _R), from_ = self)))
-        send(('pub_enc', encrypt(nR, pkR)), to = R)
-        total_time = time.process_time() - self.start_time
-        print(json.dumps(total_time))
+        send(('pub_enc', encrypt((nR,), pkR)), to = R)
+        print(json.dumps([self.start_time, time.process_time()]))
         output('I authenticated R')
 
     def receive(msg=('signed', m), from_ = S):
@@ -81,15 +79,16 @@ class roleR (process):
         await(some(received(((_I, pkI), _S), from_ = self)))
         nR = gen_nonce()
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
+        print('$$$$$$$$$$$$$$$$$$:', 1, flush = True)
         await(some(received(((_nR,), _I), from_ = self)))
-        total_time = time.process_time() - self.start_time
-        print(json.dumps(total_time))
+        print(json.dumps([self.start_time, time.process_time()]))
         output('R authenticated I')
 
     def receive(msg=('signed', m), from_ = S):
         send((verify(m, pkS), S), to = self)
 
     def receive(msg=('pub_enc', m), from_ = I):
+        print('$$$$$$$$$$$$$$$$$$$:', 2, flush = True)
         send((decrypt(m, skR), I), to = self)
 
 def main():

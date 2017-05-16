@@ -30,25 +30,25 @@ class RoleI (process):
         send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
         await(some(received(m, from_ = R)))
         s = decrypt(m, k)
-        total_time = time.process_time() - self.start_data
-        print(json.dumps(total_time))
+        print(json.dumps([self.start_time, time.process_time()]), flush = True)
         output('DECRYPTED MESSAGE:', s)
 
 class RoleR (process):
     def setup(skR, pkI):
-        self.start_data = 0
+        self.start_time = 0
         self.s = 'secret'
 
     def run():
         self.start_time = time.process_time()
-        if await(False)
-        elif timeout(5): pass
+        if await(False):
+            pass
+        elif timeout(5):
+            pass
 
     def receive(msg=('encrypt_sign', m), from_ = I):
         k = verify(decrypt(m, skR), pkI)
         send(encrypt(s, k), to = I)
-        total_time = time.process_time() - self.start_time
-        print(json.dumps(total_time))
+        print(json.dumps([self.start_time, time.process_time()]), flush = True)
 
 def main():
     skI, pkI = genkey('public')
