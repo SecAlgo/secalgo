@@ -17,31 +17,38 @@ Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
 """
-import time
+import time, json
 from sa.sec_algo_pycrypto import *
-configure(sym_mode = 'CFB')
 
 class RoleI (process):
     def setup(skI, R, pkR):
-        pass
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         k = genkey('shared')
         send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
         await(some(received(m, from_ = R)))
         s = decrypt(m, k)
+        total_time = time.process_time() - self.start_data
+        print(json.dumps(total_time))
         output('DECRYPTED MESSAGE:', s)
 
 class RoleR (process):
     def setup(skR, pkI):
+        self.start_data = 0
         self.s = 'secret'
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False)
+        elif timeout(5): pass
 
     def receive(msg=('encrypt_sign', m), from_ = I):
         k = verify(decrypt(m, skR), pkI)
         send(encrypt(s, k), to = I)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
 
 def main():
     skI, pkI = genkey('public')

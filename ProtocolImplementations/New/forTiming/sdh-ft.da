@@ -21,13 +21,16 @@ SK_sig_I, for participant, 'I'. Each participant possesses the public key of
 the others for this signature scheme. 's' is a session identifier (I will use
 a nonce). 
 '''
+import json, time
 from sa.sec_algo_pycrypto import genkey, sign, verify1 as verify, gen_nonce
 
 class RoleA(process):
     def setup(SK_sig_A, PK_sig_A, B, PK_sig_B, p, g):
         self.A = self
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         s = gen_nonce(128)
         dh_x, dh_X, _, _ = genkey('dh', dh_p = p, dh_g = g)
         send(('msg1', A, s, dh_X), to = B)
@@ -36,15 +39,20 @@ class RoleA(process):
             send(('msg3', A, s, sign((A, s, dh_X, dh_Y, B), SK_sig_A)), to = B)
             K_AB = pow(dh_Y, dh_x, p)
             dh_x = None
+            total_time = time.process_time() - self.start_time
+            print(json.dumps(total_time))
             output('A - Authenticated Exchange of Key Material Complete')
             output('Session Key:', (K_AB, s))
 
 class RoleB(process):
     def setup(SK_sig_B, PK_sig_B, PK_sig_A, p, g):
         self.B = self
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=('msg1', A, s, dh_X), from_ = A):
         dh_y, dh_Y, _, _ = genkey('dh', dh_p = p, dh_g = g)
@@ -53,6 +61,8 @@ class RoleB(process):
         dh_y = None
         await(some(received(('msg3', _A, _s, m), from_ = A)))
         if verify((A, s, dh_X, dh_Y, B), m, PK_sig_A) != None:
+            total_time = time.process_time() - self.start_time
+            print(json.dumps(total_time))
             output('B - Authenticated Exchange of Key Material Complete')
             output('Session Key:', (K_AB, s))
 
@@ -66,4 +76,3 @@ def main():
     setup(B, (SK_sig_B, PK_sig_B, PK_sig_A, dh_p, dh_g))
     start(B)
     start(A)
-    

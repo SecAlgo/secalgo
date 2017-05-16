@@ -20,8 +20,8 @@ Protocol Diagram:
   (6) R -> I : enc((R, N_I, N_R, K_IR), K_IS), enc((N_I, N_R), K_IR)
   (7) I -> R : enc(N_R, K_IR)
 """
-
-from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
+import time, json
+from sa.sec_algo_pycrypto import *
 
 class RoleS (process):
     def setup(K_IS, K_RS):
@@ -31,7 +31,8 @@ class RoleS (process):
 
     def run():
         self.start_time = time.process_time()
-        await(False)
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=('msg4', encI, encR), from_ = R):
         R1 = R
@@ -81,7 +82,6 @@ class RoleI (process):
     def receive(msg=('encR', m), from_ = self):
         send((decrypt(m, K_IR), R), to = self)
 
-
 class RoleR (process):
     def setup(S, K_RS):
         self.start_time = 0
@@ -91,7 +91,8 @@ class RoleR (process):
 
     def run():
         self.start_time = time.process_time()
-        await(False)
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=('msg1', I, N_I), from_ = _I):
         N_R = gen_nonce()

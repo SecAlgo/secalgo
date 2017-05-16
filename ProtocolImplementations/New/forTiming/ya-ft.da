@@ -21,20 +21,25 @@ Protocol Diagram:
   (3) S -> A : enc((B, K_AB, N_A, N_B), K_AS), enc((A, K_AB), K_BS)
   (4) A -> B : enc((A, K_AB), K_BS), enc(N_B, K_AB)
 """
-
-from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
+import time, json
+from sa.sec_algo_pycrypto import *
 
 class RoleS (process):
     def setup(A, B, K_AS, K_BS):
         self.S = self
+        self.start_time = 0
         
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=(_B, (_A, N_A, N_B), _B), from_ = self):
         K_AB = genkey('shared')
         send(('encSA', encrypt((B, K_AB, N_A, N_B), K_AS),
               encrypt((A, K_AB), K_BS)), to = A)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         
     def receive(msg=('encBS', _B, m), from_ = B):
         send((B, decrypt(m, K_BS), B), to = self)
@@ -43,13 +48,17 @@ class RoleA (process):
     def setup(B, S, K_AS):
         self.A = self
         self.K_AB = None
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         N_A = gen_nonce()
         send((A, N_A), to = B)
         await(some(received(((_B, K, _N_A, N_B), encSB, _S), from_ = self)))
         self.K_AB = K
         send(('encSB', encSB, ('encAB', encrypt(N_B, K_AB))), to = B)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('A - Key Exchange Complete')
 
     def receive(msg=('encSA', m, encSB), from_ = S):
@@ -60,9 +69,12 @@ class RoleB (process):
         self.B = self
         self.A1 = None
         self.K_AB = None
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=(A, N_A), from_ = A):
         self.A1 = A
@@ -71,6 +83,8 @@ class RoleB (process):
         await(some(received(((_A, K), _S), from_ = self)))
         self.K_AB = K
         await(some(received(((_N_B), _A), from_ = self)))
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('B - Key Exchange Complete')
 
     def receive(msg=('encSB', m, encAB), from_ = A):

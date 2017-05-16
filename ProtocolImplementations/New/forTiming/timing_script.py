@@ -1,11 +1,23 @@
-0;136;0cimport sys, os, subprocess
+import sys, os, subprocess
 
 full_path = '/home/christopher/secalgo/ProtocolImplementations/New/forTiming/'
 
-protocol_files = ['ds-ft.da', 'ds-pk-ft.da', 'ns-sk-ft.da', 'ns-pk-ft.da',
-                  'or-ft.da', 'wl-ft.da', 'ya-ft.da',  'dhke-1-ft.da', 
-                  'eke-ft.da', 'sdh-ft.eke', 'eap_archie-ft.da', 'tls1_2-ft.da',
-                  'kerberos-ft.da', 'iso9798-3-4-ft.da']
+protocol_files = [
+                  'ds-ft.da',
+                  'ds-pk-ft.da',
+                  'ns-sk-ft.da',
+                  'ns-pk-ft.da',
+                  'or-ft.da',
+                  'wl-ft.da',
+                  'ya-ft.da',
+                  'dhke-1-ft.da',
+                  #'eap_archie-ft.da',
+                  #'eke-ft.da',
+                  #'iso9798-3-4-ft.da'
+                  'sdh-ft.eke',
+                  #'tls1_2-ft.da',
+                  #'kerberos-ft.da',
+                 ]
 
 def time_exp01():
     for fn in protocol_files:

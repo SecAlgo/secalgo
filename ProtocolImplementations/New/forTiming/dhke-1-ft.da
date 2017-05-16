@@ -14,13 +14,16 @@ its setup. The certificates, cert_I and cert_R, are certificates granted by a
 Certification Authority linking each participant's public key to their
 identity. k is a randomly generated index for a hash function.
 """
+import json, time
 from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify1 as verify
 
 class RoleI (process):
     def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):
         self.I = self
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         dh_x, dh_X, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
         send(('msg1', dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
         await(some(received(('msg2', dh_Y, k, m, cert_R), from_ = R)))
@@ -30,14 +33,19 @@ class RoleI (process):
                 #Hash function whose index is k
                 K_IR = key_derivation(dh_Y, dh_x, PK_I[2])
                 send(('msg3', BitGen(K_IR)), to = R)
+                total_time = time.process_time() - self.start_time
+                print(json.dumps(total_time))
                 output('I - Authenticated Exchange of Key Material Complete')
         
 class RoleR (process):
     def setup(SK_R, PK_R, PK_I, cert_R, pk_sig_T):
         self.R = self
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
         dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
@@ -51,6 +59,8 @@ class RoleR (process):
                 K_IR = key_derivation(dh_X, dh_y, PK_I[2])
                 await(some(received(('msg3', m2), from_ = I)))
                 if BitGen(K_IR) == m2:
+                    total_time = time.process_time() - self.start_time
+                    print(json.dumps(total_time))
                     output('R - Authenticated Exchange of Key Material Complete')
 
 def main():

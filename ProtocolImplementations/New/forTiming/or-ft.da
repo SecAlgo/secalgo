@@ -16,15 +16,17 @@ Protocol Diagram:
   (3) S -> R : M, enc((N_I, K_IR), K_IS), enc((N_R, k_IR), K_RS)
   (4) R -> I : M, enc((N_I, K_IR), K_IS)
 """
-
+import time, json
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt, gen_nonce
 
 class RoleS (process):
     def setup(K_IS, K_RS):
-        pass
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=(M, I, R, encI, encR), from_ = _R):
         send(encI, to = self)
@@ -35,6 +37,8 @@ class RoleS (process):
         K_IR = genkey('shared')
         send((M, ('encI', encrypt((N_I, K_IR), K_IS)),
              ('encR', encrypt((N_R, K_IR), K_RS))), to = R)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
 
     def receive(msg=('encI', m), from_ = self):
         send((decrypt(m, K_IS)), to = self)
@@ -45,14 +49,18 @@ class RoleS (process):
 class RoleI (process):
     def setup(S, K_IS, R):
         self.I = self
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         M = gen_nonce()
         N_I = gen_nonce()
         send((M, I, R, ('encI', encrypt((N_I, M, I, R), K_IS))), to = R)
         await(some(received((_M, encI), from_ = R)))
         send(encI, to = self)
         await(some(received(((_N_I, K_IR), _S), from_ = self)))
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('I - Key Exchange Complete')
 
     def receive(msg=('encI', m), from_ = self):
@@ -61,9 +69,12 @@ class RoleI (process):
 class RoleR (process):
     def setup(S, K_RS):
         self.R = self
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
         
     def receive(msg=(M, I, R, encI), from_ = I):
         N_R = gen_nonce()
@@ -72,6 +83,8 @@ class RoleR (process):
         send((M, encI), to = I)
         send(encR, to = self)
         await(some(received(((_N_R, K_IR), _S), from_ = self)))
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('R - Key Exchange Complete')
 
     def receive(msg=('encR', m), from_ = self):

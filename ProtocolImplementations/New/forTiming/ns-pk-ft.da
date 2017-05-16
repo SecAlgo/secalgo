@@ -23,33 +23,41 @@ Protocol Diagram:
 did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
-
+import time, json
 from sa.sec_algo_pycrypto import genkey, encrypt, decrypt
 from sa.sec_algo_pycrypto import sign, verify, gen_nonce
 
 class roleS (process):
     def setup(skS, client_keys):
-        pass
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=(A, B), from_ = A):
         pkB_set = {x for (p, x) in client_keys if p == B}
         pkB = pkB_set.pop()
         send(('signed', sign((B, pkB), skS)), to = A)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
 
 class roleI (process):
     def setup(skI, S, pkS, R):
         self.I = self
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         send((I, R), to = S)
         await(some(received(((_R, pkR), _S), from_ = self)))
         nI = gen_nonce()
         send(('pub_enc', encrypt((nI, I), pkR)), to = R)
         await(some(received(((_nI, nR, _R), _R), from_ = self)))
         send(('pub_enc', encrypt(nR, pkR)), to = R)
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('I authenticated R')
 
     def receive(msg=('signed', m), from_ = S):
@@ -61,9 +69,12 @@ class roleI (process):
 class roleR (process):
     def setup(skR, S, pkS):
         self.R = self
+        self.start_time = 0
 
     def run():
-        await(False)
+        self.start_time = time.process_time()
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=((nI, I), I), from_ = self):
         send((R, I), to = S)
@@ -71,6 +82,8 @@ class roleR (process):
         nR = gen_nonce()
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
         await(some(received(((_nR,), _I), from_ = self)))
+        total_time = time.process_time() - self.start_time
+        print(json.dumps(total_time))
         output('R authenticated I')
 
     def receive(msg=('signed', m), from_ = S):
