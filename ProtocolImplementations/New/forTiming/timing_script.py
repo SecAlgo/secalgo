@@ -36,7 +36,7 @@ protocols = [
 
 p_main_skip = {
                'ds-ft' : 2,
-               'ds-pk-ft' : 2,
+               'ds-pk-ft' : 3,
                #'ns-sk-ft' : 2,
                #'ns-pk-ft' : 3,
                #'or-ft' : 2,
