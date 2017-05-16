@@ -7,7 +7,7 @@ protocol_files = ['ds-ft.da', 'ds-pk-ft.da', 'ns-sk-ft.da', 'ns-pk-ft.da',
                   'eke-ft.da', 'sdh-ft.eke', 'eap_archie-ft.da', 'tls1_2-ft.da',
                   'kerberos-ft.da', 'iso9798-3-4-ft.da']
 
-def time_exp01(protocol):
+def time_exp01():
     for fn in protocol_files:
         child = subprocess.Popen(['python3', '-m', 'da', full_path + fn], 
                                  bufsize= -1, stdout = subprocess.PIPE,
