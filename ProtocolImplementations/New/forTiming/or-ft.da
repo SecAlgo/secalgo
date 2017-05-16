@@ -96,4 +96,3 @@ def main():
     start(S)
     start(R)
     start(I)
-

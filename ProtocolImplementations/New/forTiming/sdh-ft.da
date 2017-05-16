@@ -39,8 +39,7 @@ class RoleA(process):
             send(('msg3', A, s, sign((A, s, dh_X, dh_Y, B), SK_sig_A)), to = B)
             K_AB = pow(dh_Y, dh_x, p)
             dh_x = None
-            total_time = time.process_time() - self.start_time
-            print(json.dumps(total_time))
+            print(json.dumps(['sdh-ft', 'roleA', self.start_time, time.process_time()]))
             output('A - Authenticated Exchange of Key Material Complete')
             output('Session Key:', (K_AB, s))
 
@@ -61,8 +60,7 @@ class RoleB(process):
         dh_y = None
         await(some(received(('msg3', _A, _s, m), from_ = A)))
         if verify((A, s, dh_X, dh_Y, B), m, PK_sig_A) != None:
-            total_time = time.process_time() - self.start_time
-            print(json.dumps(total_time))
+            print(json.dumps(['sdh-ft', 'roleB', self.start_time, time.process_time()]))
             output('B - Authenticated Exchange of Key Material Complete')
             output('Session Key:', (K_AB, s))
 

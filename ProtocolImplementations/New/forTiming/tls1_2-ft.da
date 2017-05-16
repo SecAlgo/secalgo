@@ -58,7 +58,7 @@
 # successfully. The TLS peers are now free to share protected application
 # data.
 
-import time, sys, pickle
+import time, sys, pickle, json
 from Crypto.Hash import SHA256
 from sa.sec_algo_pycrypto import (encrypt, decrypt, sign,
                                   verify1 as verify, genkey, gen_nonce)
@@ -218,6 +218,7 @@ class Connection_State():
 # class
 class TLS_Peer(process):
     def setup(ce, peer, secret_key, public_key, certificate_list):
+        self.start_time = 0
         self.max_hs_id = 0
         self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
         self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
@@ -697,6 +698,7 @@ class TLS_Peer(process):
             return
 
         # Handshake complete
+        print(json.dumps(['tls1_2-ft', 'C', self.start_time, time.process_time()]))
         output('CLIENT - Handshake complete')
         
     # Receives Handshake type TLS messages, but the messages are still enclosed
@@ -958,6 +960,7 @@ class TLS_Peer(process):
             msg_counter += 1
             send((record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
                   handshake_id, msg_counter), to = client)
+            print(json.dumps(['tls1_2-ft', 'S', self.start_time, time.process_time()]))
             output('SERVER - Handshake Complete')
 
     # This is the handler for ChangeCipherSpec messages.
@@ -971,10 +974,12 @@ class TLS_Peer(process):
         pending_read_state = Connection_State()
 
     def run():
+        self.start_time = time.process_time()
         if peer != None:
             initiate_handshake(peer)
         else:
-            await(False)
+            if await(False): pass
+            elif timeout(5): pass
         
 def main():
     config(channel = 'reliable')

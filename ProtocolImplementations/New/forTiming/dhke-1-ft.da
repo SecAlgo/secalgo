@@ -33,8 +33,7 @@ class RoleI (process):
                 #Hash function whose index is k
                 K_IR = key_derivation(dh_Y, dh_x, PK_I[2])
                 send(('msg3', BitGen(K_IR)), to = R)
-                total_time = time.process_time() - self.start_time
-                print(json.dumps(total_time))
+                print(json.dumps(['dhke-1-ft', 'roleI', self.start_time, time.process_time()]))
                 output('I - Authenticated Exchange of Key Material Complete')
         
 class RoleR (process):
@@ -59,8 +58,7 @@ class RoleR (process):
                 K_IR = key_derivation(dh_X, dh_y, PK_I[2])
                 await(some(received(('msg3', m2), from_ = I)))
                 if BitGen(K_IR) == m2:
-                    total_time = time.process_time() - self.start_time
-                    print(json.dumps(total_time))
+                    print(json.dumps(['dhke-1-ft', 'roleR', self.start_time, time.process_time()]))
                     output('R - Authenticated Exchange of Key Material Complete')
 
 def main():
