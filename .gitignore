@@ -4,4 +4,4 @@ __pycache__/
 *.pyc
 ProtocolImplementations/**/*.py
 build/
-
+results/
