@@ -52,9 +52,9 @@ def configure(**configs):
 #end security_declarations()
 
 def dec_timer(func):
-    def timer(*args):
+    def timer(*args, **kwargs):
         start_time = time.process_time()
-        result = func(*args)
+        result = func(*args, **kwargs)
         print(json.dumps([func.__name__, start_time, time.process_time()]))
         return result
     if benchmark:
