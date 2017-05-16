@@ -1,35 +1,46 @@
 import sys, os, subprocess, time
 
 full_path = '/home/christopher/secalgo/ProtocolImplementations/New/forTiming/'
+result_path = 'home/christopher/secalgo/results/'
 
-protocol_files = [
-                  'ds-ft.da',
-                  'ds-pk-ft.da',
-                  'ns-sk-ft.da',
-                  'ns-pk-ft.da',
-                  'or-ft.da',
-                  'wl-ft.da',
-                  'ya-ft.da',
-                  'dhke-1-ft.da',
+da_ext = '.da'
+results_ext = '_results.txt'
+error_ext = '_results.log'
+
+protocols = [
+                  'ds-ft',
+                  'ds-pk-ft',
+                  'ns-sk-ft',
+                  'ns-pk-ft',
+                  'or-ft',
+                  'wl-ft',
+                  #'ya-ft',
+                  #'dhke-1-ft',
                   #'eap_archie-ft.da',
                   #'eke-ft.da',
                   #'iso9798-3-4-ft.da'
-                  'sdh-ft.eke',
+                  #'sdh-ft',
                   #'tls1_2-ft.da',
                   #'kerberos-ft.da',
                  ]
 
 def time_exp01():
-    for fn in protocol_files:
+    for fn in protocols:
         print('Running:', fn, flush = True)
+        f_txt = open(result_path + fn + results.ext, 'w')
+        f_err = open(result_path + fn + error_ext, 'w')
         child = subprocess.Popen(['python3', '-m', 'da', full_path + fn], 
                                  bufsize= -1,
-                                 #stdout = subprocess.PIPE,
-                                 #stderr = subprocess.PIPE, 
+                                 stdout = f_txt,
+                                 stderr = f_err, 
                                  universal_newlines = True)
-        stdout, stderr = child.communicate()
+        child.wait()
+        #stdout, stderr = child.communicate()
         #print(stdout, flush = True)
-        time.sleep(2)
+        f_txt.close()
+        f_err.close()
+        print('Finished:', fn, flush = True)
+        time.sleep(1)
 #end time_exp01()
 
 if __name__ == '__main__':
