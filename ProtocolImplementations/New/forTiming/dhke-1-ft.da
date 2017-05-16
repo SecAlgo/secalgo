@@ -1,0 +1,89 @@
+"""
+Diffie-Hellman Key Exchange (DHKE-1)
+A protocol based on classical Diffie-Hellman, given in Shoup 1999.
+Models available for Scyther, and in Gupta and Shamtikov 2005.
+
+1. I -> R : g^x, sign((g^x, R), SK_I), cert_I
+2. R -> I : g^y, k, sign(g^x, g^y, k, I), cert_R
+3. I -> R : BitGen(H_k(g^xy))
+
+g is a generator for a group G of prime order q, all decided in advance. In
+Shoup, a "description" of G and g are included in each participant's public
+key. I will simulate this by passing this information to each process during 
+its setup. The certificates, cert_I and cert_R, are certificates granted by a 
+Certification Authority linking each participant's public key to their
+identity. k is a randomly generated index for a hash function.
+"""
+from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify1 as verify
+
+class RoleI (process):
+    def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):
+        self.I = self
+
+    def run():
+        dh_x, dh_X, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
+        send(('msg1', dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
+        await(some(received(('msg2', dh_Y, k, m, cert_R), from_ = R)))
+        if verify((R, PK_R), cert_R, pk_sig_T) != None:
+            if verify((dh_X, dh_Y, k, I), m, PK_R[0]) != None:
+                #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
+                #Hash function whose index is k
+                K_IR = key_derivation(dh_Y, dh_x, PK_I[2])
+                send(('msg3', BitGen(K_IR)), to = R)
+                output('I - Authenticated Exchange of Key Material Complete')
+        
+class RoleR (process):
+    def setup(SK_R, PK_R, PK_I, cert_R, pk_sig_T):
+        self.R = self
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
+        dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
+        if verify((I, PK_I), cert_I, pk_sig_T) != None:
+            if verify((dh_X, R), m, PK_I[0]) != None:
+                from Crypto.Random.random import randint
+                k = randint(1, 100) #k supposed to be bitstring
+                send(('msg2', dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
+                #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
+                #Hash function whose index is k
+                K_IR = key_derivation(dh_X, dh_y, PK_I[2])
+                await(some(received(('msg3', m2), from_ = I)))
+                if BitGen(K_IR) == m2:
+                    output('R - Authenticated Exchange of Key Material Complete')
+
+def main():
+    sk_sig_I, pk_sig_I = genkey('public')
+    sk_sig_R, pk_sig_R = genkey('public')
+    sk_sig_T, pk_sig_T = genkey('public')
+    dh_grp_I = genkey('dh', 0, dh_mod_size = 128)
+    dh_grp_R = genkey('dh', 0, dh_mod_size = 128)
+    SK_I = sk_sig_I
+    SK_R = sk_sig_R
+    PK_I = (pk_sig_I, dh_grp_I[2], dh_grp_I[3])
+    PK_R = (pk_sig_R, dh_grp_R[2], dh_grp_R[3])
+    R = new(RoleR)
+    I = new(RoleI)
+    cert_I = sign((I, PK_I), sk_sig_T)
+    cert_R = sign((R, PK_R), sk_sig_T)
+    setup(R, (SK_R, PK_R, PK_I, cert_R, pk_sig_T))
+    setup(I, (SK_I, PK_I, R, PK_R, cert_I, pk_sig_T))
+    start(R)
+    start(I)
+
+def BitGen(x):
+    import random
+    random.seed(x)
+    return random.getrandbits(256)
+    
+def key_derivation(public, private, mod_p):
+    shared_secret = pow(public, private, mod_p)
+    ss_length_bits = shared_secret.bit_length()
+    ss_length_bytes = ss_length_bits // 8
+    if ss_length_bits % 8 != 0:
+        ss_length_bytes += 1
+    ss_as_bytes = shared_secret.to_bytes(ss_length_bytes, byteorder = 'little')
+    from Crypto.Hash import SHA256
+    new_key = SHA256.new(ss_as_bytes).digest()
+    return new_key
