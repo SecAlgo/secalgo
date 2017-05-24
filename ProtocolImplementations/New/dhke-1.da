@@ -57,8 +57,8 @@ def main():
     sk_sig_I, pk_sig_I = genkey('public')
     sk_sig_R, pk_sig_R = genkey('public')
     sk_sig_T, pk_sig_T = genkey('public')
-    dh_grp_I = genkey('dh', 0, dh_mod_size = 128)
-    dh_grp_R = genkey('dh', 0, dh_mod_size = 128)
+    dh_grp_I = genkey('dh', 1, dh_mod_size = 128)
+    dh_grp_R = genkey('dh', 1, dh_mod_size = 128)
     SK_I = sk_sig_I
     SK_R = sk_sig_R
     PK_I = (pk_sig_I, dh_grp_I[2], dh_grp_I[3])

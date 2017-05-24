@@ -24,7 +24,7 @@ DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 
-benchmark = True
+#benchmark = False
 
 config_fn = 'config.sac'
 
@@ -51,6 +51,7 @@ def configure(**configs):
         json.dump(current_configuration, f2)
 #end security_declarations()
 
+'''
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
@@ -62,14 +63,15 @@ def dec_timer(func):
     else:
         return func
 #end timer()
+'''
 
-@dec_timer
+#@dec_timer
 def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
     return getrandbits(size)
 #end gen_nonce
 
-@dec_timer
+#@dec_timer
 def genkey(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
     with open(config_fn, 'r') as f:
@@ -172,7 +174,7 @@ def gen_dh_key(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     return (dh_x, dh_X, dh_g, dh_p)
 #end gen_dh_key()
 
-@dec_timer
+#@dec_timer
 def encrypt(plaintext, key):
     with open(config_fn, 'r') as f:
         current_configuration = json.load(f)
@@ -227,7 +229,7 @@ def asym_encrypt(plaintext, public_key, alg):
     return ct_list
 #end asym_encrypt()
 
-@dec_timer
+#@dec_timer
 def decrypt(ciphertext, key):
     with open(config_fn, 'r') as f:
         current_configuration = json.load(f)
@@ -280,7 +282,7 @@ def asym_decrypt(ct_list, private_key, alg):
     return plaintext
 #end asym_decrypt()
 
-@dec_timer
+#@dec_timer
 def sign(data, key):
     with open(config_fn, 'r') as f:
         current_configuration = json.load(f)
@@ -313,7 +315,7 @@ def pubkey_sign(data, key, alg):
     return s_result
 #end pubkey_sign()
 
-@dec_timer
+#@dec_timer
 def verify(data, key):
     with open(config_fn, 'r') as f:
         current_configuration = json.load(f)
@@ -325,7 +327,7 @@ def verify(data, key):
     else:
         return mac_verify(data, key)
 
-@dec_timer
+#@dec_timer
 def verify1(data, signed_data, key):
     with open(config_fn, 'r') as f:
         current_configuration = json.load(f)

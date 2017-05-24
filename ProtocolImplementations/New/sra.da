@@ -1,0 +1,39 @@
+'''
+Shamir-Rivest-Adleman Three Pass Protocol
+
+  1. A -> B : enc(M, k_A)
+  2. B -> A : enc(enc(M, k_A), k_B)
+  3. A -> B : dec(enc(enc(M, k_A), k_B), k_A)
+
+'''
+from sa.sec_algo_pycrypto import *
+configure(sym_mode = 'ECB')
+
+class roleA(process):
+    def setup(B, secret):
+        pass
+
+    def run():
+        k_A = genkey('shared')
+        send(('msg1', encrypt(secret, key = k_A)), to = B)
+        await(some(received(('msg2', encB_encA_s), from_ = _B)))
+        send(('msg3', decrypt(encB_encA_s, key = k_A)), to = B)
+
+class roleB(process):
+    def setup():
+        pass
+
+    def run():
+        k_B = genkey('shared')
+        await(some(received(('msg1', encA_s), from_ = A)))
+        send(('msg2', encrypt(encA_s, key = k_B)), to = A)
+        await(some(received(('msg3', encB_s), from_ = _A)))
+        secret = decrypt(encB_s, key = k_B)
+        output('MESSAGE:', secret)
+
+def main():
+    secret = sys.argv[1] if len(sys.argv) > 1 else 'I am a secret'
+    B = new(roleB, ())
+    A = new(roleA, (B, secret))
+    start(B)
+    start(A)
