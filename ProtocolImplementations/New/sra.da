@@ -6,8 +6,10 @@ Shamir-Rivest-Adleman Three Pass Protocol
   3. A -> B : dec(enc(enc(M, k_A), k_B), k_A)
 
 '''
+import sys, pickle
 from sa.sec_algo_pycrypto import *
-configure(sym_mode = 'ECB')
+from sa.Misc.Padding import *
+configure(sym_mode = 'CTR')
 
 class roleA(process):
     def setup(B, secret):
@@ -15,9 +17,11 @@ class roleA(process):
 
     def run():
         k_A = genkey('shared')
-        send(('msg1', encrypt(secret, key = k_A)), to = B)
+        p_secret = secret
+        send(('msg1', cp_secret[8:]), to = B)
         await(some(received(('msg2', encB_encA_s), from_ = _B)))
-        send(('msg3', decrypt(encB_encA_s, key = k_A)), to = B)
+        iv_encB_encA_s = iv + encB_encA_s
+        send(('msg3', decrypt(iv_encB_encA_s, key = k_A)), to = B)
 
 class roleB(process):
     def setup():
@@ -26,9 +30,11 @@ class roleB(process):
     def run():
         k_B = genkey('shared')
         await(some(received(('msg1', encA_s), from_ = A)))
-        send(('msg2', encrypt(encA_s, key = k_B)), to = A)
+        encB_encA_s = encrypt(encA_s, key = k_B)
+        iv = encB_encA_s[:8]
+        send(('msg2', encB_encA_s[8:]), to = A)
         await(some(received(('msg3', encB_s), from_ = _A)))
-        secret = decrypt(encB_s, key = k_B)
+        secret = decrypt(iv + encB_s, key = k_B)
         output('MESSAGE:', secret)
 
 def main():
