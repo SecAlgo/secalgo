@@ -43,12 +43,12 @@ with open(config_fn, 'w') as f:
 
 def configure(**configs):
     with open(config_fn, 'r') as f1:
-        current_configuration = json.load(f1)
+        current_cfg = json.load(f1)
         for k, v in configs.items():
-            if current_configuration[k] != None:
-                current_configuration[k] = v
+            if current_cfg[k] != None:
+                current_cfg[k] = v
     with open(config_fn, 'w') as f2:
-        json.dump(current_configuration, f2)
+        json.dump(current_cfg, f2)
 #end security_declarations()
 
 '''
@@ -66,60 +66,62 @@ def dec_timer(func):
 '''
 
 #@dec_timer
-def gen_nonce(size = NONCE_DEFAULT_SIZE_BITS):
+def nonce(size = NONCE_DEFAULT_SIZE_BITS):
     Random.atfork()
     return getrandbits(size)
 #end gen_nonce
 
 #@dec_timer
-def genkey(key_type, key_size = None, use_dh_group = True, dh_group = None,
+def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if key_type == 'shared' or key_type == 'random':
         if key_size == None:
-            key_size = (current_configuration['sym_key_size'] // 8)
-        return gen_sym_key(key_size)
+            key_size = (current_cfg['sym_key_size'] // 8)
+        newkey =  keygen_shared(key_size)
+        return {'alg': current_cfg['sym_cipher'],
+                'mode': current_cfg['sym_mode'], 'key': key newkey}
     elif key_type == 'public':
         if key_size == None:
-            key_size = current_configuration['pub_key_size']
-            alg = current_configuration['pub_cipher']
-        private_key = gen_key_pair(key_size, alg)
-        return private_key.exportKey(), get_pub_key(private_key).exportKey()
+            key_size = current_cfg['pub_key_size']
+        alg = current_cfg['pub_cipher']
+        newkey = keygen_public(key_size, alg)
+        new_priv_key, new_pub_key =  newkey, newkey.publicley()
+        return ({'alg': current_cfg['pub_cipher'], 'type': 'private',
+                 'key': new_priv_key.exportKey()},
+                {'alg': current_cfg['pub_cipher'], 'type': 'public',
+                 'key': new_pub_key.exportKey()})
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
-            key_size = current_configuration['dh_exp_size']
+            key_size = current_cfg['dh_exp_size']
         if use_dh_group:
             if dh_group == None:
-                dh_group = current_configuration['dh_grp']
+                dh_group = current_cfg['dh_grp']
         else:
             if dh_mod_size == None:
-                dh_mod_size = current_configuration['dh_mod_size']            
-        return gen_dh_key(key_size, use_dh_group,
+                dh_mod_size = current_cfg['dh_mod_size']            
+        return keygen_dh(key_size, use_dh_group,
                           dh_group, dh_mod_size, dh_p, dh_g)
 #end genkey()
 
-def gen_key_pair(key_size, alg):
+def keygen_public(key_size, alg):
     if alg == 'RSA':
         return RSA.generate(key_size)
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end gen_key_pair()
 
-def get_pub_key(k):
-    return k.publickey()
-#end get_public_key()
-
-def gen_sym_key(key_size):
+def keygen_shared(key_size):
     size = key_size
     return Random.new().read(size)
 #end gen_sym_key
 
-def gen_dh_key(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
+def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     if use_group == True:        
         if dh_group == None:
-            dh_group = current_configuration['dh_grp']
+            dh_group = current_cfg['dh_grp']
         dh_p = modp_groups[dh_group]['p']
         dh_g = modp_groups[dh_group]['g']
         dh_mod_size = size(dh_p)
@@ -128,7 +130,7 @@ def gen_dh_key(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
         if dh_p != None:
             dh_mod_size = size(dh_p)
         else:
-            dh_mod_size = current_configuration['dh_mod_size']
+            dh_mod_size = current_cfg['dh_mod_size']
 
         # print('###########:', key_size, dh_mod_size, flush = True)
         # generate new safe prime to define finite field
@@ -177,16 +179,16 @@ def gen_dh_key(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
 #@dec_timer
 def encrypt(plaintext, key):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        if current_configuration['pub_cipher'] == 'RSA':
+        if current_cfg['pub_cipher'] == 'RSA':
             pub_key = RSA.importKey(key)
         return asym_encrypt(plaintext, pub_key,
-                            current_configuration['pub_cipher'])
+                            current_cfg['pub_cipher'])
     else:
-        return sym_encrypt(plaintext, key, current_configuration['sym_cipher'],
-                           current_configuration['sym_mode'])
+        return sym_encrypt(plaintext, key, current_cfg['sym_cipher'],
+                           current_cfg['sym_mode'])
 #end encrypt
 
 def sym_encrypt(plaintext, key, alg, mode):
@@ -232,17 +234,17 @@ def asym_encrypt(plaintext, public_key, alg):
 #@dec_timer
 def decrypt(ciphertext, key):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        if current_configuration['pub_cipher'] == 'RSA':
+        if current_cfg['pub_cipher'] == 'RSA':
             pub_key = RSA.importKey(key)
         return asym_decrypt(ciphertext, pub_key,
-                            current_configuration['pub_cipher'])
+                            current_cfg['pub_cipher'])
     else:
         
-        return sym_decrypt(ciphertext, key, current_configuration['sym_cipher'],
-                           current_configuration['sym_mode'])
+        return sym_decrypt(ciphertext, key, current_cfg['sym_cipher'],
+                           current_cfg['sym_mode'])
 #end decrypt()
 
 def sym_decrypt(ciphertext, key, alg, mode):
@@ -285,12 +287,12 @@ def asym_decrypt(ct_list, private_key, alg):
 #@dec_timer
 def sign(data, key):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        if current_configuration['pub_cipher'] == 'RSA':
+        if current_cfg['pub_cipher'] == 'RSA':
             pub_key = RSA.importKey(key)
-        return pubkey_sign(data, pub_key, current_configuration['pub_cipher'])
+        return pubkey_sign(data, pub_key, current_cfg['pub_cipher'])
     else:
         return mac_sign(data, key)
 #end sign()
@@ -318,25 +320,25 @@ def pubkey_sign(data, key, alg):
 #@dec_timer
 def verify(data, key):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        if current_configuration['pub_cipher'] == 'RSA':
+        if current_cfg['pub_cipher'] == 'RSA':
             pub_key = RSA.importKey(key)
-        return pubkey_verify(data, pub_key, current_configuration['pub_cipher'])
+        return pubkey_verify(data, pub_key, current_cfg['pub_cipher'])
     else:
         return mac_verify(data, key)
 
 #@dec_timer
 def verify1(data, signed_data, key):
     with open(config_fn, 'r') as f:
-        current_configuration = json.load(f)
+        current_cfg = json.load(f)
     Random.atfork()
     if b'BEGIN' in key:
-        if current_configuration['pub_cipher'] == 'RSA':
+        if current_cfg['pub_cipher'] == 'RSA':
             pub_key = RSA.importKey(key)
         return pubkey_verify1(data, signed_data, pub_key,
-                              current_configuration['pub_cipher'])
+                              current_cfg['pub_cipher'])
     else:
         return mac_verify1(data, signed_data, key)
 #end verify1()
