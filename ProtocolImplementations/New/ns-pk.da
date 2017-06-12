@@ -24,8 +24,7 @@ did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
 
-from sa.sec_algo_pycrypto import genkey, encrypt, decrypt
-from sa.sec_algo_pycrypto import sign, verify, gen_nonce
+from sa.sec_algo_pycrypto import *
 
 class roleS (process):
     def setup(skS, client_keys):
@@ -35,8 +34,7 @@ class roleS (process):
         await(False)
 
     def receive(msg=(A, B), from_ = A):
-        pkB_set = {x for (p, x) in client_keys if p == B}
-        pkB = pkB_set.pop()
+        pkB = [x for (p, x) in client_keys if p == B].pop()
         send(('signed', sign((B, pkB), skS)), to = A)
 
 class roleI (process):
@@ -46,7 +44,7 @@ class roleI (process):
     def run():
         send((I, R), to = S)
         await(some(received(((_R, pkR), _S), from_ = self)))
-        nI = gen_nonce()
+        nI = nonce()
         send(('pub_enc', encrypt((nI, I), pkR)), to = R)
         await(some(received(((_nI, nR, _R), _R), from_ = self)))
         send(('pub_enc', encrypt(nR, pkR)), to = R)
@@ -68,9 +66,9 @@ class roleR (process):
     def receive(msg=((nI, I), I), from_ = self):
         send((R, I), to = S)
         await(some(received(((_I, pkI), _S), from_ = self)))
-        nR = gen_nonce()
+        nR = nonce()
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
-        await(some(received(((_nR,), _I), from_ = self)))
+        await(some(received((_nR, _I), from_ = self)))
         output('R authenticated I')
 
     def receive(msg=('signed', m), from_ = S):
@@ -80,13 +78,13 @@ class roleR (process):
         send((decrypt(m, skR), I), to = self)
 
 def main():
-    skS, pkS = genkey('public')
-    skI, pkI = genkey('public')
-    skR, pkR = genkey('public')
+    skS, pkS = keygen('public')
+    skI, pkI = keygen('public')
+    skR, pkR = keygen('public')
     I = new(roleI)
     R = new(roleR)
     S = new(roleS)
-    setup(S, (skS, {(I, pkI), (R, pkR)}))
+    setup(S, (skS, [(I, pkI), (R, pkR)]))
     setup(I, (skI, S, pkS, R))
     setup(R, (skR, S, pkS))
     start(S)

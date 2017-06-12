@@ -19,10 +19,13 @@ KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = 256
 SYM_KEY_DEFAULT_SIZE_BYTES = 32
+MAC_KEY_DEFAULT_SIZE_BITS = 256
+MAC_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
 DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
+PUBLIC_CIPHERS = {'RSA', 'DSA'}
 
 #benchmark = False
 
@@ -31,6 +34,8 @@ config_fn = 'config.sac'
 default_configuration = {'sym_cipher' : 'AES',
                          'sym_mode' : 'CBC',
                          'sym_key_size' : SYM_KEY_DEFAULT_SIZE_BITS,
+                         'mac_alg' : 'HMAC',
+                         'mac_key_size' : MAC_KEY_DEFAULT_SIZE_BITS,
                          'pub_cipher' : 'RSA',
                          'pub_key_size' : KEY_PAIR_DEFAULT_SIZE_BITS,
                          'nonce_size' : NONCE_DEFAULT_SIZE_BITS,
@@ -74,51 +79,66 @@ def nonce(size = NONCE_DEFAULT_SIZE_BITS):
 #@dec_timer
 def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if key_type == 'shared' or key_type == 'random':
+    if key_type == 'random':
         if key_size == None:
-            key_size = (current_cfg['sym_key_size'] // 8)
-        newkey =  keygen_shared(key_size)
-        return {'alg': current_cfg['sym_cipher'],
-                'mode': current_cfg['sym_mode'], 'key': key newkey}
+            print('SA_ERROR: \'random\' option for keygen requires a size argument.')
+        return Random.new().read(key_size)
+    elif key_type == 'mac':
+        return keygen_mac(key_size)   
+    elif key_type == 'shared':
+        return keygen_shared(key_size)
     elif key_type == 'public':
-        if key_size == None:
-            key_size = current_cfg['pub_key_size']
-        alg = current_cfg['pub_cipher']
-        newkey = keygen_public(key_size, alg)
-        new_priv_key, new_pub_key =  newkey, newkey.publicley()
-        return ({'alg': current_cfg['pub_cipher'], 'type': 'private',
-                 'key': new_priv_key.exportKey()},
-                {'alg': current_cfg['pub_cipher'], 'type': 'public',
-                 'key': new_pub_key.exportKey()})
+        return keygen_public(key_size)
     elif key_type == 'diffie-hellman' or key_type == 'dh':
-        if key_size == None:
-            key_size = current_cfg['dh_exp_size']
-        if use_dh_group:
-            if dh_group == None:
-                dh_group = current_cfg['dh_grp']
-        else:
-            if dh_mod_size == None:
-                dh_mod_size = current_cfg['dh_mod_size']            
-        return keygen_dh(key_size, use_dh_group,
-                          dh_group, dh_mod_size, dh_p, dh_g)
+        return keygen_dh(key_size, use_dh_group, dh_group, dh_mod_size, dh_p,
+                         dh_g)
 #end genkey()
 
-def keygen_public(key_size, alg):
-    if alg == 'RSA':
-        return RSA.generate(key_size)
+def keygen_mac(key_size):
+    with open(config_fn, 'r') as f:
+        current_cfg = json.load(f)
+    if key_size == None:
+        key_size = current_cfg['mac_key_size']
+    new_key = Random.new().read(key_size)
+    new_key_dict = {'alg' : current_cfg['mac_alg'],
+                    'key' : new_key}
+    return new_key_dict
+#end keygen_mac()
+
+def keygen_public(key_size):
+    with open(config_fn, 'r') as f:
+        current_cfg = json.load(f)
+    if key_size == None:
+        key_size = current_cfg['pub_key_size']
+    if current_cfg['pub_cipher'] == 'RSA':
+        key_pair = RSA.generate(key_size)
+        priv_key = key_pair.exportKey()
+        pub_key = key_pair.publickey().exportKey()
+        priv_key_dict = {'alg' : 'RSA', 'type' : 'private', 'key' : priv_key}
+        pub_key_dict = {'alg' : 'RSA', 'type' : 'public', 'key' : pub_key}
+        return priv_key_dict, pub_key_dict
     else:
-        print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end gen_key_pair()
 
 def keygen_shared(key_size):
-    size = key_size
-    return Random.new().read(size)
+    with open(config_fn, 'r') as f:
+        current_cfg = json.load(f)
+    if key_size == None:
+        key_size = (current_cfg['sym_key_size'] // 8)
+    new_key =  Random.new().read(key_size)
+    key_dict = {'alg' : current_cfg['sym_cipher'],
+                'mode' : current_cfg['sym_mode'],
+                'key' : new_key}
+    return key_dict
 #end gen_sym_key
 
 def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
+    with open(config_fn, 'r') as f:
+        current_cfg = json.load(f)
+    if key_size == None:
+        key_size = current_cfg['dh_exp_size']
     if use_group == True:        
         if dh_group == None:
             dh_group = current_cfg['dh_grp']
@@ -178,121 +198,131 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
 
 #@dec_timer
 def encrypt(plaintext, key):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if b'BEGIN' in key:
-        if current_cfg['pub_cipher'] == 'RSA':
-            pub_key = RSA.importKey(key)
-        return asym_encrypt(plaintext, pub_key,
-                            current_cfg['pub_cipher'])
+    if key['alg'] in PUBLIC_CIPHERS:
+        return asym_encrypt(plaintext, key)
     else:
-        return sym_encrypt(plaintext, key, current_cfg['sym_cipher'],
-                           current_cfg['sym_mode'])
+        return sym_encrypt(plaintext, key)
 #end encrypt
 
-def sym_encrypt(plaintext, key, alg, mode):
+def sym_encrypt(plaintext, key):
     serial_pt = pickle.dumps(plaintext)
-    if mode == 'CTR':
-        #print('$$$$$$$$$$: Encrypt: USING CTR')
-        pre = Random.new().read(8)
-        ctr = Counter.new(64, prefix = pre)
-        encrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-        ciphertext =  pre + encrypter.encrypt(serial_pt)
-    elif mode == 'CBC':
-        #print('$$$$$$$$$$: Encrypt: USING CBC')
-        padded_pt = pkcs7_pad(serial_pt)
-        iv = Random.new().read(16)
-        encrypter = AES.new(key, AES.MODE_CBC, iv)
-        ciphertext = iv + encrypter.encrypt(padded_pt)
-    elif mode == 'ECB':
-        #print('$$$$$$$$$$: Encrypt: USING ECB')
-        padded_pt = pkcs7_pad(serial_pt)
-        encrypter = AES.new(key, AES.MODE_ECB)
-        ciphertext = encrypter.encrypt(padded_pt)
-    elif mode == 'CFB':
-        #print('$$$$$$$$$$: Encrypt: USING CFB')
-        seg_size = 8
-        padded_pt = pkcs7_pad(serial_pt, seg_size)
-        iv = Random.new().read(16)
-        encrypter = AES.new(key, AES.MODE_CFB, iv, segment_size=seg_size)
-        ciphertext = iv + encrypter.encrypt(padded_pt)
+    alg = key['alg']
+    mode = key['mode']
+    k = key['key']
+    ciphertext = None
+    if alg == 'AES':
+        #print('$$$$$$$$$$: Encrypt: USING AES')
+        if mode == 'CTR':
+            #print('$$$$$$$$$$: Encrypt: USING CTR')
+            pre = Random.new().read(8)
+            ctr = Counter.new(64, prefix = pre)
+            encrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
+            ciphertext =  pre + encrypter.encrypt(serial_pt)
+        elif mode == 'CBC':
+            #print('$$$$$$$$$$: Encrypt: USING CBC')
+            padded_pt = pkcs7_pad(serial_pt)
+            iv = Random.new().read(16)
+            encrypter = AES.new(k, AES.MODE_CBC, iv)
+            ciphertext = iv + encrypter.encrypt(padded_pt)
+        elif mode == 'ECB':
+            #print('$$$$$$$$$$: Encrypt: USING ECB')
+            padded_pt = pkcs7_pad(serial_pt)
+            encrypter = AES.new(k, AES.MODE_ECB)
+            ciphertext = encrypter.encrypt(padded_pt)
+        elif mode == 'CFB':
+            #print('$$$$$$$$$$: Encrypt: USING CFB')
+            seg_size = 8
+            padded_pt = pkcs7_pad(serial_pt, seg_size)
+            iv = Random.new().read(16)
+            encrypter = AES.new(k, AES.MODE_CFB, iv, segment_size=seg_size)
+            ciphertext = iv + encrypter.encrypt(padded_pt)
     return ciphertext
 #end sym_encrypt()
 
-def asym_encrypt(plaintext, public_key, alg):
+def asym_encrypt(plaintext, key):
+    alg = key['alg']
+    k = key['key']
     serial_pt = pickle.dumps(plaintext)
-    frag_counter = (len(serial_pt) // KEY_PAIR_DEFAULT_SIZE_BYTES) + 1
-    ct_list = []
-    for i in range(frag_counter):
-        ciphertext = public_key.encrypt(serial_pt[(i * KEY_PAIR_DEFAULT_SIZE_BYTES):((i + 1) * KEY_PAIR_DEFAULT_SIZE_BYTES)], '')
-        ct_list.append(ciphertext)
-    #end for
-    return ct_list
+    ct_list = None
+    if alg == 'RSA':
+        pubk = RSA.importKey(k)
+        kpdsb = KEY_PAIR_DEFAULT_SIZE_BYTES
+        frag_counter = (len(serial_pt) // kpdsb) + 1
+        ct_list = []
+        for i in range(frag_counter):
+            frag = serial_pt[(i * kpdsb):((i + 1) * kpdsb)]
+            ciphertext = pubk.encrypt(frag, '')
+            ct_list.append(ciphertext)
+        #end for
+        return ct_list
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end asym_encrypt()
 
 #@dec_timer
 def decrypt(ciphertext, key):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if b'BEGIN' in key:
-        if current_cfg['pub_cipher'] == 'RSA':
-            pub_key = RSA.importKey(key)
-        return asym_decrypt(ciphertext, pub_key,
-                            current_cfg['pub_cipher'])
+    if key['alg'] in PUBLIC_CIPHERS:
+        return asym_decrypt(ciphertext, key)
     else:
-        
-        return sym_decrypt(ciphertext, key, current_cfg['sym_cipher'],
-                           current_cfg['sym_mode'])
+        return sym_decrypt(ciphertext, key)
 #end decrypt()
 
-def sym_decrypt(ciphertext, key, alg, mode):
-    if mode == 'CTR':
-        #print('$$$$$$$$$$: Decrypt: USING CTR')
-        pre = ciphertext[0:8]
-        ctr = Counter.new(64, prefix = pre)
-        decrypter = AES.new(key, AES.MODE_CTR, counter = ctr)
-        serial_pt = decrypter.decrypt(ciphertext[8:])
-    elif mode == 'CBC':
-        #print('$$$$$$$$$$: Decrypt: USING CBC')
-        iv = ciphertext[0:16]
-        decrypter = AES.new(key, AES.MODE_CBC, iv)
-        padded_pt = decrypter.decrypt(ciphertext[16:])
-        serial_pt = pkcs7_unpad(padded_pt)
-    elif mode == 'ECB':
-        #print('$$$$$$$$$$: Decrypt: USING ECB')
-        decrypter = AES.new(key, AES.MODE_ECB)
-        padded_pt = decrypter.decrypt(ciphertext)
-        serial_pt = pkcs7_unpad(padded_pt)
-    elif mode == 'CFB':
-        #print('$$$$$$$$$$: Encrypt: USING CFB')
-        seg_size = 8
-        iv = ciphertext[0:16]
-        decrypter = AES.new(key, AES.MODE_CFB, iv, segment_size = seg_size)
-        padded_pt = decrypter.decrypt(ciphertext[16:])
-        serial_pt = pkcs7_unpad(padded_pt, seg_size)
+def sym_decrypt(ciphertext, key):
+    alg = key['alg']
+    mode = key['mode']
+    k = key['key']
+    if alg == 'AES':
+        #print('$$$$$$$$$$: Decrypt: USING AES')
+        if mode == 'CTR':
+            #print('$$$$$$$$$$: Decrypt: USING CTR')
+            pre = ciphertext[0:8]
+            ctr = Counter.new(64, prefix = pre)
+            decrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
+            serial_pt = decrypter.decrypt(ciphertext[8:])
+        elif mode == 'CBC':
+            #print('$$$$$$$$$$: Decrypt: USING CBC')
+            iv = ciphertext[0:16]
+            decrypter = AES.new(k, AES.MODE_CBC, iv)
+            padded_pt = decrypter.decrypt(ciphertext[16:])
+            serial_pt = pkcs7_unpad(padded_pt)
+        elif mode == 'ECB':
+            #print('$$$$$$$$$$: Decrypt: USING ECB')
+            decrypter = AES.new(k, AES.MODE_ECB)
+            padded_pt = decrypter.decrypt(ciphertext)
+            serial_pt = pkcs7_unpad(padded_pt)
+        elif mode == 'CFB':
+            #print('$$$$$$$$$$: Encrypt: USING CFB')
+            seg_size = 8
+            iv = ciphertext[0:16]
+            decrypter = AES.new(k, AES.MODE_CFB, iv, segment_size = seg_size)
+            padded_pt = decrypter.decrypt(ciphertext[16:])
+            serial_pt = pkcs7_unpad(padded_pt, seg_size)
     return pickle.loads(serial_pt)
 #end sym_decrypt()
 
-def asym_decrypt(ct_list, private_key, alg):
+def asym_decrypt(ct_list, key):
     serial_pt = b''
-    for ciphertext in ct_list:
-        serial_pt += private_key.decrypt(ciphertext)
-    #end for
-    plaintext = pickle.loads(serial_pt)
-    return plaintext
+    alg = key['alg']
+    k = key['key']
+    privk = None
+    if alg == 'RSA':
+        privk = RSA.importKey(k)
+        for ciphertext in ct_list:
+            serial_pt += privk.decrypt(ciphertext)
+        #end for
+        plaintext = pickle.loads(serial_pt)
+        return plaintext
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end asym_decrypt()
 
 #@dec_timer
 def sign(data, key):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if b'BEGIN' in key:
-        if current_cfg['pub_cipher'] == 'RSA':
-            pub_key = RSA.importKey(key)
-        return pubkey_sign(data, pub_key, current_cfg['pub_cipher'])
+    if key['alg'] in PUBLIC_CIPHERS:
+        return pubkey_sign(data, key)
     else:
         return mac_sign(data, key)
 #end sign()
@@ -300,84 +330,113 @@ def sign(data, key):
 def mac_sign(data, key):
     Random.atfork()
     serial_data = pickle.dumps(data)
-    h = HMAC.new(key, serial_data, SHA256)
-    sig = h.digest()
-    result = (serial_data, sig)
-    s_result = pickle.dumps(result)
-    return s_result
+    alg = key['alg']
+    k = key['key']
+    if alg == 'HMAC':
+        h = HMAC.new(k, serial_data, SHA256)
+        sig = h.digest()
+        result = (serial_data, sig)
+        s_result = pickle.dumps(result)
+        return s_result
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end mac_sign()    
         
-def pubkey_sign(data, key, alg):
+def pubkey_sign(data, key):
     Random.atfork()
     serial_data = pickle.dumps(data)
-    sig = key.sign(SHA256.new(serial_data).digest(), '')
-    result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
-                                    byteorder = 'little'))
-    s_result = pickle.dumps(result)
-    return s_result
+    alg = key['alg']
+    k = key['key']
+    if alg == 'RSA':
+        pubk = RSA.importKey(k)
+        sig = pubk.sign(SHA256.new(serial_data).digest(), '')
+        result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
+                                               byteorder = 'little'))
+        s_result = pickle.dumps(result)
+        return s_result
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end pubkey_sign()
 
+#returns signed data if verification succeeds
+#returns None if verification fails
 #@dec_timer
 def verify(data, key):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if b'BEGIN' in key:
-        if current_cfg['pub_cipher'] == 'RSA':
-            pub_key = RSA.importKey(key)
-        return pubkey_verify(data, pub_key, current_cfg['pub_cipher'])
+    if key['alg'] in PUBLIC_CIPHERS:
+        return pubkey_verify(data, key)
     else:
         return mac_verify(data, key)
+#end verify()
 
+#returns True if verification succeeds
+#returns False if verification fails
 #@dec_timer
 def verify1(data, signed_data, key):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     Random.atfork()
-    if b'BEGIN' in key:
-        if current_cfg['pub_cipher'] == 'RSA':
-            pub_key = RSA.importKey(key)
-        return pubkey_verify1(data, signed_data, pub_key,
-                              current_cfg['pub_cipher'])
+    if key['alg'] in PUBLIC_CIPHERS:
+        return pubkey_verify1(data, signed_data, key)
     else:
         return mac_verify1(data, signed_data, key)
 #end verify1()
 
 def mac_verify(data, key):
     Random.atfork()
-    serial_data, sig = pickle.loads(data)
-    verdict = (sig == HMAC.new(key, serial_data, SHA256).digest())
-    if verdict:
-        return pickle.loads(serial_data)
+    alg = key['alg']
+    k = key['key']
+    if alg == 'HMAC':
+        serial_data, sig = pickle.loads(data)
+        verdict = (sig == HMAC.new(k, serial_data, SHA256).digest())
+        if verdict:
+            return pickle.loads(serial_data)
+        else:
+            return none
     else:
-        return none
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end mac_verify()
 
 def mac_verify1(data, signed_data, key):
     Random.atfork()
-    serial_data, sig = pickle.loads(signed_data)
-    verdict = (sig == HMAC.new(key, pickle.dumps(data), SHA256).digest())
-    return verdict
+    alg = key['alg']
+    k = key['key']
+    if alg == 'HMAC':
+        serial_data, sig = pickle.loads(signed_data)
+        verdict = (sig == HMAC.new(k, pickle.dumps(data), SHA256).digest())
+        return verdict
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end mac_verify1()
     
 #returns None when verfication fails
-def pubkey_verify(data, key, alg):
+def pubkey_verify(data, key):
     Random.atfork()
     unp_data = pickle.loads(data)
-    sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = key.verify(SHA256.new(unp_data[0]).digest(), sig)
-    if verdict:
-        return pickle.loads(unp_data[0])
+    alg = key['alg']
+    k = key['key']
+    if alg == 'RSA':
+        privk = RSA.importKey(k)
+        sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
+        verdict = privk.verify(SHA256.new(unp_data[0]).digest(), sig)
+        if verdict:
+            return pickle.loads(unp_data[0])
+        else:
+            return None
     else:
-        return None
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end pubkey_verify()
 
-def pubkey_verify1(data, signed_data, key, alg):
+def pubkey_verify1(data, signed_data, key):
     Random.atfork()
     unp_data = pickle.loads(signed_data)
-    sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-    verdict = key.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
-    return verdict
+    alg = key['alg']
+    k = key['key']
+    if alg == 'RSA':
+        privk = RSA.importKey(k)
+        sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
+        verdict = privk.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
+        return verdict
+    else:
+        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end verify1()
 
 modp_groups = {

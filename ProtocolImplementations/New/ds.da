@@ -25,7 +25,7 @@ class RoleI (process):
         pass
 
     def run():
-        k = genkey('shared')
+        k = keygen('shared')
         send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
         await(some(received(m, from_ = R)))
         s = decrypt(m, k)
@@ -43,8 +43,8 @@ class RoleR (process):
         send(encrypt(s, k), to = I)
 
 def main():
-    skI, pkI = genkey('public')
-    skR, pkR = genkey('public')
+    skI, pkI = keygen('public')
+    skR, pkR = keygen('public')
     R = new(RoleR, (skR, pkI))
     I = new(RoleI, (skI, R, pkR))
     start(I)
