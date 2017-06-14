@@ -17,7 +17,7 @@ Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
 """
-from sa.sec_algo_pycrypto import *
+from sa.secalgo import *
 configure(sym_mode = 'CFB')
 
 class RoleI (process):

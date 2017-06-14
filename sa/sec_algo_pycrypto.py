@@ -2,7 +2,6 @@ import sys
 import random
 import pickle
 import json
-import resource
 import time
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
@@ -15,6 +14,7 @@ from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
+'''
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = 256
@@ -56,7 +56,6 @@ def configure(**configs):
         json.dump(current_cfg, f2)
 #end security_declarations()
 
-'''
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
@@ -70,20 +69,18 @@ def dec_timer(func):
 #end timer()
 '''
 
-#@dec_timer
-def nonce(size = NONCE_DEFAULT_SIZE_BITS):
+def nonce(size):
     Random.atfork()
     return getrandbits(size)
-#end gen_nonce
+#end nonce
 
+'''
 #@dec_timer
 def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
     Random.atfork()
     if key_type == 'random':
-        if key_size == None:
-            print('SA_ERROR: \'random\' option for keygen requires a size argument.')
-        return Random.new().read(key_size)
+        return keygen_random(key_size)
     elif key_type == 'mac':
         return keygen_mac(key_size)   
     elif key_type == 'shared':
@@ -93,25 +90,38 @@ def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         return keygen_dh(key_size, use_dh_group, dh_group, dh_mod_size, dh_p,
                          dh_g)
-#end genkey()
+#end keygen()
+'''
 
-def keygen_mac(key_size):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
+def keygen_random(key_size):
+    Random.atfork()
     if key_size == None:
-        key_size = current_cfg['mac_key_size']
+        print('SA_ERROR: \'random\' option for keygen requires a size argument.')
+        return None
+    else:
+        return Random.new().read(key_size)
+#end keygen_random()
+
+def keygen_mac(key_size, alg):
+    Random.atfork()
     new_key = Random.new().read(key_size)
-    new_key_dict = {'alg' : current_cfg['mac_alg'],
+    new_key_dict = {'alg' : alg,
                     'key' : new_key}
     return new_key_dict
 #end keygen_mac()
 
-def keygen_public(key_size):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
-    if key_size == None:
-        key_size = current_cfg['pub_key_size']
-    if current_cfg['pub_cipher'] == 'RSA':
+def keygen_shared(key_size, alg, mode):
+    Random.atfork()
+    new_key =  Random.new().read(key_size)
+    key_dict = {'alg' : alg,
+                'mode' : mode,
+                'key' : new_key}
+    return key_dict
+#end keygen_shared()
+
+def keygen_public(key_size, alg):
+    Random.atfork()
+    if alg == 'RSA':
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
         pub_key = key_pair.publickey().exportKey()
@@ -120,28 +130,11 @@ def keygen_public(key_size):
         return priv_key_dict, pub_key_dict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end gen_key_pair()
-
-def keygen_shared(key_size):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
-    if key_size == None:
-        key_size = (current_cfg['sym_key_size'] // 8)
-    new_key =  Random.new().read(key_size)
-    key_dict = {'alg' : current_cfg['sym_cipher'],
-                'mode' : current_cfg['sym_mode'],
-                'key' : new_key}
-    return key_dict
-#end gen_sym_key
+#end keygen_public()
 
 def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
-    if key_size == None:
-        key_size = current_cfg['dh_exp_size']
+    Random.atfork()
     if use_group == True:        
-        if dh_group == None:
-            dh_group = current_cfg['dh_grp']
         dh_p = modp_groups[dh_group]['p']
         dh_g = modp_groups[dh_group]['g']
         dh_mod_size = size(dh_p)
@@ -149,9 +142,7 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
         # check parameters, assign defaults if necessary
         if dh_p != None:
             dh_mod_size = size(dh_p)
-        else:
-            dh_mod_size = current_cfg['dh_mod_size']
-
+        
         # print('###########:', key_size, dh_mod_size, flush = True)
         # generate new safe prime to define finite field
         # This is pretty efficient
@@ -196,6 +187,7 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     return (dh_x, dh_X, dh_g, dh_p)
 #end gen_dh_key()
 
+'''
 #@dec_timer
 def encrypt(plaintext, key):
     Random.atfork()
@@ -204,8 +196,10 @@ def encrypt(plaintext, key):
     else:
         return sym_encrypt(plaintext, key)
 #end encrypt
+'''
 
 def sym_encrypt(plaintext, key):
+    Random.atfork()
     serial_pt = pickle.dumps(plaintext)
     alg = key['alg']
     mode = key['mode']
@@ -241,13 +235,14 @@ def sym_encrypt(plaintext, key):
 #end sym_encrypt()
 
 def asym_encrypt(plaintext, key):
+    Random.atfork()
     alg = key['alg']
     k = key['key']
     serial_pt = pickle.dumps(plaintext)
     ct_list = None
     if alg == 'RSA':
         pubk = RSA.importKey(k)
-        kpdsb = KEY_PAIR_DEFAULT_SIZE_BYTES
+        kpdsb = (pubk.size() // 8)
         frag_counter = (len(serial_pt) // kpdsb) + 1
         ct_list = []
         for i in range(frag_counter):
@@ -260,6 +255,7 @@ def asym_encrypt(plaintext, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end asym_encrypt()
 
+'''
 #@dec_timer
 def decrypt(ciphertext, key):
     Random.atfork()
@@ -268,8 +264,10 @@ def decrypt(ciphertext, key):
     else:
         return sym_decrypt(ciphertext, key)
 #end decrypt()
+'''
 
 def sym_decrypt(ciphertext, key):
+    Random.atfork()
     alg = key['alg']
     mode = key['mode']
     k = key['key']
@@ -303,6 +301,7 @@ def sym_decrypt(ciphertext, key):
 #end sym_decrypt()
 
 def asym_decrypt(ct_list, key):
+    Random.atfork()
     serial_pt = b''
     alg = key['alg']
     k = key['key']
@@ -318,6 +317,7 @@ def asym_decrypt(ct_list, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end asym_decrypt()
 
+'''
 #@dec_timer
 def sign(data, key):
     Random.atfork()
@@ -326,6 +326,7 @@ def sign(data, key):
     else:
         return mac_sign(data, key)
 #end sign()
+'''
 
 def mac_sign(data, key):
     Random.atfork()
@@ -358,6 +359,7 @@ def pubkey_sign(data, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end pubkey_sign()
 
+'''
 #returns signed data if verification succeeds
 #returns None if verification fails
 #@dec_timer
@@ -368,7 +370,9 @@ def verify(data, key):
     else:
         return mac_verify(data, key)
 #end verify()
+'''
 
+'''
 #returns True if verification succeeds
 #returns False if verification fails
 #@dec_timer
@@ -379,6 +383,7 @@ def verify1(data, signed_data, key):
     else:
         return mac_verify1(data, signed_data, key)
 #end verify1()
+'''
 
 def mac_verify(data, key):
     Random.atfork()

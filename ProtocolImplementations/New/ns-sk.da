@@ -18,7 +18,7 @@ Protocol Diagram:
   (4) R -> I : enc(N_R, K_IR)
   (5) I -> R : enc(N_R - 1, K_IR)
 """
-from sa.sec_algo_pycrypto import *
+from sa.secalgo import *
 
 class RoleS (process):
     def setup(K_IS, K_RS):

@@ -24,7 +24,7 @@ did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
 
-from sa.sec_algo_pycrypto import *
+from sa.secalgo import *
 
 class roleS (process):
     def setup(skS, client_keys):
