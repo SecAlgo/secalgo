@@ -21,8 +21,8 @@ protocol.
 """
 
 import sys, time
-from sa.sec_algo_pycrypto import *
-configure(sym_mode = 'CTR', sym_key_size = 192)
+from sa.secalgo import *
+configure(verify_returns = 'bool')
 
 class roleA(process):
     def setup(B, S, sk_A, pk_A, pk_S):
@@ -33,8 +33,8 @@ class roleA(process):
         await(some(received(('msg02', (A, _pk_A, t_A, sig_A),
                              (_B, pk_B, t_B, sig_B)), from_ = S),
                    has = (A == self)))
-        if (verify1((A, pk_A, t_A), sig_A, pk_S) and
-            verify1((B, pk_B, t_B), sig_B, pk_S)):
+        if (verify(((A, pk_A, t_A), sig_A), pk_S) and
+            verify(((B, pk_B, t_B), sig_B), pk_S)):
             k_AB = keygen('shared')
             t_AB = time.time()
             send(('msg03', (A, pk_A, t_A, sig_A), (B, pk_B, t_B, sig_B),
@@ -52,10 +52,10 @@ class roleB(process):
         await(some(received(('msg03', (A, pk_A, t_A, sig_A),
                              (B, _pk_B, t_B, sig_B),
                              encrypted_key), from_ = A), has = (B == self)))
-        if (verify1((A, pk_A, t_A), sig_A, pk_S) and
-            verify1((B, pk_B, t_B), sig_B, pk_S)):
+        if (verify(((A, pk_A, t_A), sig_A), pk_S) and
+            verify(((B, pk_B, t_B), sig_B), pk_S)):
             (k_AB, t_AB), sig_AB = decrypt(encrypted_key, sk_B)
-            if verify1((k_AB, t_AB), sig_AB, pk_A):
+            if verify(((k_AB, t_AB), sig_AB), pk_A):
                 output('Recipient: Key Exchange Complete')
             else:
                 output('Recipient: Could not verify signature on shared key')
