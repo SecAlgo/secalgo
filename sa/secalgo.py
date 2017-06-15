@@ -161,10 +161,10 @@ def verify(data, key):
         if current_cfg['verify_returns'] == 'data':
             return backend.pubkey_verify(data, key)
         if current_cfg['verify_returns'] == 'bool':
-            return backend.pubkey_verify1(data[0], data, key)
+            return backend.pubkey_verify1(data[0], data[1], key)
     else:
         if current_cfg['verify_returns'] == 'data':
             return backend.mac_verify(data, key)
         if current_cfg['verify_returns'] == 'bool':
-            return backend.mac_verify1(data[0], data, key)
+            return backend.mac_verify1(data[0], data[1], key)
 #end verify()

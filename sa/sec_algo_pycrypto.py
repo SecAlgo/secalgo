@@ -431,6 +431,7 @@ def pubkey_verify(data, key):
 #end pubkey_verify()
 
 def pubkey_verify1(data, signed_data, key):
+    #print('$$$$$$$$$$: verify1', flush = True)
     Random.atfork()
     unp_data = pickle.loads(signed_data)
     alg = key['alg']

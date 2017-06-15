@@ -14,18 +14,19 @@ its setup. The certificates, cert_I and cert_R, are certificates granted by a
 Certification Authority linking each participant's public key to their
 identity. k is a randomly generated index for a hash function.
 """
-from sa.sec_algo_pycrypto import genkey, gen_nonce, sign, verify1 as verify
+from sa.secalgo import *
+configure(verify_returns = 'bool')
 
 class RoleI (process):
     def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):
         self.I = self
 
     def run():
-        dh_x, dh_X, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
+        dh_x, dh_X, _, _ = keygen('dh', dh_p = PK_I[2], dh_g = PK_I[1])
         send(('msg1', dh_X, sign((dh_X, R), key = SK_I), cert_I), to = R)
         await(some(received(('msg2', dh_Y, k, m, cert_R), from_ = R)))
-        if verify((R, PK_R), cert_R, pk_sig_T) != None:
-            if verify((dh_X, dh_Y, k, I), m, PK_R[0]) != None:
+        if verify(((R, PK_R), cert_R), pk_sig_T) != None:
+            if verify(((dh_X, dh_Y, k, I), m), PK_R[0]) != None:
                 #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
                 #Hash function whose index is k
                 K_IR = key_derivation(dh_Y, dh_x, PK_I[2])
@@ -40,9 +41,9 @@ class RoleR (process):
         await(False)
 
     def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
-        dh_y, dh_Y, _, _ = genkey('dh', dh_p = PK_I[2], dh_g = PK_I[1])
-        if verify((I, PK_I), cert_I, pk_sig_T) != None:
-            if verify((dh_X, R), m, PK_I[0]) != None:
+        dh_y, dh_Y, _, _ = keygen('dh', dh_p = PK_I[2], dh_g = PK_I[1])
+        if verify(((I, PK_I), cert_I), pk_sig_T) != None:
+            if verify(((dh_X, R), m), PK_I[0]) != None:
                 from Crypto.Random.random import randint
                 k = randint(1, 100) #k supposed to be bitstring
                 send(('msg2', dh_Y, k, sign((dh_X, dh_Y, k, I), key = SK_R), cert_R), to = I)
@@ -54,11 +55,11 @@ class RoleR (process):
                     output('R - Authenticated Exchange of Key Material Complete')
 
 def main():
-    sk_sig_I, pk_sig_I = genkey('public')
-    sk_sig_R, pk_sig_R = genkey('public')
-    sk_sig_T, pk_sig_T = genkey('public')
-    dh_grp_I = genkey('dh', 1, dh_mod_size = 128)
-    dh_grp_R = genkey('dh', 1, dh_mod_size = 128)
+    sk_sig_I, pk_sig_I = keygen('public')
+    sk_sig_R, pk_sig_R = keygen('public')
+    sk_sig_T, pk_sig_T = keygen('public')
+    dh_grp_I = keygen('dh', 1, dh_mod_size = 128)
+    dh_grp_R = keygen('dh', 1, dh_mod_size = 128)
     SK_I = sk_sig_I
     SK_R = sk_sig_R
     PK_I = (pk_sig_I, dh_grp_I[2], dh_grp_I[3])
