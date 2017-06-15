@@ -12,7 +12,8 @@ NONCE_DEFAULT_SIZE_BITS = 128
 DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
-PUBLIC_CIPHERS = {'RSA', 'DSA'}
+PUBLIC_CIPHERS = {'RSA', 'DSA', 'public'}
+SYM_CIPHERS = {'AES', 'DES', '3DES', 'Blowfish', 'shared'}
 
 config_fn = 'config.sac'
 
@@ -93,15 +94,18 @@ def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
         if key_size == None:
             key_size = (current_cfg['mac_key_size'] // 8)
         return backend.keygen_mac(key_size, current_cfg['mac_alg'])
-    elif key_type == 'shared':
+    elif key_type in SYM_CIPHERS:
+        if key_type == 'shared':
+            key_type = current_cfg['sym_cipher']
         if key_size == None:
             key_size = (current_cfg['sym_key_size'] // 8)
-        return backend.keygen_shared(key_size, current_cfg['sym_cipher'],
-                             current_cfg['sym_mode'])
-    elif key_type == 'public':
+        return backend.keygen_shared(key_size, key_type, current_cfg['sym_mode'])
+    elif key_type in PUBLIC_CIPHERS:
+        if key_type == 'public':
+            key_type = current_cfg['pub_cipher']
         if key_size == None:
             key_size = current_cfg['pub_key_size']
-        return backend.keygen_public(key_size, current_cfg['pub_cipher'])
+        return backend.keygen_public(key_size, key_type)
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
             key_size = current_cfg['dh_exp_size']
