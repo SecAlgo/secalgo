@@ -2,7 +2,8 @@ import sys
 import random
 import pickle
 import json
-#import resource
+#if sys.platform != 'win32':
+#    import resource
 import time
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
