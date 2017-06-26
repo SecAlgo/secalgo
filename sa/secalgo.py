@@ -87,8 +87,8 @@ def nonce(size = None):
 #end nonce()
 
 @dec_timer
-def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
-           dh_mod_size = None, dh_p = None, dh_g = None):
+def keygen(key_type, key_size = None, key_mat = None, use_dh_group = True,
+           dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
     backend = get_backend(current_cfg['backend'])
@@ -97,13 +97,13 @@ def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
     elif key_type == 'mac':
         if key_size == None:
             key_size = (current_cfg['mac_key_size'] // 8)
-        return backend.keygen_mac(key_size, current_cfg['mac_alg'])
+        return backend.keygen_mac(key_size, current_cfg['mac_alg'], key_mat)
     elif key_type in SYM_CIPHERS:
         if key_type == 'shared':
             key_type = current_cfg['sym_cipher']
         if key_size == None:
             key_size = (current_cfg['sym_key_size'] // 8)
-        return backend.keygen_shared(key_size, key_type, current_cfg['sym_mode'])
+        return backend.keygen_shared(key_size, key_type, current_cfg['sym_mode'], key_mat)
     elif key_type in PUBLIC_CIPHERS:
         if key_type == 'public':
             key_type = current_cfg['pub_cipher']

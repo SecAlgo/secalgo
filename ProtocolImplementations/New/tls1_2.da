@@ -425,16 +425,21 @@ class TLS_Peer(process):
         third_slice = second_slice + pending_wsp.enc_key_length
         fourth_slice = third_slice + pending_wsp.enc_key_length
         
+        first_block = key_block[:first_slice]
+        second_block = key_block[first_slice:second_slice]
+        third_block = key_block[second_slice:third_slice]
+        fourth_block = key_block[third_slice:]
+
         if pending_wsp.connection_end == CONN_CLIENT:
-            pending_write_state.mac_key = key_block[:first_slice]
-            pending_read_state.mac_key = key_block[first_slice:second_slice]
-            pending_write_state.cipher_state = [key_block[second_slice:third_slice]]
-            pending_read_state.cipher_state = [key_block[third_slice:]]
+            pending_write_state.mac_key = keygen('mac', key_mat = first_block)
+            pending_read_state.mac_key = keygen('mac', key_mat = second_block)
+            pending_write_state.cipher_state = [keygen('shared', key_mat = third_block)]
+            pending_read_state.cipher_state = [keygen('shared', key_mat = fourth_block)]
         else:
-            pending_read_state.mac_key = key_block[:first_slice]
-            pending_write_state.mac_key = key_block[first_slice:second_slice]
-            pending_read_state.cipher_state = [key_block[second_slice:third_slice]]
-            pending_write_state.cipher_state = [key_block[third_slice:]]
+            pending_read_state.mac_key = keygen('mac', key_mat = first_block)
+            pending_write_state.mac_key = keygen('mac', key_mat = second_block)
+            pending_read_state.cipher_state = [keygen('shared', key_mat = third_block)]
+            pending_write_state.cipher_state = [keygen('shared', key_mat = fourth_block)]
     
     def initiate_handshake(server):
         output('CLIENT - begin Handshake')

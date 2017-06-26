@@ -102,17 +102,23 @@ def keygen_random(key_size):
         return Random.new().read(key_size)
 #end keygen_random()
 
-def keygen_mac(key_size, alg):
+def keygen_mac(key_size, alg, key_mat):
     Random.atfork()
-    new_key = Random.new().read(key_size)
+    if key_mat == None:
+        new_key = Random.new().read(key_size)
+    else:
+        new_key = key_mat
     new_key_dict = {'alg' : alg,
                     'key' : new_key}
     return new_key_dict
 #end keygen_mac()
 
-def keygen_shared(key_size, alg, mode):
+def keygen_shared(key_size, alg, mode, key_mat):
     Random.atfork()
-    new_key =  Random.new().read(key_size)
+    if key_mat == None:
+        new_key =  Random.new().read(key_size)
+    else:
+        new_key = key_mat
     key_dict = {'alg' : alg,
                 'mode' : mode,
                 'key' : new_key}
