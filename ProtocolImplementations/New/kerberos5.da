@@ -51,7 +51,7 @@ class Role_AuthServer(process):
 
     def run():
         if await(False): pass
-        elif timeout(5): pass
+        elif timeout(10): pass
 
     def receive(msg=('krb_as_req', pvno, msg_type, padata,
                      req_body), from_ = C):
@@ -142,7 +142,7 @@ class Role_TGS(process):
 
     def run():
         if await(False): pass
-        elif timeout(5): pass
+        elif timeout(10): pass
 
     def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
         #First task is to retrieve and decrypt the ticket contained in the
@@ -285,7 +285,7 @@ class Role_AppServer(process):
 
     def run():
         if await(False): pass
-        elif timeout(5): pass
+        elif timeout(10): pass
 
     #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
     def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator),

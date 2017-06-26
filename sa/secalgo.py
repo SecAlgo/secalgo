@@ -30,7 +30,7 @@ default_cfg = {'sym_cipher'        : 'AES',
                'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
                'benchmark'         : False,
-               'benchmark_loops'   : 10000,
+               'benchmark_loops'   : 1000,
                'backend'           : 'SA_Pycrypto'}
 
 with open(config_fn, 'w') as f:

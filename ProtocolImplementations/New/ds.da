@@ -37,7 +37,7 @@ class RoleR (process):
 
     def run():
         if await(False): pass
-        elif timeout(3): pass
+        elif timeout(10): pass
 
     def receive(msg=('encrypt_sign', m), from_ = I):
         k = verify(decrypt(m, skR), pkI)

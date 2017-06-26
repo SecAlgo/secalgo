@@ -31,7 +31,7 @@ class RoleS (process):
 
     def run():
         if await(False): pass
-        elif timeout(3): pass
+        elif timeout(10): pass
 
     def receive(msg=('msg4', encI, encR), from_ = R):
         R1 = R
@@ -84,7 +84,7 @@ class RoleR (process):
 
     def run():
         if await(False): pass
-        elif timeout(3): pass
+        elif timeout(10): pass
 
     def receive(msg=('msg1', I, N_I), from_ = _I):
         N_R = nonce()
