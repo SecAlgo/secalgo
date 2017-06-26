@@ -32,7 +32,8 @@ class roleS (process):
         pass
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=(A, B), from_ = A):
         pkB = [x for (p, x) in client_keys if p == B].pop()
@@ -62,7 +63,8 @@ class roleR (process):
         self.R = self
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(5): pass
 
     def receive(msg=((nI, I), I), from_ = self):
         send((R, I), to = S)

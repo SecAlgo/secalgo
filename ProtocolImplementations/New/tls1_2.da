@@ -981,7 +981,8 @@ class TLS_Peer(process):
         if peer != None:
             initiate_handshake(peer)
         else:
-            await(False)
+            if await(False): pass
+            elif timeout(5): pass
         
 def main():
     config(channel = 'reliable')

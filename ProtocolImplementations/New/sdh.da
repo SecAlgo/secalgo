@@ -46,7 +46,8 @@ class RoleB(process):
         self.B = self
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=('msg1', A, s, dh_X), from_ = A):
         dh_y, dh_Y, _, _ = keygen('dh', dh_p = p, dh_g = g)

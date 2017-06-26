@@ -25,7 +25,8 @@ class RoleS (process):
         pass
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=(M, I, R, encI, encR), from_ = _R):
         send(encI, to = self)
@@ -64,7 +65,8 @@ class RoleR (process):
         self.R = self
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
         
     def receive(msg=(M, I, R, encI), from_ = I):
         N_R = nonce()

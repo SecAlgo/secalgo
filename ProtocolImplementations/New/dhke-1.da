@@ -39,7 +39,8 @@ class RoleR (process):
         self.R = self
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
         dh_y, dh_Y, _, _ = keygen('dh', dh_p = PK_I[2], dh_g = PK_I[1])

@@ -30,7 +30,8 @@ class RoleS (process):
         self.R1 = None
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=('msg4', encI, encR), from_ = R):
         R1 = R
@@ -82,7 +83,8 @@ class RoleR (process):
         self.K_IR = None
 
     def run():
-        await(False)
+        if await(False): pass
+        elif timeout(3): pass
 
     def receive(msg=('msg1', I, N_I), from_ = _I):
         N_R = nonce()
