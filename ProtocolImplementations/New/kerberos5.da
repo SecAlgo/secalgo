@@ -27,7 +27,8 @@ S  = Application Server
 """
 
 import sys, time, random
-from sa.sec_algo_pycrypto import genkey, gen_nonce, encrypt, decrypt
+from sa.secalgo import *
+configure(benchmark = True)
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_TKT_DURATION = 3600 #one hour
@@ -83,7 +84,7 @@ class Role_AuthServer(process):
             return
 
         #Generate a key matching for the chosen encryption algorithm
-        key_C_TGS = genkey('shared')
+        key_C_TGS = keygen('shared')
 
         #check for postdate or may_postdate option
 
@@ -227,7 +228,7 @@ class Role_TGS(process):
             return
         
         #generate shared session key for client and application server
-        key_C_S = genkey('shared')
+        key_C_S = keygen('shared')
 
         #check for preauthentication required
         #check for preauthentication requested
@@ -355,7 +356,7 @@ class Role_C(process):
         #select an application server to access
         S = random.choice(tuple(servers))
         #generate nonce
-        nonce_C_AS = gen_nonce()        
+        nonce_C_AS = nonce()        
         #send KRB_AS_REQ msg to acquire TGT from AS
         #AS-REQ-BODY = [kdc-options, cname*, realm, sname*, from*, till, rtime*,
         #            nonce, etype, addresses*, enc-authorization-data*,
@@ -411,7 +412,7 @@ class Role_C(process):
             #TGS_REQ_BODY = [kdc-options, cname*, realm, sname*, from*, till,
             #                rtime, nonce, etype, addresses,
             #                enc-authorization-data, additional-tickets]
-            nonce_C_TGS = gen_nonce()
+            nonce_C_TGS = nonce()
             tgs_req_body = [dict(), None, 'TEST', S, 0,
                             time.time() + (5 * 3600), 0, nonce_C_TGS, [18, 17],
                             [], [], []]
@@ -465,23 +466,23 @@ def main():
     num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     C = new(Role_C, num = num_clients)
-    S = new(Role_S, num = num_servers)
+    S = new(Role_AppServer, num = num_servers)
     TGS = new(Role_TGS)
-    AS = new(Role_AS)
+    AS = new(Role_AuthServer)
     client_keys = dict()
     for client in C:
-        key_C_AS = genkey('shared')
+        key_C_AS = keygen('shared')
         setup(client, ('TEST', S, AS, TGS, key_C_AS))
         client_keys[client] = key_C_AS
     as_server_keys = dict()
     tgs_server_keys = dict()
     for server in S:
-        key_S_AS = genkey('shared')
+        key_S_AS = keygen('shared')
         as_server_keys[server] = key_S_AS
-        key_S_TGS = genkey('shared')
+        key_S_TGS = keygen('shared')
         tgs_server_keys[server] = key_S_TGS
         setup(server, (AS, TGS, key_S_AS, key_S_TGS))
-    key_AS_TGS = genkey('shared')
+    key_AS_TGS = keygen('shared')
     setup(AS, (C, S, TGS, client_keys, as_server_keys, key_AS_TGS))
     setup(TGS, (S, AS, key_AS_TGS, tgs_server_keys))
     start(AS)

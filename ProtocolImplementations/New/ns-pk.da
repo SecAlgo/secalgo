@@ -25,6 +25,7 @@ did fix for (6):
 """
 
 from sa.secalgo import *
+configure(benchmark = True)
 
 class roleS (process):
     def setup(skS, client_keys):

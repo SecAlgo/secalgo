@@ -16,6 +16,7 @@ identity. k is a randomly generated index for a hash function.
 """
 from sa.secalgo import *
 configure(verify_returns = 'bool')
+configure(benchmark = True)
 
 class RoleI (process):
     def setup(SK_I, PK_I, R, PK_R, cert_I, pk_sig_T):

@@ -18,7 +18,7 @@ Protocol Diagram:
   (2) B -> A: enc(s, k)
 """
 from sa.secalgo import *
-configure(sym_mode = 'CFB')
+configure(benchmark = True)
 
 class RoleI (process):
     def setup(skI, R, pkR):

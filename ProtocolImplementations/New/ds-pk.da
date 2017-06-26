@@ -23,6 +23,7 @@ protocol.
 import sys, time
 from sa.secalgo import *
 configure(verify_returns = 'bool')
+configure(benchmark = True)
 
 class roleA(process):
     def setup(B, S, sk_A, pk_A, pk_S):

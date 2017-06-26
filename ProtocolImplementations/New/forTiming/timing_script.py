@@ -28,7 +28,7 @@ protocols = [
              'ya-ft',
              'dhke-1-ft',
              #'eap_archie-ft',
-             #'eke-ft.da',
+             #'eke-ft',
              #'iso9798-3-4-ft',
              'sdh-ft',
              'tls1_2-ft',

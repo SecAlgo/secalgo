@@ -30,6 +30,7 @@ default_cfg = {'sym_cipher'        : 'AES',
                'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
                'benchmark'         : False,
+               'benchmark_loops'   : 10,
                'backend'           : 'SA_Pycrypto'}
 
 with open(config_fn, 'w') as f:
@@ -46,18 +47,21 @@ def configure(**configs):
 #end security_declarations()
 
 def dec_timer(func):
-    with open(config_fn, 'r') as f:
-        current_cfg = json.load(f)
     def timer(*args, **kwargs):
-        start_time = time.process_time()
-        result = func(*args, **kwargs)
-        print(json.dumps([func.__name__, start_time, time.process_time()]), flush = True)
-        return result
+        with open(config_fn, 'r') as f:
+            current_cfg = json.load(f)
+        if not current_cfg['benchmark']:
+            return func(*args, **kwargs)
+        else:
+            loops = current_cfg['benchmark_loops']
+            start_time = time.process_time()
+            for i in range(loops):
+                result = func(*args, **kwargs)
+            print(json.dumps([func.__name__, start_time, time.process_time(),
+                              loops]), flush = True)
+            return result
     #end timer()
-    if current_cfg['benchmark']:
-        return timer
-    else:
-        return func
+    return timer
 #end dec_timer()
 
 def get_backend(cfg_backend):
@@ -71,7 +75,7 @@ def get_backend(cfg_backend):
               ', not recognized.', flush = True)
     return backend
 
-#@dec_timer
+@dec_timer
 def nonce(size = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -82,7 +86,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-#@dec_timer
+@dec_timer
 def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
            dh_mod_size = None, dh_p = None, dh_g = None):
     with open(config_fn, 'r') as f:
@@ -119,7 +123,7 @@ def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
                          dh_g)
 #end keygen()
 
-#@dec_timer
+@dec_timer
 def encrypt(plaintext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -130,7 +134,7 @@ def encrypt(plaintext, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-#@dec_timer
+@dec_timer
 def decrypt(ciphertext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -141,7 +145,7 @@ def decrypt(ciphertext, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-#@dec_timer
+@dec_timer
 def sign(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -152,7 +156,7 @@ def sign(data, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-#@dec_timer
+@dec_timer
 def verify(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)

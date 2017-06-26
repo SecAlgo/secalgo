@@ -23,6 +23,7 @@ a nonce).
 '''
 from sa.secalgo import *
 configure(verify_returns = 'bool')
+configure(benchmark = True)
 
 class RoleA(process):
     def setup(SK_sig_A, PK_sig_A, B, PK_sig_B, p, g):
