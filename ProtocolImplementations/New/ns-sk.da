@@ -27,7 +27,7 @@ class RoleS (process):
 
     def run():
         if await(False): pass
-        elif timeout(10): pass
+        elif timeout(60): pass
 
     def receive(msg=(I, R, N_I), from_ = I):
         K_IR = keygen('shared')
@@ -62,7 +62,7 @@ class RoleR (process):
 
     def run():
         if await(False): pass
-        elif timeout(10): pass
+        elif timeout(60): pass
 
     def receive(msg=((K, I), _S), from_ = self):
         K_IR = K

@@ -55,13 +55,15 @@ def dec_timer(func):
         else:
             loops = current_cfg['benchmark_loops']
             start_time = time.process_time()
-            for i in range(loops):
+            i = 0
+            while (((time.process_time() - start_time) < 5) and (i < loops)):
                 if i == 0:
                     result = func(*args, **kwargs)
                 else:
                     trash = func(*args, **kwargs)
+                i += 1
             print(json.dumps([func.__name__, start_time, time.process_time(),
-                              loops]), flush = True)
+                              i]), flush = True)
             return result
     #end timer()
     return timer
