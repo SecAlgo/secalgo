@@ -17,36 +17,56 @@ Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
 """
+import time, json, sys
 from sa.secalgo import *
-configure(benchmark = True)
+#configure(benchmark = True)
 
 class RoleI (process):
-    def setup(skI, R, pkR):
+    def setup(skI, R, pkR, loops):
         pass
 
     def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = ds(i)
+            await(result == i)
+        print(json.dumps(['ds', 'roleI', start_time, time.process_time(), loops]), flush = True)
+    
+    def ds(i):
         k = keygen('shared')
-        send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
-        await(some(received(m, from_ = R)))
+        send(('encrypt_sign', i, encrypt(sign(k, skI), pkR)), to = R)
+        await(some(received((_i, m), from_ = R)))
+        output(i)
+        output(k)
         s = decrypt(m, k)
         output('DECRYPTED MESSAGE:', s)
+        return i
 
 class RoleR (process):
-    def setup(skR, pkI):
+    def setup(skR, pkI, loops):
         self.s = 'secret'
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('encrypt_sign', m), from_ = I):
+    def receive(msg=('encrypt_sign', i, m), from_ = I):
         k = verify(decrypt(m, skR), pkI)
-        send(encrypt(s, k), to = I)
+        output(i)
+        output(k)
+        send((i, encrypt(s, k)), to = I)
+        if i == (loops - 1):
+            print(json.dumps(['ds', 'roleR', self.start_time, time.process_time(), loops]),
+                  flush = True)
 
 def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     skI, pkI = keygen('public')
     skR, pkR = keygen('public')
-    R = new(RoleR, (skR, pkI))
-    I = new(RoleI, (skI, R, pkR))
+    R = new(RoleR, (skR, pkI, loops))
+    I = new(RoleI, (skI, R, pkR, loops))
     start(I)
     start(R)
