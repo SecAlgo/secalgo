@@ -1,0 +1,45 @@
+Results for: ds-pk
+['keygen', 0.116080786, 3.118252245, 25]
+library
+function time: keygen - 0.12008685835999999
+['keygen', 3.118389051, 6.154002892, 19]
+library
+function time: keygen - 0.15976914952631582
+['keygen', 6.154134709, 9.249672181, 23]
+library
+function time: keygen - 0.1345885857391304
+['sign', 0.008173406000000001, 3.010428667, 1258]
+library
+skip
+['sign', 3.010564938, 6.011901786, 1256]
+library
+skip
+['verify', 0.007430277000000001, 3.00771961, 3956]
+library
+function time: verify - 0.0007584148971183013
+['verify', 3.007854929, 6.008236182, 3956]
+library
+function time: verify - 0.0007584381327098079
+['keygen', 6.008351092, 9.008438407, 5838]
+library
+function time: keygen - 0.0005138895709146968
+['sign', 9.008543064, 12.009768903, 1283]
+library
+skip
+['encrypt', 12.009877978, 15.009941793, 2904]
+library
+function time: encrypt - 0.001033079826101928
+['verify', 0.007194842000000001, 3.007944395, 3934]
+library
+function time: verify - 0.0007627731451448907
+['verify', 3.008076852, 6.00829547, 3932]
+library
+function time: verify - 0.0007630260981688709
+['decrypt', 6.008402503, 9.008920151, 569]
+library
+function time: decrypt - 0.005273317483304041
+['verify', 9.009036012, 12.009059736, 4019]
+library
+function time: verify - 0.0007464602448370241
+[1, "ds-pk", 0.4250539930237458]
+["avg", "ds-pk", 0.4250539930237458]

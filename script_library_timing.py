@@ -119,7 +119,7 @@ if __name__ == '__main__':
     proto = sys.argv[1] if len(sys.argv) > 1 else 'all'
     iter_num = int(sys.argv[2]) if len(sys.argv) > 2 else 10
     output_file = sys.argv[3] if len(sys.argv) > 3 else None
-    if proto == 'all:
+    if proto == 'all':
         for p in protocols:
             time_exp01(p, iter_num)
             parse_exp01(p, iter_num, output_file)
