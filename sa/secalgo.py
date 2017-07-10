@@ -30,7 +30,6 @@ default_cfg = {'sym_cipher'        : 'AES',
                'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
                'benchmark'         : False,
-               'benchmark_loops'   : 1000,
                'backend'           : 'SA_Pycrypto'}
 
 with open(config_fn, 'w') as f:
@@ -53,16 +52,17 @@ def dec_timer(func):
         if not current_cfg['benchmark']:
             return func(*args, **kwargs)
         else:
-            loops = current_cfg['benchmark_loops']
             start_time = time.process_time()
+            end_time = 0
             i = 0
-            while (((time.process_time() - start_time) < 5) and (i < loops)):
+            while ((end_time - start_time) < 3):
                 if i == 0:
                     result = func(*args, **kwargs)
                 else:
                     trash = func(*args, **kwargs)
+                end_time = time.process_time()
                 i += 1
-            print(json.dumps([func.__name__, start_time, time.process_time(),
+            print(json.dumps([func.__name__, start_time, end_time,
                               i]), flush = True)
             return result
     #end timer()

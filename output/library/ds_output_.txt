@@ -1,0 +1,30 @@
+Results for: ds
+['keygen', 0.085705481, 3.133605046, 23]
+library
+function time: keygen - 0.13251737239130434
+['keygen', 3.133750553, 6.294191493, 22]
+library
+function time: keygen - 0.14365640636363633
+['keygen', 0.0073425700000000005, 3.007474089, 5690]
+library
+function time: keygen - 0.0005272638873462214
+['sign', 3.007607953, 6.008459386, 1282]
+library
+skip
+['encrypt', 6.008567635, 9.009593995, 2966]
+library
+function time: encrypt - 0.0010118092919757246
+['decrypt', 0.007392425, 3.009311139, 586]
+library
+function time: decrypt - 0.005122728180887372
+['verify', 3.009444568, 6.009971236, 3998]
+library
+function time: verify - 0.0007505069204602301
+['encrypt', 6.010076687, 9.010446704, 5500]
+library
+function time: encrypt - 0.0005455218212727272
+['decrypt', 9.010412588, 12.010808129, 7158]
+library
+function time: decrypt - 0.00041916674224643777
+[1, "ds", 0.2845507755991294]
+["avg", "ds", 0.2845507755991294]

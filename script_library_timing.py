@@ -2,6 +2,7 @@ import sys, os, subprocess, time, json
 
 full_path = '/home/christopher/secalgo/ProtocolImplementations/New/'
 result_path = '/home/christopher/secalgo/results/library/'
+output_path = '/home/christopher/secalgo/output/library/'
 m_buf_opt = '--message-buffer-size'
 m_buf_size = '8192'
 da_ext = '.da'
@@ -48,9 +49,9 @@ p_main_skip = {
                'kerberos5' : 4
               }
                  
-def time_exp01(iter_num):
-    print('Library Timing Experiment 01', flush = True)
-    for p in protocols:
+def time_exp01(p, iter_num):
+    print('Library Timing Experiment 01 for:', p, flush = True)
+    if p in protocols:
         if p == 'dhke-1' or p == 'tls1_2':
             cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext]
         else:
@@ -71,16 +72,17 @@ def time_exp01(iter_num):
             time.sleep(1)
             print('Completed Iteration', str(i + 1), flush = True)
         print('Finished', p, flush = True)
-        time.sleep(1)
-    print('Completed Timing Experiment 01', flush = True)
+        print('Completed Timing Experiment 01 for:', p, flush = True)
+    else:
+        print('No such protocol', p, 'available.', flush = True)    
 #end time_exp01()
 
-def parse_exp01(iter_num, output_file):
+def parse_exp01(p, iter_num, output_file):
     if output_file == None:
-        of = sys.stdout
+        of = open(output_path + p + '_output_.txt', 'w')
     else:
         of = open(output_file, 'w')
-    for p in protocols:
+    if p in protocols:
         print('Results for:', p, file = of, flush = True)
         total_library_time = 0
         iter_result_list = []
@@ -100,7 +102,8 @@ def parse_exp01(iter_num, output_file):
                             skip_counter += 1
                         else:
                             function_time = ((data_line[2] - data_line[1]) / data_line[3])
-                            print('function time:', data_line[0], '-', function_time, flush = True)
+                            print('function time:', data_line[0], '-', function_time,
+                                  file = of, flush = True)
                             library_time += function_time
             iter_result = [(i + 1), p, library_time]
             iter_result_list.append(iter_result)
@@ -109,11 +112,12 @@ def parse_exp01(iter_num, output_file):
             total_library_time += ir[2]
         avg_library_time = total_library_time / iter_num
         print(json.dumps(['avg', p, avg_library_time]), file = of, flush = True)
-
+        of.close()
 #end parse_exp01()
 
 if __name__ == '__main__':
-    iter_num = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    output_file = sys.argv[2] if len(sys.argv) > 2 else None
-    time_exp01(iter_num)
-    parse_exp01(iter_num, output_file)
+    p = sys.argv[1] if len(sys.argv) > 1 else 'ds'
+    iter_num = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    output_file = sys.argv[3] if len(sys.argv) > 3 else None
+    time_exp01(p, iter_num)
+    parse_exp01(p, iter_num, output_file)

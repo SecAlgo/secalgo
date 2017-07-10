@@ -1,0 +1,42 @@
+Results for: ns-sk
+['keygen', 0.08538860300000001, 3.08578935, 5899]
+library
+function time: keygen - 0.0005086287077470758
+['keygen', 3.085900541, 6.086246697, 5915]
+library
+function time: keygen - 0.0005072436442941674
+['nonce', 0.006729753000000001, 3.006760969, 5799]
+library
+function time: nonce - 0.0005173359572340059
+['keygen', 0.007701787000000001, 3.007964227, 5907]
+library
+function time: keygen - 0.0005079164448958863
+['encrypt', 3.008093697, 6.008286316, 5517]
+library
+function time: encrypt - 0.0005438087038245424
+['encrypt', 6.008383411, 9.008746805, 5467]
+library
+function time: encrypt - 0.0005488134980793853
+['decrypt', 3.007694003, 6.007707324, 7182]
+library
+function time: decrypt - 0.00041771279880256195
+['decrypt', 0.006888314, 3.007029944, 7212]
+library
+function time: decrypt - 0.0004159930158069884
+['nonce', 3.007437155, 6.007758351, 5903]
+library
+function time: nonce - 0.0005082705736066406
+['encrypt', 6.00785943, 9.007965433, 5754]
+library
+function time: encrypt - 0.0005213948562738965
+['decrypt', 6.008735272, 9.008762656, 7474]
+library
+function time: decrypt - 0.00040139515440192666
+['encrypt', 9.009071753, 12.009297432, 5757]
+library
+function time: encrypt - 0.0005211439428521799
+['decrypt', 9.008867146, 12.009244613, 7402]
+library
+function time: decrypt - 0.0004053468612537152
+[1, "ns-sk", 0.006325004159072971]
+["avg", "ns-sk", 0.006325004159072971]
