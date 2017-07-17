@@ -1,0 +1,117 @@
+"""
+Needham-Schroeder Public Key Mutual Authentication Protocol
+Written by Christopher Kane
+
+Original Source:
+Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
+Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
+pp. 993-999.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/nspk.html
+
+Protocol Diagram:
+  (1) A -> S : (A, B)
+  (2) S -> A : sign((B, pkB), skS)
+  (3) A -> B : enc((Na, A), pkB)
+  (4) B -> S : (B, A)
+  (5) S -> B : sign((A, pkA), skS)
+  (6) B -> A : enc((Na, Nb), pkA)
+  (7) A -> B : enc(Nb, pkB)
+
+did fix for (6):
+  (6) B -> A : enc((Na, Nb, B), pkA)
+"""
+
+from sa.secalgo import *
+
+class roleS (process):
+    def setup(skS, client_keys):
+        pass
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('1', _), from_ = I):
+        #Generates:
+        #receive(msg=('1', m), from_ = I)
+        #Equalities:
+        #I, R = m
+        send(('2', sign((R, pk(R)), key = sk(self))), to = I)
+
+    def receive(msg=('4', _), from_ = R):
+        #Generates:
+        #receive(msg=('4', m), from_ = R):
+        #Equalities:
+        #R, I = m
+        send(('5', sign((I, pk(I)), key = sk(S))), to = R)
+
+class roleI (process):
+    def setup(skI, S, pkS, R):
+        pass
+
+    def run():
+        send(('1', (self, R)), to = S)
+        await(some(received(('2', _), from_ = _S)))
+        #Generates:
+        #await(some(received(('2', m), from_ = _S)))
+        #Equalities:
+        #m = sign((R, pk(R)), key = sk(S))
+        #R, pk(R) = verify(m, key(S))
+        nI = nonce()
+        send(('3', encrypt((nI, self), pk(R))), to = R)
+        await(some(received(('6', _), from_ = R)))
+        #Generates:
+        #await(some(received(('6', m2), from_ = R)))
+        #Equalities:
+        #m2 = encrypt((nI, nR, R), key = pk(self))
+        #_nI, nR, _R = decrypt(m2, key = sk(self))
+        send(('7', encrypt(nR, key = pk(R))), to = R)
+        output('I authenticated R')
+
+class roleR (process):
+    def setup(skR, S, pkS):
+        pass
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('3', _), from_ = I):
+        #Generates:
+        #receive(msg=('3', m), from_ = I):
+        #Equalities:
+        #m = encrypt((nI, I), key = pk(self))
+        #nI, I = decrypt(m, key = sk(self))
+        send(('4', (R, I)), to = S)
+        await(some(received(('5', _), from_ = S)))
+        #Generates:
+        #await(some(received(('4', m2), from_ = S)))
+        #Equalities:
+        #m2 = sign((I, pk(I)), key = sk(S))
+        #I, pk(I) = verify(m, key = pk(S))
+        nR = nonce()
+        send(('6', encrypt((nI, nR, R), pk(I))), to = I)
+        await(some(received(('7', _), from_ = _I)))
+        #Generates:
+        #await(some(received(('7', m3), from_ = _I)))
+        #Equalities:
+        #m3 = encrypt(nR, key = pk(self))
+        #_nR = decrypt(m3, key = sk(self))
+        output('R authenticated I')
+
+def main():
+    skS, pkS = keygen('public')
+    skI, pkI = keygen('public')
+    skR, pkR = keygen('public')
+    I = new(roleI)
+    R = new(roleR)
+    S = new(roleS)
+    setup(S, (skS, [(I, pkI), (R, pkR)]))
+    setup(I, (skI, S, pkS, R))
+    setup(R, (skR, S, pkS))
+    start(S)
+    start(R)
+    start(I)

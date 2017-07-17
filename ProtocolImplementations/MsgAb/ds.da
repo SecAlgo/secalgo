@@ -1,0 +1,60 @@
+"""
+Simplified Denning-Sacco Key Exchange Protocol
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981. p. 533-536.
+
+Immediate Source:
+Bruno Blanchett, "Security Protocol Verification: Symbolic and Computational 
+Models", ETAPS Invited Talk, 2012. 
+
+This simplified version removes the keyserver used to distribute the public keys
+for A and B.
+
+Protocol Diagram:
+  (1) A -> B: enc(sign(k, skA), pkB)
+  (2) B -> A: enc(s, k)
+"""
+from sa.secalgo import *
+configure(benchmark = True)
+
+class RoleI (process):
+    def setup(R):
+        pass
+
+    def run():
+        k.assign((self, R), keygen('shared'))
+        send(('1', encrypt(sign(k(self, R), key = sk(self)), key = pk(R))), to = R)
+        await(some(received(('2', _), from_ = _R)))
+        #Generates:
+        #await(some(received(('2', m), from_ = _R)
+        #Equalities:
+        #m[0] = encrypt(s, key = k(I,R))
+        #s = decrypt(m[0], key = k(I,R))
+        output('DECRYPTED MESSAGE:', s)
+
+class RoleR (process):
+    def setup():
+        self.s = 'secret'
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('1', _), from_ = I):
+        #Generates:
+        #receive(msg=('1', m), from_ I):
+        #Equalities:
+        #m[0] = encrypt(sign(k(I_R), key = sk(I)), key = pk(self))
+        #k.assign((I, R), verify(decrypt(m[0], key = sk(self)), key = pk(I)))
+        send(('2', encrypt(s, key = k(I,R))), to = I)
+
+def main():
+    skI, pkI = keygen('public')
+    skR, pkR = keygen('public')
+    R = new(RoleR, ())
+    I = new(RoleI, (R,))
+    start(I)
+    start(R)

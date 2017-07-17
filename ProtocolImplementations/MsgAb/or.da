@@ -1,0 +1,92 @@
+"""
+Otway-Rees Key Distribution Protocol
+Written by Christopher Kane
+
+Original Source:
+Dave Otway and Owen Rees, "Efficient and Timely Mutual Authentication", ACM 
+SIGOPS, v.21.1, Jan., 1987, pp. 8-10.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/otwayRees.html
+
+Protocol Diagram:
+  (1) I -> R : M, I, R, enc((N_I, M, I, R), K_IS)
+  (2) R -> S : M, I, R, enc((N_I, M, I, R), K_IS), enc((N_R, M, I, R), K_RS)
+  (3) S -> R : M, enc((N_I, K_IR), K_IS), enc((N_R, k_IR), K_RS)
+  (4) R -> I : M, enc((N_I, K_IR), K_IS)
+"""
+
+from sa.secalgo import *
+configure(benchmark = True)
+
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        pass
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=(M, I, R, encI, encR), from_ = _R):
+        send(encI, to = self)
+        send(encR, to = self)
+        await(some(received((N_I, _M, _I, _R), from_ = self),
+                   received((N_R, _M, _I, _R), from_ = self),
+                   has = N_R != N_I))
+        K_IR = keygen('shared')
+        send((M, ('encI', encrypt((N_I, K_IR), key = K_IS)),
+             ('encR', encrypt((N_R, K_IR), key = K_RS))), to = R)
+
+    def receive(msg=('encI', m), from_ = self):
+        send((decrypt(m, key = K_IS)), to = self)
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_RS)), to = self)
+    
+class RoleI (process):
+    def setup(S, K_IS, R):
+        self.I = self
+
+    def run():
+        M = nonce()
+        N_I = nonce()
+        send((M, I, R, ('encI', encrypt((N_I, M, I, R), key = K_IS))), to = R)
+        await(some(received((_M, encI), from_ = R)))
+        send(encI, to = self)
+        await(some(received(((_N_I, K_IR), _S), from_ = self)))
+        output('I - Key Exchange Complete')
+
+    def receive(msg=('encI', m), from_ = self):
+        send((decrypt(m, key = K_IS), S), to = self)
+
+class RoleR (process):
+    def setup(S, K_RS):
+        self.R = self
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+        
+    def receive(msg=(M, I, R, encI), from_ = I):
+        N_R = nonce()
+        send((M, I, R, encI, ('encR', encrypt((N_R, M, I, R), key = K_RS))), to = S)
+        await(some(received((_M, encI, encR), from_ = S)))
+        send((M, encI), to = I)
+        send(encR, to = self)
+        await(some(received(((_N_R, K_IR), _S), from_ = self)))
+        output('R - Key Exchange Complete')
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_RS), S), to = self)
+    
+def main():
+    K_IS = keygen('shared')
+    K_RS = keygen('shared')
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)
+
