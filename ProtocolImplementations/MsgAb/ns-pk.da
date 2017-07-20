@@ -23,84 +23,121 @@ Protocol Diagram:
 did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
-
 from sa.secalgo import *
 
 class roleS (process):
-    def setup(skS, client_keys):
+    def setup():
         pass
 
     def run():
         if await(False): pass
         elif timeout(10): pass
 
-    def receive(msg=('1', _), from_ = I):
-        #Generates:
-        #receive(msg=('1', m), from_ = I)
-        #Equalities:
-        #I, R = m
-        send(('2', sign((R, pk(R)), key = sk(self))), to = I)
+    # def receive(msg=('1', _), from_ = I):
+    # Generates:
+    def receive(msg=('1', m), from_ = I):
+        # Equalities:
+        # I, R = m
 
-    def receive(msg=('4', _), from_ = R):
-        #Generates:
-        #receive(msg=('4', m), from_ = R):
-        #Equalities:
-        #R, I = m
-        send(('5', sign((I, pk(I)), key = sk(S))), to = R)
+        # send(('2', (sign((R, pk(R)), key = sk(self)),)), to = I)
+        # Generates:
+        print('##########:', 2, flush = True)
+        send(('2', (sign((m[1], pk(m[1])), key = sk(self)),)), to = m[0])
+
+    # def receive(msg=('4', _), from_ = R):
+    # Generates:
+    def receive(msg=('4', m), from_ = R):
+        # Equalities:
+        # R, I = m
+
+        # send(('5', (sign((I, pk(I)), key = sk(self)),)), to = R)
+        # Generates:
+        print('##########:', 5, flush = True)
+        send(('5', (sign((m[1], pk(m[1])), key = sk(self)),)), to = m[0])
 
 class roleI (process):
-    def setup(skI, S, pkS, R):
+    def setup(S, R):
         pass
 
     def run():
+        print('##########:', 1, flush = True)
         send(('1', (self, R)), to = S)
-        await(some(received(('2', _), from_ = _S)))
-        #Generates:
-        #await(some(received(('2', m), from_ = _S)))
-        #Equalities:
-        #m = sign((R, pk(R)), key = sk(S))
-        #R, pk(R) = verify(m, key(S))
+
+        #await(some(received(('2', _), from_ = _S)))
+        # Generates:
+        await(some(received(('2', m), from_ = _S)))
+
+        # Equalities:
+        # m[0] = sign((R, pk(R)), key = sk(S))
+        # R, pk(R) = verify(m[0], pk(S))
+
         nI = nonce()
-        send(('3', encrypt((nI, self), pk(R))), to = R)
-        await(some(received(('6', _), from_ = R)))
-        #Generates:
-        #await(some(received(('6', m2), from_ = R)))
-        #Equalities:
-        #m2 = encrypt((nI, nR, R), key = pk(self))
-        #_nI, nR, _R = decrypt(m2, key = sk(self))
-        send(('7', encrypt(nR, key = pk(R))), to = R)
-        output('I authenticated R')
+        # send(('3', encrypt((nI, self), key = pk(R))), to = R)
+        # Generates:
+        print('##########:', 3, flush = True)
+        send(('3', (encrypt((nI, self), key = verify(m[0], key = pk(S))[1]),)), to = R)
+
+        # await(some(received(('6', _), from_ = R)))
+        # Generates:
+        await(some(received(('6', m2), from_ = R)))
+
+        # Equalities:
+        # m2[0] = encrypt((nI, nR, R), key = pk(self))
+        # nI, nR, R = decrypt(m2[0], key = sk(self))
+
+        # send(('7', encrypt(nR, key = pk(R))), to = R)
+        # Generates:
+        print('##########:', 7, flush = True)
+        send(('7', (encrypt(decrypt(m2[0], key = sk(self))[1],
+                            key = verify(m[0], pk(S))[1]),)), to = R)
+
+        if nI == decrypt(m2[0], key = sk(self))[0]:
+            output('I authenticated R')
 
 class roleR (process):
-    def setup(skR, S, pkS):
+    def setup(S):
         pass
 
     def run():
         if await(False): pass
         elif timeout(10): pass
 
-    def receive(msg=('3', _), from_ = I):
-        #Generates:
-        #receive(msg=('3', m), from_ = I):
-        #Equalities:
-        #m = encrypt((nI, I), key = pk(self))
-        #nI, I = decrypt(m, key = sk(self))
-        send(('4', (R, I)), to = S)
-        await(some(received(('5', _), from_ = S)))
-        #Generates:
-        #await(some(received(('4', m2), from_ = S)))
-        #Equalities:
-        #m2 = sign((I, pk(I)), key = sk(S))
-        #I, pk(I) = verify(m, key = pk(S))
+    # def receive(msg=('3', _), from_ = I):
+    # Generates:
+    def receive(msg=('3', m), from_ = I):
+        # Equalities:
+        # m[0] = encrypt((nI, I), key = pk(self))
+        # nI, I = decrypt(m[0], key = sk(self))
+
+        # send(('4', (self, I)), to = S)
+        # Generates:
+        print('##########:', 4, flush = True)
+        send(('4', (self, decrypt(m[0], key = sk(self))[1])), to = S)
+        
+        # await(some(received(('5', _), from_ = S)))
+        # Generates:
+        await(some(received(('5', m2), from_ = S)))
+
+        # Equalities:
+        # m2[0] = sign((I, pk(I)), key = sk(S))
+        # I, pk(I) = verify(m2[0], key = pk(S))
         nR = nonce()
-        send(('6', encrypt((nI, nR, R), pk(I))), to = I)
-        await(some(received(('7', _), from_ = _I)))
-        #Generates:
-        #await(some(received(('7', m3), from_ = _I)))
-        #Equalities:
-        #m3 = encrypt(nR, key = pk(self))
-        #_nR = decrypt(m3, key = sk(self))
-        output('R authenticated I')
+        
+        # send(('6', encrypt((nI, nR, R), key = pk(I))), to = I)
+        # Generates:
+        print('##########:', 6, flush = True)
+        send(('6', (encrypt((decrypt(m[0], key = sk(self))[0], nR, self),
+                            key = verify(m2[0], key = pk(S))[1]),)), to = decrypt(m[0], key = sk(self))[1])
+
+        # await(some(received(('7', _), from_ = _I)))
+        # Generates:
+        await(some(received(('7', m3), from_ = _I)))
+
+        # Equalities:
+        # m3[0] = encrypt(nR, key = pk(self))
+        # nR = decrypt(m3[0], key = sk(self))
+        if nR == decrypt(m3[0], key = sk(self)):
+            output('R authenticated I')
 
 def main():
     skS, pkS = keygen('public')
@@ -109,9 +146,15 @@ def main():
     I = new(roleI)
     R = new(roleR)
     S = new(roleS)
-    setup(S, (skS, [(I, pkI), (R, pkR)]))
-    setup(I, (skI, S, pkS, R))
-    setup(R, (skR, S, pkS))
+    setup(S, ())
+    setup(I, (S, R))
+    setup(R, (S, ))
+    register_key('public', S, pkS)
+    register_key('public', I, pkI)
+    register_key('public', R, pkR)
+    register_key('private', S, skS)
+    register_key('private', I, skI)
+    register_key('private', R, skR)
     start(S)
     start(R)
     start(I)

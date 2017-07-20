@@ -28,15 +28,21 @@ class RoleS (process):
         if await(False): pass
         elif timeout(10): pass
 
-    def receive(msg=('1', _), from_ = I):
-        #Generates
-        #receive(msg=('1', m), from_ = I):
-        #Equalities:
-        #m[0] = I
-        #m[1] = R
-        #m[2] = N_I
-        send(('2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)),
-                    key = K_IS)), to = I)
+    # def receive(msg=('1', _), from_ = I):
+    # Generates:
+    def receive(msg=('1', m), from_ = I):
+        # Equalities:
+        # m[0] = I
+        # m[1] = R
+        # m[2] = N_I
+
+        K_IR = keygen('shared')
+
+        # send(('2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)),
+        #             key = K_IS)), to = I)
+        # Generates:
+        send(('2', (encrypt((m[2], K_IR, m[1], encrypt((K_IR, m[0]), key = K_RS)),
+                            key = K_IS),)), to = I)
 
 class RoleI (process):
     def setup(S, K_IS, R):
@@ -44,23 +50,33 @@ class RoleI (process):
     
     def run():
         N_I = nonce()
-        send(('1', (I, R, N_I)), to = S)
-        await(some(received(('2', _), from_ = _S)))
-        #Generates:
-        #await(some(received(('2', m), from_ = _S)
-        #Equalities:
-        #m[0] = encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)), key = K_IS)
-        #N_I, K_IR, R  = decrypt(m[0], key = K_IS)
-        #encrypt((K_IR, I), key = K_RS) = decrypt(m[0], key = K_IS)[3]
-        send(('3', encrypt((K_IR, I), key = K_RS)), to = R)
-        #send(('3', decrypt(m[0], key = K_IS)[3]), to = R)
-        await(some(received(('4', _), from_ = _R)))
-        #Generates:
-        #await(some(received(('4', m2), from_ = _R)
-        #Equalities:
-        #m2[0] = encrypt(N_R, key = K_IR)
-        #N_R = decrypt(m2[0], key = K_IR)
-        send(('5', encrypt(N_R - 1, key = K_IR)), to = R)
+        send(('1', (self, R, N_I)), to = S)
+
+        # await(some(received(('2', _), from_ = _S)))
+        # Generates:
+        await(some(received(('2', m), from_ = _S)))
+
+        # Equalities:
+        # m[0] = encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)), key = K_IS)
+        # N_I, K_IR, R  = decrypt(m[0], key = K_IS)
+        # encrypt((K_IR, I), key = K_RS) = decrypt(m[0], key = K_IS)[3]
+        
+        # send(('3', encrypt((K_IR, I), key = K_RS)), to = R)
+        # Generates:
+        send(('3', (decrypt(m[0], key = K_IS)[3],)), to = R)
+
+        # await(some(received(('4', _), from_ = _R)))
+        # Generates:
+        await(some(received(('4', m2), from_ = _R)))
+
+        # Equalities:
+        # m2[0] = encrypt(N_R, key = K_IR)
+        # N_R = decrypt(m2[0], key = K_IR)
+
+        # send(('5', encrypt(N_R - 1, key = K_IR)), to = R)
+        # Generates:
+        send(('5', (encrypt((decrypt(m2[0], key = decrypt(m[0], key = K_IS)[1]) - 1),
+                            key = decrypt(m[0], key = K_IS)[1]),)), to = R)
         output('I - Key Exchange Complete')
 
 class RoleR (process):
@@ -71,21 +87,26 @@ class RoleR (process):
         if await(False): pass
         elif timeout(10): pass
 
-    def receive(msg=('3', _), from_ = I):
-        #Generates:
-        #receive(msg=('3', m), from_ = I):
-        #Equalities:
-        #m[0] = encrypt((K_IR, I), key = K_RS)
-        #K_IR, I = decrypt(m[0], key = K_RS)
+    # def receive(msg=('3', _), from_ = I):
+    # Generates:
+    def receive(msg=('3', m), from_ = I):
+        # Equalities:
+        # m[0] = encrypt((K_IR, I), key = K_RS)
+        # K_IR, I = decrypt(m[0], key = K_RS)
         N_R = nonce()
-        send(('4', encrypt(N_R, key = K_IR)), to = I)
-        await(some(received(('5', _), from_ = _I)))
-        #Generates:
-        #await(some(received(('5', m2), from_ = _I)))
-        #Equalities:
-        #m2[0] = encrypt(N_R - 1, key = K_IR)
-        #(N_R - 1) = decrypt(m2[0], key = K_IR)
-        output('R - Key Exchange Complete')
+
+        # send(('4', encrypt(N_R, key = K_IR)), to = I)
+        send(('4', (encrypt(N_R, key = decrypt(m[0], key = K_RS)[0]),)), to = I)
+
+        # await(some(received(('5', _), from_ = _I)))
+        # Generates:
+        await(some(received(('5', m2), from_ = _I)))
+
+        # Equalities:
+        # m2[0] = encrypt(N_R - 1, key = K_IR)
+        # (N_R - 1) = decrypt(m2[0], key = K_IR)
+        if (N_R - 1) == decrypt(m2[0], key = decrypt(m[0], key = K_RS)[0]):
+            output('R - Key Exchange Complete')
 
 def main():
     K_IS = keygen('shared')

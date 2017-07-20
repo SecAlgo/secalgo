@@ -1,4 +1,4 @@
-import json, time 
+import json, time, pickle
 import sa.sec_algo_pycrypto as SA_Pycrypto
 #import sa.sec_algo_charm as SA_Charm
 
@@ -177,3 +177,53 @@ def verify(data, key):
         if current_cfg['verify_returns'] == 'bool':
             return backend.mac_verify1(data[0], data[1], key)
 #end verify()
+
+# Public/Private key access functions hack
+# setup code
+public_fn = 'public_keys.sac' #name for file storing public keys
+private_fn = 'private_keys.sac' #name for file storing private keys
+
+# These two blocks overwrite any existing public and private key files with
+# new files containing empty dictionaries. This ensures that the files are
+# always present when register or the access functions try to open them, and
+# that keys used by any previous protcol executions are eliminated.
+with open(public_fn, 'wb') as f:
+    pickle.dump(dict(), f)
+with open(private_fn, 'wb') as f:
+    pickle.dump(dict(), f)
+
+# Works exactly the same as my persistent configurations. Opens the file
+# corresponding to the type of the key, loads the dictionary holding the
+# keys into a local reference. Then adds the new key to the dictionary
+# using the process id of the owner of the key as the key. The modified
+# dictionary is then written to the key file.
+def register_key(type, id, key):
+    if type == 'public':
+        with open(public_fn, 'rb') as f:
+            public_keys = pickle.load(f)
+        public_keys[id] = key
+        with open(public_fn, 'wb') as f:
+            pickle.dump(public_keys, f)
+    elif type == 'private':
+        with open(private_fn, 'rb') as f:
+            private_keys = pickle.load(f)
+        private_keys[id] = key
+        with open(private_fn, 'wb') as f:
+            pickle.dump(private_keys, f)
+#end register_key()
+
+# Reads the public key file and returns the key owned by id
+def pk(id):
+    with open(public_fn, 'rb') as f:
+        public_keys = pickle.load(f)
+    return public_keys[id]
+#end pk()
+
+# Reads the private key file and returns the key owned by id
+def sk(id):
+    with open(private_fn, 'rb') as f:
+        private_keys = pickle.load(f)
+    return private_keys[id]
+#end sk()
+
+# end Public/Private key access functions hack
