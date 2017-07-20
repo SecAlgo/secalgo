@@ -17,6 +17,43 @@ Protocol Diagram:
   (1) A -> B: enc(sign(k, skA), pkB)
   (2) B -> A: enc(s, k)
 """
+#Public/Private key access functions hack
+import pickle
+public_fn = 'public_keys.sac'
+private_fn = 'private_keys.sac'
+
+def register_key(type, id, key):
+    if type == 'public':
+        try:
+            with open(public_fn, 'rb') as f:
+                public_keys = pickle.load(f)
+        except FileNotFoundError:
+            public_keys = {}
+        public_keys[id] = key
+        with open(public_fn, 'wb') as f:
+            pickle.dump(public_keys, f)
+    elif type == 'private':
+        try:
+            with open(private_fn, 'rb') as f:
+                private_keys = pickle.load(f)
+        except FileNotFoundError:
+            private_keys = {}
+        private_keys[id] = key
+        with open(private_fn, 'wb') as f:
+            pickle.dump(private_keys, f)
+
+def pk(id):
+    with open(public_fn, 'rb') as f:
+        public_keys = pickle.load(f)
+    return public_keys[id]
+
+def sk(id):
+    with open(private_fn, 'rb') as f:
+        private_keys = pickle.load(f)
+    return private_keys[id]
+
+#end Public/Private key access functions hack
+
 from sa.secalgo import *
 
 class RoleI (process):
@@ -24,15 +61,16 @@ class RoleI (process):
         pass
 
     def run():
-        k_IR = keygen('shared')
-        send(('1', encrypt(sign(k_IR, key = sk(self)), key = pk(R))), to = R)
-        await(some(received(('2', _), from_ = _R)))
-        #Generates:
-        #await(some(received(('2', m), from_ = _R)
+        K_IR = keygen('shared')
+        send(('1', encrypt(sign(K_IR, key = sk(self)), key = pk(R))), to = R)
+        #await(some(received(('2', _), from_ = _R))) #MessageAbstraction
+        #Generates
+        await(some(received(('2', m), from_ = _R)))
         #Equalities:
-        #m[0] = encrypt(s, key = k_IR)
-        #s = decrypt(m[0], key = k_IR)
-        output('DECRYPTED MESSAGE:', s)
+        #m[0] = encrypt(s, key = K_IR)
+        #s = decrypt(m[0], key = K_IR)
+        #output('DECRYPTED MESSAGE:', s)
+        output('DECRYPTED MESSAGE:', decrypt(m[0], key = K_IR))
 
 class RoleR (process):
     def setup():
@@ -42,18 +80,23 @@ class RoleR (process):
         if await(False): pass
         elif timeout(10): pass
 
-    def receive(msg=('1', _), from_ = I):
-        #Generates:
-        #receive(msg=('1', m), from_ I):
+    #def receive(msg=('1', _), from_ = I): MessageAbstraction
+    #Generates:
+    def receive(msg=('1', m), from_ = I):
         #Equalities:
-        #m[0] = encrypt(sign(k_IR, key = sk(I)), key = pk(self))
-        #k_IR = verify(decrypt(m[0], key = sk(self)), key = pk(I)))
-        send(('2', encrypt(s, key = k_IR)), to = I)
-
+        #m[0] = encrypt(sign(K_IR, key = sk(I)), key = pk(self))
+        #K_IR = verify(decrypt(m[0], key = sk(self)), key = pk(I)))
+        #send(('2', encrypt(s, key = K_IR)), to = I)
+        send(('2', encrypt(s, key = verify(decrypt(m[0], key = sk(self)), key = pk(I)))), to = I)
+        
 def main():
     skI, pkI = keygen('public')
     skR, pkR = keygen('public')
     R = new(RoleR, ())
     I = new(RoleI, (R,))
+    register_key('private', I, skI)
+    register_key('private', R, skR)
+    register_key('public', I, pkI)
+    register_key('public', R, pkR)
     start(I)
     start(R)
