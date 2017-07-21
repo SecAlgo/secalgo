@@ -41,7 +41,6 @@ class roleS (process):
 
         # send(('2', (sign((R, pk(R)), key = sk(self)),)), to = I)
         # Generates:
-        print('##########:', 2, flush = True)
         send(('2', (sign((m[1], pk(m[1])), key = sk(self)),)), to = m[0])
 
     # def receive(msg=('4', _), from_ = R):
@@ -52,7 +51,6 @@ class roleS (process):
 
         # send(('5', (sign((I, pk(I)), key = sk(self)),)), to = R)
         # Generates:
-        print('##########:', 5, flush = True)
         send(('5', (sign((m[1], pk(m[1])), key = sk(self)),)), to = m[0])
 
 class roleI (process):
@@ -60,7 +58,6 @@ class roleI (process):
         pass
 
     def run():
-        print('##########:', 1, flush = True)
         send(('1', (self, R)), to = S)
 
         #await(some(received(('2', _), from_ = _S)))
@@ -74,7 +71,6 @@ class roleI (process):
         nI = nonce()
         # send(('3', encrypt((nI, self), key = pk(R))), to = R)
         # Generates:
-        print('##########:', 3, flush = True)
         send(('3', (encrypt((nI, self), key = verify(m[0], key = pk(S))[1]),)), to = R)
 
         # await(some(received(('6', _), from_ = R)))
@@ -87,7 +83,6 @@ class roleI (process):
 
         # send(('7', encrypt(nR, key = pk(R))), to = R)
         # Generates:
-        print('##########:', 7, flush = True)
         send(('7', (encrypt(decrypt(m2[0], key = sk(self))[1],
                             key = verify(m[0], pk(S))[1]),)), to = R)
 
@@ -111,7 +106,6 @@ class roleR (process):
 
         # send(('4', (self, I)), to = S)
         # Generates:
-        print('##########:', 4, flush = True)
         send(('4', (self, decrypt(m[0], key = sk(self))[1])), to = S)
         
         # await(some(received(('5', _), from_ = S)))
@@ -125,7 +119,6 @@ class roleR (process):
         
         # send(('6', encrypt((nI, nR, R), key = pk(I))), to = I)
         # Generates:
-        print('##########:', 6, flush = True)
         send(('6', (encrypt((decrypt(m[0], key = sk(self))[0], nR, self),
                             key = verify(m2[0], key = pk(S))[1]),)), to = decrypt(m[0], key = sk(self))[1])
 
