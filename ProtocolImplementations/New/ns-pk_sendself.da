@@ -25,7 +25,7 @@ did fix for (6):
 """
 
 from sa.secalgo import *
-#configure(benchmark = True)
+configure(benchmark = True)
 
 class roleS (process):
     def setup(skS, client_keys):
@@ -33,48 +33,52 @@ class roleS (process):
 
     def run():
         if await(False): pass
-        elif timeout(10): pass
+        elif timeout(60): pass
 
-    def receive(msg=('msg1', (I, R)), from_ = I):
-        pkR = [x for (p, x) in client_keys if p == R].pop()
-        send(('msg2', sign((R, pkR), skS)), to = I)
-
-    def receive(msg=('msg4', (R, I)), from_ = IR):
-        pkI = [x for (p, x) in client_keys if p == I].pop()
-        send(('msg5', sign((I, pkI), skS)), to = R)
+    def receive(msg=(A, B), from_ = A):
+        pkB = [x for (p, x) in client_keys if p == B].pop()
+        send(('signed', sign((B, pkB), skS)), to = A)
 
 class roleI (process):
     def setup(skI, S, pkS, R):
-        pass
-    
+        self.I = self
+
     def run():
-        send(('msg1', (I, R)), to = S)
-        await(some(received(('msg2', sig_S), from_ = _S),
-                   has = (verify(sig_S, key = pkS)[0] == R)))
-        pk_R = verify(sig_S, key = pkS)[1]
+        send((I, R), to = S)
+        await(some(received(((_R, pkR), _S), from_ = self)))
         nI = nonce()
-        send(('msg3', encrypt((nI, I), key = pkR)), to = R)
-        await(some(received(('msg6', enc_RI), from_ = _R),
-                   has = (decrypt(enc_RI, key = skI)[0] == nI)))
-        nR = decrypt(enc_RI, key = skI)[1]
-        send(('msg7', encrypt(nR, pkR)), to = R)
+        send(('pub_enc', encrypt((nI, I), pkR)), to = R)
+        await(some(received(((_nI, nR, _R), _R), from_ = self)))
+        send(('pub_enc', encrypt(nR, pkR)), to = R)
         output('I authenticated R')
+
+    def receive(msg=('signed', m), from_ = S):
+        send((verify(m, pkS), S), to = self)
+
+    def receive(msg=('pub_enc', m), from_ = R):
+        send((decrypt(m, skI), R), to = self)
 
 class roleR (process):
     def setup(skR, S, pkS):
-                pass
+        self.R = self
 
     def run():
         if await(False): pass
         elif timeout(60): pass
 
-    def receive(msg=('msg3', enc_IR), from_ = self):
+    def receive(msg=((nI, I), I), from_ = self):
         send((R, I), to = S)
         await(some(received(((_I, pkI), _S), from_ = self)))
         nR = nonce()
         send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
         await(some(received((_nR, _I), from_ = self)))
         output('R authenticated I')
+
+    def receive(msg=('signed', m), from_ = S):
+        send((verify(m, pkS), S), to = self)
+
+    def receive(msg=('pub_enc', m), from_ = I):
+        send((decrypt(m, skR), I), to = self)
 
 def main():
     skS, pkS = keygen('public')
