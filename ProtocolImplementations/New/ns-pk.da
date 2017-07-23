@@ -48,16 +48,16 @@ class roleI (process):
         pass
     
     def run():
-        send(('msg1', (I, R)), to = S)
+        send(('msg1', (self, R)), to = S)
         await(some(received(('msg2', sig_S), from_ = _S),
                    has = (verify(sig_S, key = pkS)[0] == R)))
-        pk_R = verify(sig_S, key = pkS)[1]
+        pkR = verify(sig_S, key = pkS)[1]
         nI = nonce()
-        send(('msg3', encrypt((nI, I), key = pkR)), to = R)
+        send(('msg3', encrypt((nI, self), key = pkR)), to = R)
         await(some(received(('msg6', enc_RI), from_ = _R),
                    has = (decrypt(enc_RI, key = skI)[0] == nI)))
         nR = decrypt(enc_RI, key = skI)[1]
-        send(('msg7', encrypt(nR, pkR)), to = R)
+        send(('msg7', encrypt(nR, key = pkR)), to = R)
         output('I authenticated R')
 
 class roleR (process):
@@ -66,14 +66,19 @@ class roleR (process):
 
     def run():
         if await(False): pass
-        elif timeout(60): pass
+        elif timeout(10): pass
 
-    def receive(msg=('msg3', enc_IR), from_ = self):
-        send((R, I), to = S)
-        await(some(received(((_I, pkI), _S), from_ = self)))
+    def receive(msg=('msg3', enc_IR), from_ = I):
+        I == decrypt(enc_IR, key = skR)[1]
+        nI = decrypt(enc_IR, key = skR)[0]
+        send(('msg4', (self, I)), to = S)
+        await(some(received(('msg5', sig_S), from_ = _S),
+                   has = (verify(sig_S, key = pkS)[0] == I)))
+        pkI = verify(sig_S, key = pkS)[1]
         nR = nonce()
-        send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
-        await(some(received((_nR, _I), from_ = self)))
+        send(('msg6', encrypt((nI, nR, self), key = pkI)), to = I)
+        await(some(received(('msg7', enc_IR2), from_ = _I),
+                   has = (decrypt(enc_IR2, key = skR) == nR)))
         output('R authenticated I')
 
 def main():
