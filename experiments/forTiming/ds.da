@@ -19,7 +19,6 @@ Protocol Diagram:
 """
 import time, json, sys
 from sa.secalgo import *
-#configure(benchmark = True)
 
 class RoleI (process):
     def setup(skI, R, pkR, loops):
@@ -36,8 +35,6 @@ class RoleI (process):
         k = keygen('shared')
         send(('encrypt_sign', i, encrypt(sign(k, skI), pkR)), to = R)
         await(some(received((_i, m), from_ = R)))
-        output(i)
-        output(k)
         s = decrypt(m, k)
         output('DECRYPTED MESSAGE:', s)
         return i

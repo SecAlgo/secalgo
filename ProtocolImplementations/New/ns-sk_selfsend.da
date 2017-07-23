@@ -18,9 +18,9 @@ Protocol Diagram:
   (4) R -> I : enc(N_R, K_IR)
   (5) I -> R : enc(N_R - 1, K_IR)
 """
-import time, json, sys
 from sa.secalgo import *
-
+#configure(benchmark = True)
+    
 class RoleS (process):
     def setup(K_IS, K_RS):
         pass
@@ -35,26 +35,19 @@ class RoleS (process):
                 ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
 
 class RoleI (process):
-    def setup(S, K_IS, R, loops):
+    def setup(S, K_IS, R):
         self.I = self
         self.K_IR = None
 
     def run():
-        start_time = time.process_time()
-        for i in range(loops):
-            result = ns_sk(i)
-            await(result == i)
-        print(json.dumps(['ns-sk', 'RoleI', start_time, time.process_time(), loops]), flush = True)
-
-        def ns_sk(i):
-            N_I = nonce()
-            send((I, R, N_I), to = S)
-            await(some(received(((_N_I, K, _R, m), _S), from_ = self)))
-            K_IR = K
-            send(m, to = R)
-            await(some(received(((N_R), _R), from_ = self)))
-            send(('encI', encrypt(N_R - 1, K_IR)), to = R)
-            output('I - Key Exchange Complete')
+        N_I = nonce()
+        send((I, R, N_I), to = S)
+        await(some(received(((_N_I, K, _R, m), _S), from_ = self)))
+        K_IR = K
+        send(m, to = R)
+        await(some(received(((N_R), _R), from_ = self)))
+        send(('encI', encrypt(N_R - 1, K_IR)), to = R)
+        output('I - Key Exchange Complete')
 
     def receive(msg=('encS', m), from_ = S):
         send((decrypt(m, K_IS), S), to = self)
