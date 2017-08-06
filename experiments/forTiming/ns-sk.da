@@ -18,72 +18,55 @@ Protocol Diagram:
   (4) R -> I : enc(N_R, K_IR)
   (5) I -> R : enc(N_R - 1, K_IR)
 """
-import time, json, sys
 from sa.secalgo import *
-
+#configure(benchmark = True)
+    
 class RoleS (process):
     def setup(K_IS, K_RS):
         pass
 
     def run():
         if await(False): pass
-        elif timeout(60): pass
+        elif timeout(10): pass
 
-    def receive(msg=(I, R, N_I), from_ = I):
+    def receive(msg=('msg1', (I, R, N_I)), from_ = I):
         K_IR = keygen('shared')
-        send(('encS', encrypt((N_I, K_IR, R,
-                ('encS', encrypt((K_IR, I), K_RS))), K_IS)), to = I)
+        send(('msg2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)),
+                              key = K_IS)), to = I)
 
 class RoleI (process):
-    def setup(S, K_IS, R, loops):
-        self.I = self
-        self.K_IR = None
+    def setup(S, K_IS, R):
+        pass
 
     def run():
-        start_time = time.process_time()
-        for i in range(loops):
-            result = ns_sk(i)
-            await(result == i)
-        print(json.dumps(['ns-sk', 'RoleI', start_time, time.process_time(), loops]), flush = True)
-
-        def ns_sk(i):
-            N_I = nonce()
-            send((I, R, N_I), to = S)
-            await(some(received(((_N_I, K, _R, m), _S), from_ = self)))
-            K_IR = K
-            send(m, to = R)
-            await(some(received(((N_R), _R), from_ = self)))
-            send(('encI', encrypt(N_R - 1, K_IR)), to = R)
-            output('I - Key Exchange Complete')
-
-    def receive(msg=('encS', m), from_ = S):
-        send((decrypt(m, K_IS), S), to = self)
-        
-    def receive(msg=('encR', m), from_ = R):
-        send((decrypt(m, K_IR), R), to = self)
+        N_I = nonce()
+        send(('msg1', (self, R, N_I)), to = S)
+        await(some(received(('msg2', enc_IS), from_ = _S),
+                   has = ((decrypt(enc_IS, key = K_IS)[0] == N_I) and
+                          (decrypt(enc_IS, key = K_IS)[2] == R))))
+        _, K_IR, _, enc_RS = decrypt(enc_IS, key = K_IS)
+        send(('msg3', enc_RS), to = R)
+        await(some(received(('msg4', enc_RI), from_ = _R)))
+        N_R = decrypt(enc_RI, key = K_IR)
+        send(('msg5', encrypt((N_R - 1), key = K_IR)), to = R)
+        output('I - Key Exchange Complete')
 
 class RoleR (process):
     def setup(S, K_RS):
-        self.R = self
-        self.K_IR = None
-
+        pass
+    
     def run():
         if await(False): pass
-        elif timeout(60): pass
+        elif timeout(10): pass
 
-    def receive(msg=((K, I), _S), from_ = self):
-        K_IR = K
+    def receive(msg=('msg3', enc_RS), from_ = I):
+        I == decrypt(enc_RS, key = K_RS)[1]
+        K_IR = decrypt(enc_RS, key = K_RS)[0]
         N_R = nonce()
-        send(('encR', encrypt(N_R, K_IR)), to = I)
-        await(some(received(((N_R1), _I), from_ = self),
-                   has = N_R1 == N_R - 1))
+        send(('msg4', encrypt(N_R, key = K_IR)), to = I)
+        await(some(received(('msg5', enc_IR), from_ = _I),
+                   has = ((N_R - 1) == decrypt(enc_IR, key = K_IR))))
         output('R - Key Exchange Complete')
-
-    def receive(msg=('encS', m), from_ = I):
-        send((decrypt(m, K_RS), S), to = self)
-
-    def receive(msg=('encI', m), from_ = I):
-        send((decrypt(m, K_IR), I), to = self)
 
 def main():
     K_IS = keygen('shared')
