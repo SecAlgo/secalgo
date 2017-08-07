@@ -24,73 +24,93 @@ did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
 
+import time, json, sys
 from sa.secalgo import *
-#configure(benchmark = True)
 
 class roleS (process):
-    def setup(skS, client_keys):
-        pass
+    def setup(skS, client_keys, loops):
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg1', (I, R)), from_ = I):
+    def receive(msg=('msg1', i, (I, R)), from_ = I):
         pkR = [x for (p, x) in client_keys if p == R].pop()
-        send(('msg2', sign((R, pkR), skS)), to = I)
+        send(('msg2', i, sign((R, pkR), skS)), to = I)
 
-    def receive(msg=('msg4', (R, I)), from_ = IR):
+    def receive(msg=('msg4', i, (R, I)), from_ = IR):
         pkI = [x for (p, x) in client_keys if p == I].pop()
-        send(('msg5', sign((I, pkI), skS)), to = R)
+        send(('msg5', i, sign((I, pkI), skS)), to = R)
+        if i == (loops - 1):
+            print(json.dumps(['ns-pk', 'RoleS', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 class roleI (process):
-    def setup(skI, S, pkS, R):
+    def setup(skI, S, pkS, R, loops):
         pass
     
     def run():
-        send(('msg1', (self, R)), to = S)
-        await(some(received(('msg2', sig_S), from_ = _S),
+        start_time = time.process_time()
+        for i in range(loops):
+            result = ns_pk(i)
+            await(result == i)
+        print(json.dumps(['ns-pk', 'RoleI', start_time, time.process_time(), loops]), flush = True)
+
+
+    def ns_pk(i):
+        send(('msg1', i, (self, R)), to = S)
+        await(some(received(('msg2', _i, sig_S), from_ = _S),
                    has = (verify(sig_S, key = pkS)[0] == R)))
         pkR = verify(sig_S, key = pkS)[1]
         nI = nonce()
-        send(('msg3', encrypt((nI, self), key = pkR)), to = R)
-        await(some(received(('msg6', enc_RI), from_ = _R),
+        send(('msg3', i, encrypt((nI, self), key = pkR)), to = R)
+        await(some(received(('msg6', _i, enc_RI), from_ = _R),
                    has = (decrypt(enc_RI, key = skI)[0] == nI)))
         nR = decrypt(enc_RI, key = skI)[1]
-        send(('msg7', encrypt(nR, key = pkR)), to = R)
+        send(('msg7', i, encrypt(nR, key = pkR)), to = R)
         output('I authenticated R')
+        return i
 
 class roleR (process):
-    def setup(skR, S, pkS):
-                pass
+    def setup(skR, S, pkS, loops):
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg3', enc_IR), from_ = I):
+    def receive(msg=('msg3', i, enc_IR), from_ = I):
         I == decrypt(enc_IR, key = skR)[1]
         nI = decrypt(enc_IR, key = skR)[0]
-        send(('msg4', (self, I)), to = S)
-        await(some(received(('msg5', sig_S), from_ = _S),
+        send(('msg4', i, (self, I)), to = S)
+        await(some(received(('msg5', _i, sig_S), from_ = _S),
                    has = (verify(sig_S, key = pkS)[0] == I)))
         pkI = verify(sig_S, key = pkS)[1]
         nR = nonce()
-        send(('msg6', encrypt((nI, nR, self), key = pkI)), to = I)
-        await(some(received(('msg7', enc_IR2), from_ = _I),
+        send(('msg6', i, encrypt((nI, nR, self), key = pkI)), to = I)
+        await(some(received(('msg7', _i, enc_IR2), from_ = _I),
                    has = (decrypt(enc_IR2, key = skR) == nR)))
         output('R authenticated I')
+        if i == (loops - 1):
+            print(json.dumps(['ns-pk', 'RoleR', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     skS, pkS = keygen('public')
     skI, pkI = keygen('public')
     skR, pkR = keygen('public')
     I = new(roleI)
     R = new(roleR)
     S = new(roleS)
-    setup(S, (skS, [(I, pkI), (R, pkR)]))
-    setup(I, (skI, S, pkS, R))
-    setup(R, (skR, S, pkS))
+    setup(S, (skS, [(I, pkI), (R, pkR)], loops))
+    setup(I, (skI, S, pkS, R, loops))
+    setup(R, (skR, S, pkS, loops))
     start(S)
     start(R)
     start(I)

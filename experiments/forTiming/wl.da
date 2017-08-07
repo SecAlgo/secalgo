@@ -21,71 +21,91 @@ Protocol Diagram:
   (7) I -> R : enc(N_R, K_IR)
 """
 
+import time, json, sys
 from sa.secalgo import *
-#configure(benchmark = True)
 
 class RoleS (process):
-    def setup(K_IS, K_RS):
-        pass
+    def setup(K_IS, K_RS, loops):
+        self.start_time = 0
     
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg4', (enc_IS, enc_RS)), from_ = R):
+    def receive(msg=('msg4', i, (enc_IS, enc_RS)), from_ = R):
         I, R, N_I, N_R = decrypt(enc_IS, key = K_IS)
         if (I, R, N_I, N_R) == decrypt(enc_RS, key = K_RS):
             K_IR = keygen('shared')
-            send(('msg5', (encrypt((R, N_I, N_R, K_IR), key = K_IS),
+            send(('msg5', i, (encrypt((R, N_I, N_R, K_IR), key = K_IS),
                            encrypt((I, N_I, N_R, K_IR), key = K_RS))), to = R)
+            if i == (loops - 1):
+                print(json.dumps(['wl', 'RoleS', self.start_time, time.process_time(), loops]), flush = True)
+                exit()
 
 class RoleI (process):
-    def setup(S, K_IS, R):
+    def setup(S, K_IS, R, loops):
         self.K_IR = None
 
     def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = woo_lam(i)
+            await(result == i)
+        print(json.dumps(['wl', 'RoleI', start_time, time.process_time(), loops]), flush = True)
+
+    def woo_lam(i):
         N_I = nonce()
-        send(('msg1', (self, N_I)), to = R)
-        await(some(received(('msg2', (_R, N_R)), from_ = _R)))
-        send(('msg3', encrypt((self, R, N_I, N_R), key = K_IS)), to = R)
-        await(some(received(('msg6', (enc_SI, enc_RI)), from_ = _R),
+        send(('msg1', i, (self, N_I)), to = R)
+        await(some(received(('msg2', _i, (_R, N_R)), from_ = _R)))
+        send(('msg3', i, encrypt((self, R, N_I, N_R), key = K_IS)), to = R)
+        await(some(received(('msg6', _i, (enc_SI, enc_RI)), from_ = _R),
                    has = ((decrypt(enc_SI, key = K_IS)[0] == R) and
                           (decrypt(enc_SI, key = K_IS)[1] == N_I) and
                           (decrypt(enc_SI, key = K_IS)[2] == N_R))))
         K_IR = decrypt(enc_SI, key = K_IS)[3]
         if (N_I, N_R) == decrypt(enc_RI, key = K_IR):
-            send(('msg7', encrypt(N_R, key = K_IR)), to = R)
+            send(('msg7', i, encrypt(N_R, key = K_IR)), to = R)
             output('I - Key Exchange Complete')
+        return i
 
 class RoleR (process):
-    def setup(S, K_RS):
+    def setup(S, K_RS, loops):
         self.K_IR = None
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg1', (I, N_I)), from_ = _I):
+    def receive(msg=('msg1', i, (I, N_I)), from_ = _I):
         N_R = nonce()
-        send(('msg2', (self, N_R)), to = I)
-        await(some(received(('msg3', enc_IS), from_ = _I)))
-        send(('msg4', (enc_IS, encrypt((I, self, N_I, N_R), key = K_RS))), to = S)
-        await(some(received(('msg5', (enc_SI, enc_SR)), from_ = _S),
+        send(('msg2', i, (self, N_R)), to = I)
+        await(some(received(('msg3', _i, enc_IS), from_ = _I)))
+        send(('msg4', i, (enc_IS, encrypt((I, self, N_I, N_R), key = K_RS))), to = S)
+        await(some(received(('msg5', _i, (enc_SI, enc_SR)), from_ = _S),
                    has = ((decrypt(enc_SR, key = K_RS)[0] == I) and
                           (decrypt(enc_SR, key = K_RS)[1] == N_I) and
                           (decrypt(enc_SR, key = K_RS)[2] == N_R))))
         K_IR = decrypt(enc_SR, key = K_RS)[3]
-        send(('msg6', (enc_SI, encrypt((N_I, N_R), key = K_IR))), to = I)
-        await(some(received(('msg7', enc_IR), from_ = _I),
+        send(('msg6', i, (enc_SI, encrypt((N_I, N_R), key = K_IR))), to = I)
+        await(some(received(('msg7', _i, enc_IR), from_ = _I),
                    has = (decrypt(enc_IR, key = K_IR) == N_R)))
         output('R - Key Exchange Complete')
+        if i == (loops - 1):
+            print(json.dumps(['wl', 'RoleR', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     K_IS = keygen('shared')
     K_RS = keygen('shared')
-    S = new(RoleS, (K_IS, K_RS))
-    R = new(RoleR, (S, K_RS))
-    I = new(RoleI, (S, K_IS, R))
+    S = new(RoleS, (K_IS, K_RS, loops))
+    R = new(RoleR, (S, K_RS, loops))
+    I = new(RoleI, (S, K_IS, R, loops))
     start(S)
     start(R)
     start(I)

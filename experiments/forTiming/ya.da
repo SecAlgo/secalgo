@@ -22,63 +22,84 @@ Protocol Diagram:
   (4) A -> B : enc((A, K_AB), K_BS), enc(N_B, K_AB)
 """
 
+import time, json, sys
 from sa.secalgo import *
-#configure(benchmark = True)
 
 class RoleS (process):
-    def setup(A, B, K_AS, K_BS):
-        pass
+    def setup(A, B, K_AS, K_BS, loops):
+        self.start_time = 0
         
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg2', (_B, enc_BS)), from_ = _B):
+    def receive(msg=('msg2', i, (_B, enc_BS)), from_ = _B):
         if A == decrypt(enc_BS, key = K_BS)[0]:
             _, N_A, N_B = decrypt(enc_BS, key = K_BS)
             K_AB = keygen('shared')
-            send(('msg3', (encrypt((B, K_AB, N_A, N_B), key = K_AS),
+            send(('msg3', i, (encrypt((B, K_AB, N_A, N_B), key = K_AS),
                            encrypt((A, K_AB), key = K_BS))), to = A)
-            
+            if i == (loops - 1):
+                print(json.dumps(['ya', 'RoleS', self.start_time, time.process_time(), loops]), flush = True)
+                exit()
+                
 class RoleA (process):
-    def setup(B, S, K_AS):
+    def setup(B, S, K_AS, loops):
         pass
     
     def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = yahalom(i)
+            await(result == i)
+        print(json.dumps(['ya', 'RoleA', start_time, time.process_time(), loops]), flush = True)
+        
+
+    def yahalom(i):
         N_A = nonce()
-        send(('msg1', (self, N_A)), to = B)
-        await(some(received(('msg3', (enc_SA, enc_SB)), from_ = _S),
+        send(('msg1', i, (self, N_A)), to = B)
+        await(some(received(('msg3', _i, (enc_SA, enc_SB)), from_ = _S),
                    has = ((decrypt(enc_SA, key = K_AS)[0] == B) and
                           (decrypt(enc_SA, key = K_AS)[2] == N_A))))
         _, K_AB, _, N_B = decrypt(enc_SA, key = K_AS)
-        send(('msg4', (enc_SB, encrypt(N_B, key = K_AB))), to = B)
-        output('A - Key Exchange Complete')
+        send(('msg4', i, (enc_SB, encrypt(N_B, key = K_AB))), to = B)
+        #output('A - Key Exchange Complete')
+        return i
 
 class RoleB (process):
-    def setup(S, K_BS):
-        pass
+    def setup(S, K_BS, loops):
+        self.start_time = 0
     
     def run():
-        if await(False):  pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False):  pass
+        #elif timeout(10): pass
 
-    def receive(msg=('msg1', (A, N_A)), from_ = A):
+    def receive(msg=('msg1', i, (A, N_A)), from_ = A):
         N_B = nonce()
-        send(('msg2', (self, encrypt((A, N_A, N_B), key = K_BS))), to = S)
-        await(some(received(('msg4', (enc_SB, enc_AB)), from_ = _A),
+        send(('msg2', i, (self, encrypt((A, N_A, N_B), key = K_BS))), to = S)
+        await(some(received(('msg4', _i, (enc_SB, enc_AB)), from_ = _A),
                    has = (decrypt(enc_SB, key = K_BS)[0] == A)))
         K_AB = decrypt(enc_SB, key = K_BS)[1]
         if decrypt(enc_AB, key = K_AB) == N_B:
-            output('B - Key Exchange Complete')
+            pass
+            #output('B - Key Exchange Complete')
+        if i == (loops - 1):
+            print(json.dumps(['ya', 'RoleB', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 def main():
+    loops = int(sys.argv[1]) if len(sys.argv) else 1000
     K_AS = keygen('shared')
     K_BS = keygen('shared')
     B = new(RoleB)
     A = new(RoleA)
-    S = new(RoleS, (A, B, K_AS, K_BS))
-    setup(A, (B, S, K_AS))
-    setup(B, (S, K_BS))
+    S = new(RoleS, (A, B, K_AS, K_BS, loops))
+    setup(A, (B, S, K_AS, loops))
+    setup(B, (S, K_BS, loops))
     start(S)
     start(B)
     start(A)

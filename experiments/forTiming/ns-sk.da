@@ -37,6 +37,7 @@ class RoleS (process):
                               key = K_IS)), to = I)
         if i == (loops - 1):
             print(json.dumps(['ns-sk', 'RoleS', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 class RoleI (process):
     def setup(S, K_IS, R, loops):
@@ -49,7 +50,7 @@ class RoleI (process):
             await(result == i)
         print(json.dumps(['ns-sk', 'RoleI', start_time, time.process_time(), loops]), flush = True)
 
-    def ns_sk(i)
+    def ns_sk(i):
         N_I = nonce()
         send(('msg1', i, (self, R, N_I)), to = S)
         await(some(received(('msg2', _i, enc_IS), from_ = _S),
@@ -83,11 +84,11 @@ class RoleR (process):
         output('R - Key Exchange Complete')
         if i == (loops - 1):
             print(json.dumps(['ns-sk', 'RoleR', self.start_time, time.process_time(), loops]), flush = True)
-        
+            exit()
         
 
 def main():
-    loops = int(sys.argv[1]), len(sys.argv) > 1 else 1000
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     K_IS = keygen('shared')
     K_RS = keygen('shared')
     S = new(RoleS, (K_IS, K_RS, loops))
