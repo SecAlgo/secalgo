@@ -58,11 +58,10 @@
 # successfully. The TLS peers are now free to share protected application
 # data.
 
-import time, sys, pickle
+import time, sys, pickle, json
 from Crypto.Hash import SHA256
 from sa.secalgo import *
 configure(verify_returns = 'bool')
-configure(benchmark = True)
 
 # Protocol version number for SSL/TLS
 PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
@@ -219,13 +218,8 @@ class Connection_State():
 
 # class
 class TLS_Peer(process):
-    def setup(ce, peer, secret_key, public_key, certificate_list):
-        self.max_hs_id = 0
-        self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
-        self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
-        self.supported_compression_methods = (COMP_NULL,)
 
-        # SecurityParameters defined on p. 17 of RFC 5246
+    def reset_security_parameters_and_state(ce):
         self.current_rsp = Security_Parameters(ce)
         self.current_wsp = Security_Parameters(ce)
         self.pending_rsp = Security_Parameters(ce)
@@ -234,7 +228,17 @@ class TLS_Peer(process):
         self.current_read_state = Connection_State()
         self.current_write_state = Connection_State()
         self.pending_read_state = Connection_State()
-        self.pending_write_state = Connection_State()        
+        self.pending_write_state = Connection_State()
+    
+    def setup(ce, peer, secret_key, public_key, certificate_list, loops):
+        self.start_time = 0
+        self.max_hs_id = 0
+        self.supported_tls_versions = (PROTOCOL_VERSION_1_2,)
+        self.supported_cipher_suites = (TLS_RSA_WITH_AES_256_CBC_SHA256,)
+        self.supported_compression_methods = (COMP_NULL,)
+
+        # SecurityParameters defined on p. 17 of RFC 5246
+        reset_security_parameters_and_state(ce)
 
     def record_wrapper(content_type, tls_message):
         version = PROTOCOL_VERSION_1_2
@@ -441,8 +445,8 @@ class TLS_Peer(process):
             pending_read_state.cipher_state = [keygen('shared', key_mat = third_block)]
             pending_write_state.cipher_state = [keygen('shared', key_mat = fourth_block)]
     
-    def initiate_handshake(server):
-        output('CLIENT - begin Handshake')
+    def initiate_handshake(server, i):
+        output('CLIENT - begin Handshake', '(', i, ')')
         # handshake_id's are not a part of the protocol. I added them to make
         # writing correct awaits easier. These are the same sorts of session
         # id's we have used elsewhere--a tuple of a process id and a counter
@@ -474,11 +478,11 @@ class TLS_Peer(process):
         handshake_ch = (CLIENT_HELLO, None, body_ch)
         handshake_messages.append(handshake_ch)
         msg_counter += 1
-        send((record_wrapper(TYPE_HANDSHAKE, handshake_ch), handshake_id,
+        send((i, record_wrapper(TYPE_HANDSHAKE, handshake_ch), handshake_id,
               msg_counter), to = server)
 
         # Client will await a ServerHello response
-        await(some(received((msg, _handshake_id, counter), from_ = server),
+        await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
                           counter > msg_counter and
                           SERVER_HELLO == record_unwrapper(msg)[0])))
@@ -504,7 +508,7 @@ class TLS_Peer(process):
         # authentication, then the server must send a Certificate message
         # CERTIFICATE = P{certificate_list}
         if key_exchange_alg not in {KE_NULL, KE_DH_ANON}:
-            await(some(received((msg, _handshake_id, counter), from_ = server),
+            await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                        has = (msg[0] == TYPE_HANDSHAKE and
                               counter > msg_counter and
                               CERTIFICATE  == record_unwrapper(msg)[0])))
@@ -522,10 +526,10 @@ class TLS_Peer(process):
             # where T is some trusted authority
             (cert_list,) = body_cert
             verdict = True
-            for i, cert in enumerate(cert_list):
-                if i < (len(cert_list) - 1):
+            for i2, cert in enumerate(cert_list):
+                if i2 < (len(cert_list) - 1):
                     if not verify(((cert[0], cert[1]), cert[2]),
-                                  key = cert_list[i + 1][1]):
+                                  key = cert_list[i2 + 1][1]):
                         verdict = False
                 else:
                     # final (root) certificate is self-signed
@@ -542,7 +546,7 @@ class TLS_Peer(process):
         # client must await a SERVER_KEY_EXCHANGE message from the server
         # Our current options for key exchange do not require this message.
         if key_exchange_alg not in {KE_NULL, KE_RSA, KE_DH_DSS, KE_DH_RSA}:
-            await(some(received((msg, _handshake_id, counter), from_ = server),
+            await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                        has = (msg[0] == TYPE_HANDSHAKE and
                               counter > msg_counter and
                               (SERVER_KEY_EXCHANGE ==
@@ -557,7 +561,7 @@ class TLS_Peer(process):
         # construct an await for it.
         # Going to ignore this message for now.
         if key_exchange_alg not in {KE_NULL, KE_DH_ANON}:
-            if await(some(received((msg, _handshake_id, counter), from_ = server),
+            if await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                           has = (msg[0] == TYPE_HANDSHAKE and
                                  counter > msg_counter and
                                  (CERTIFICATE_REQUEST ==
@@ -565,7 +569,7 @@ class TLS_Peer(process):
                 msg_counter = counter
                 # ...Handle CertificateRequest
                 pass
-            elif some(received((msg, _handshake_id, counter), from_ = server),
+            elif some(received((_i, msg, _handshake_id, counter), from_ = server),
                       has = (msg[0] == TYPE_HANDSHAKE and
                              counter > msg_counter and
                              SERVER_HELLO_DONE == record_unwrapper(msg)[0])):
@@ -575,7 +579,7 @@ class TLS_Peer(process):
         
         # Client end of TLS Handshake will now wait for a ServerHelloDone
         # ServerHelloDone = Struct{}
-        await(some(received((msg, _handshake_id, counter), from_ = server),
+        await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
                           counter > msg_counter and
                           SERVER_HELLO_DONE == record_unwrapper(msg)[0])))
@@ -609,7 +613,7 @@ class TLS_Peer(process):
         handshake_cke = (CLIENT_KEY_EXCHANGE, None, body_cke)
         handshake_messages.append(handshake_cke)
         msg_counter += 1
-        send((record_wrapper(TYPE_HANDSHAKE, handshake_cke), handshake_id,
+        send((i, record_wrapper(TYPE_HANDSHAKE, handshake_cke), handshake_id,
               msg_counter), to = server)
 
         # Once the premaster secret is generated by the client, it can then use
@@ -640,7 +644,7 @@ class TLS_Peer(process):
         # where type is always equal to 1
         handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
         msg_counter += 1
-        send((record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
+        send((i, record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
               handshake_id, msg_counter), to = server)
         
         # Immediately after sending this message, the sender must replace
@@ -670,13 +674,13 @@ class TLS_Peer(process):
         handshake_messages.append(handshake_cfin)
         shm += pickle.dumps(handshake_cfin)
         msg_counter += 1
-        send((record_wrapper(TYPE_HANDSHAKE, handshake_cfin), handshake_id,
+        send((i, record_wrapper(TYPE_HANDSHAKE, handshake_cfin), handshake_id,
               msg_counter), to = server)
         
         # The server will also have sent, or will send, a ChangeCipherSpec
         # message causing the client to replace its current read session
         # state with its pending read session state.
-        await(some(received((msg, _handshake_id, counter), from_ = server),
+        await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                    has = (msg[0] == TYPE_CHANGE_CIPHER_SPEC and
                           counter > msg_counter)))
         msg_counter = counter
@@ -685,7 +689,7 @@ class TLS_Peer(process):
         # are not actually Handshake messages.
         
         # Will now await the Finished message from the server.
-        await(some(received((msg, _handshake_id, counter), from_ = server),
+        await(some(received((_i, msg, _handshake_id, counter), from_ = server),
                    has = (msg[0] == TYPE_HANDSHAKE and
                           counter > msg_counter and
                           FINISHED == record_unwrapper(msg)[0])))
@@ -704,31 +708,32 @@ class TLS_Peer(process):
             return
 
         # Handshake complete
-        output('CLIENT - Handshake complete')
+        output('CLIENT - Handshake complete', '(', i, ')')
+        reset_security_parameters_and_state(self.ce)
+        return i
         
     # Receives Handshake type TLS messages, but the messages are still enclosed
     # within the Record layer structure
-    def receive(msg=((22, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
+    def receive(msg=(i, (22, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
                      handshake_id, counter), from_ = client):
         msg_counter = counter
         handshake_messages = []
         handshake_msg = record_unwrapper((TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
                                           None, cipher_fragment))
-
         # Handshake messages must be recieved in the proper order. Handling of
         # other types of Handshake messages are handled further into the
         # receive handler. So only receipt of the ClientHello will continue
         # from here.
         if CLIENT_HELLO != handshake_msg[0]:
             return
-        output('SEVER - begin Handshake')
+        output('SEVER - begin Handshake', '(', i, ')')
 
         # Will first set the connection end in the security parameters to
         # indicate that this peer is acting as the server
-        current_rsp.connection_end = CONN_SERVER
-        current_wsp.connection_end = CONN_SERVER
-        pending_rsp.connection_end = CONN_SERVER
-        pending_wsp.connection_end = CONN_SERVER
+        #current_rsp.connection_end = CONN_SERVER
+        #current_wsp.connection_end = CONN_SERVER
+        #pending_rsp.connection_end = CONN_SERVER
+        #pending_wsp.connection_end = CONN_SERVER
         
         # Unpack the Client Hello
         # Client_Hello = (client_version, random, session_id, cipher_suites,
@@ -787,7 +792,7 @@ class TLS_Peer(process):
             handshake_sh = (SERVER_HELLO, None, body_sh)
             handshake_messages.append(handshake_sh)
             msg_counter += 1
-            send((record_wrapper(TYPE_HANDSHAKE, handshake_sh), handshake_id,
+            send((i, record_wrapper(TYPE_HANDSHAKE, handshake_sh), handshake_id,
                   msg_counter), to = client)
 
             # Now the server can update the security parameters to reflect the
@@ -809,9 +814,9 @@ class TLS_Peer(process):
             handshake_sc = (CERTIFICATE, None, body_sc)
             handshake_messages.append(handshake_sc)
             msg_counter += 1
-            send((record_wrapper(TYPE_HANDSHAKE, handshake_sc), handshake_id,
+            send((i, record_wrapper(TYPE_HANDSHAKE, handshake_sc), handshake_id,
                   msg_counter), to = client)
-            
+
             # The server will send as the third Handshake message a
             # ServerKeyExchange message, if it is required. Again this is
             # determined by the key exchange method determined by the agreed-
@@ -840,9 +845,9 @@ class TLS_Peer(process):
             handshake_shd = (SERVER_HELLO_DONE, None, body_shd)
             handshake_messages.append(handshake_shd)
             msg_counter += 1
-            send((record_wrapper(TYPE_HANDSHAKE, handshake_shd), handshake_id,
+            send((i, record_wrapper(TYPE_HANDSHAKE, handshake_shd), handshake_id,
                   msg_counter), to = client)
-
+            
             # The server now awaits for several messages from the client.
             # The first would be the ClientCertificate message, but only if the
             # server had requested that the client send a certificate to
@@ -854,7 +859,7 @@ class TLS_Peer(process):
             # encrypted with the server's public key. The pre-master secret will
             # be used to establish a shared master secret from which all
             # encryption and authentication keys will be derived.
-            await(some(received((msg, _handshake_id, counter), from_ = client),
+            await(some(received((_i, msg, _handshake_id, counter), from_ = client),
                        has = (msg[0] == TYPE_HANDSHAKE and
                               counter > msg_counter and
                               (CLIENT_KEY_EXCHANGE ==
@@ -889,7 +894,7 @@ class TLS_Peer(process):
             # The client will send a ChangeCipherSpec message causing the
             # client to replace its current read session state with its pending
             # read session state.
-            await(some(received((msg, _handshake_id, counter), from_ = client),
+            await(some(received((_i, msg, _handshake_id, counter), from_ = client),
                    has = (msg[0] == TYPE_CHANGE_CIPHER_SPEC and
                           counter > msg_counter)))
             msg_counter = counter
@@ -900,7 +905,7 @@ class TLS_Peer(process):
 
             # The server will now await the Finished message from the
             # client.
-            await(some(received((msg, _handshake_id, counter), from_ = client),
+            await(some(received((_i, msg, _handshake_id, counter), from_ = client),
                        has = (msg[0] == TYPE_HANDSHAKE and
                               counter > msg_counter and
                               FINISHED == record_unwrapper(msg)[0])))
@@ -936,7 +941,7 @@ class TLS_Peer(process):
             # where type is always equal to 1
             handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
             msg_counter += 1
-            send((record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
+            send((i, record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs),
                   handshake_id, msg_counter), to = client)
 
             # Immediately after sending this message, the sender must replace
@@ -963,13 +968,18 @@ class TLS_Peer(process):
             finished = (verification_data,)
             handshake_sfin = (FINISHED, None, finished)
             msg_counter += 1
-            send((record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
+            send((i, record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
                   handshake_id, msg_counter), to = client)
-            output('SERVER - Handshake Complete')
+            output('SERVER - Handshake Complete', '(', i, ')')
+            reset_security_parameters_and_state(self.ce)
+            if i == (loops - 1):
+                print(json.dumps(['tls1_2', 'role_TLSPeer (S)', start_time,
+                                  time.process_time(), loops]), flush = True)
+                exit()
 
     # This is the handler for ChangeCipherSpec messages.
     # ChangeCipherSpec = Struct{type}
-    def receive(msg=((20, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
+    def receive(msg=(i, (20, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
                      handshake_id, msg_counter)):
         output('CHANGE_CIPHER_SPEC!!!!!!!!!!!!!!!!!!!')
         current_rsp = pending_rsp
@@ -979,12 +989,19 @@ class TLS_Peer(process):
 
     def run():
         if peer != None:
-            initiate_handshake(peer)
+            self.start_time = time.process_time()
+            for i in range(loops):
+                result = initiate_handshake(peer, i)
+                await(result == i)
+            print(json.dumps(['tls1_2', 'role_TLSPeer (C)', start_time, time.process_time(), loops]), flush = True)
         else:
-            if await(False): pass
-            elif timeout(10): pass
+            self.start_time = time.process_time()
+            await(False)
+            #if await(False): pass
+            #elif timeout(10): pass
         
 def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     config(channel = 'reliable')
     tls_server = new(TLS_Peer)
     tls_client = new(TLS_Peer)
@@ -996,7 +1013,7 @@ def main():
                                               key = sk_root))
     certificate_list = (server_certificate, root_certificate)
     setup(tls_server, (CONN_SERVER, None, sk_server, pk_server,
-                       certificate_list))
-    setup(tls_client, (CONN_CLIENT, tls_server, None, None, None))
+                       certificate_list, loops))
+    setup(tls_client, (CONN_CLIENT, tls_server, None, None, None, loops))
     start(tls_server)
     start(tls_client)
