@@ -1,3 +1,4 @@
+
 """
 Kerberos Authentication Protocol v5 in DistAlgo
 Written by Christopher Kane
@@ -26,9 +27,8 @@ S  = Application Server
 
 """
 
-import sys, time, random
+import sys, time, random, json
 from sa.secalgo import *
-configure(benchmark = True)
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_TKT_DURATION = 3600 #one hour
@@ -38,7 +38,7 @@ KRB_AP_REQ_TYPE = 14 #msg-type value for krb_ap_req messages
 #authentication server
 class Role_AuthServer(process):
     #give citations to specification
-    def setup(clients, servers, TGS, client_keys, server_keys, key_TGS):
+    def setup(clients, servers, TGS, client_keys, server_keys, key_TGS, loops):
         self.supported_etypes = {17, 18} #cite and give name for constant
         self.max_tgt_duration = DEFAULT_TGT_DURATION
         self.skew = DEFAULT_SKEW
@@ -48,12 +48,15 @@ class Role_AuthServer(process):
         self.per_server_lifetimes = dict()
         for s in servers:
             per_server_lifetimes[s] = DEFAULT_TGT_DURATION
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('krb_as_req', pvno, msg_type, padata,
+    def receive(msg=('krb_as_req', i, pvno, msg_type, padata,
                      req_body), from_ = C):
         #unpack req_body
         (kdc_options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
@@ -127,24 +130,31 @@ class Role_AuthServer(process):
         
         #Now send reply
         #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
-        output('AS - Sent TGT to client,', cname)
-        send(('krb_as_rep', 5, 11, [], 'TEST', cname, new_tgt,
+        #output('AS - Sent TGT to client,', cname)
+        send(('krb_as_rep', i, 5, 11, [], 'TEST', cname, new_tgt,
               encrypt(as_rep_enc_part, client_keys[cname])), to = C)
-            
+        if i == (loops - 1):            
+            print(json.dumps(['kerberos5', 'roleAuthServer', self.start_time,
+                              time.process_time(), loops]), flush = True)
+            exit()
+
 class Role_TGS(process):
-    def setup(servers, AS, key_AS_TGS, server_keys):
+    def setup(servers, AS, key_AS_TGS, server_keys, loops):
         self.supported_etypes = {17, 18}
         self.skew = DEFAULT_SKEW
         self.max_tkt_duration = DEFAULT_TKT_DURATION
         self.per_server_lifetimes = dict()
         for s in server_keys:
             per_server_lifetimes[s] = DEFAULT_TKT_DURATION
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
-    def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
+    def receive(msg=('krb_tgs_req', i, 5, 12, padata, req_body), from_ = C):
         #First task is to retrieve and decrypt the ticket contained in the
         #authentication header (krb_ap_req) inside the padata field.
         #Need to figure out which key to use to decrypt ticket.
@@ -204,7 +214,7 @@ class Role_TGS(process):
             return
 
         #TGS has now authenticated identity of client
-        output('TGS - Authenticated client:', au_cname)
+        #output('TGS - Authenticated client:', au_cname)
 
         #Now that the client's identity has been authenticated, its request for
         #credentials for an application server can now be processes.
@@ -274,21 +284,27 @@ class Role_TGS(process):
             
         #Now send reply
         #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
-        output('TGS - Sent Ticket for server', sname, 'to client,', C) 
-        send(('krb_tgs_rep', 5, 13, [], 'TEST', tgt_cname, new_ticket,
-              encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)        
+        #output('TGS - Sent Ticket for server', sname, 'to client,', C) 
+        send(('krb_tgs_rep', i, 5, 13, [], 'TEST', tgt_cname, new_ticket,
+              encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)
+        if i == (loops - 1):
+            print(json.dumps(['kerberos5', 'roleTGS', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
         
 class Role_AppServer(process):
-    def setup(AS, TGS, key_S_AS, key_S_TGS):
+    def setup(AS, TGS, key_S_AS, key_S_TGS, loops):
         self.S = self
         self.skew = DEFAULT_SKEW
+        self.start_time = 0
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        self.start_time = time.process_time()
+        await(False)
+        #if await(False): pass
+        #elif timeout(10): pass
 
     #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
-    def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator),
+    def receive(msg=('krb_ap_req', i, 5, 14, ap-options, ticket, authenticator),
                 from_ = C):
         #message type check accomplished through pattern matach (but this may
         #not be correct, since a wrong msg-type should generate an error msg.
@@ -349,13 +365,24 @@ class Role_AppServer(process):
             return
 
         #S has now authenticated identity of client
-        output('Server:', S, '- Authenticated client:', au_cname)
+        output('Server:', S, '- Authenticated client:', au_cname, '(', i, ')')
+        if i == (loops - 1):
+            print(json.dumps(['kerberos5', 'roleAppServer', self.start_time,
+                              time.process_time(), loops]), flush = True)
+            exit()
         
 class Role_C(process):
-    def setup(realm, servers, AS, TGS, key_C_AS):
+    def setup(realm, servers, AS, TGS, key_C_AS, loops):
         self.C = self
 
     def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = krbv5(i)
+            await(result == i)
+        print(json.dumps(['kerberos5', 'roleC', start_time, time.process_time(), loops]), flush = True)
+
+    def krbv5(i):
         #select an application server to access
         S = random.choice(tuple(servers))
         #generate nonce
@@ -368,15 +395,15 @@ class Role_C(process):
         #etype 17 = aes128
         as_req_body = [dict(), C, 'TEST', S, 0, time.time() + (5 * 3600), 0,
                        nonce_C_AS, [18, 17], [], [], []]
-        output('Client - Sent request to AS for credentials for server,', S)
-        send(('krb_as_req', 5, 10, [], as_req_body), to = AS)
+        output('Client - Sent request to AS for credentials for server,', S, '(', i, ')')
+        send(('krb_as_req', i, 5, 10, [], as_req_body), to = AS)
 
         #await KRB_AS_REP containing TGT and session key
         #check of the crealm and cname fields done through pattern match in the
         #await statement
         #This await condition is not correct; need to figure out the correct
         #behavior, and then compose the right await condition
-        await(some(received(('krb_as_rep', 5, 11, padata, 'TEST', _C, tgt,
+        await(some(received(('krb_as_rep', _i, 5, 11, padata, 'TEST', _C, tgt,
                              enc_part), from_= AS)))
 
         #decrypt the enc-part of the response
@@ -391,8 +418,9 @@ class Role_C(process):
                 #check host address field (caddr), if used
                 #MAY check the last-req and key_expiration fields to recommend
                 #client change password
-                output('Client - Acquired TGT from AS')
+                #output('Client - Acquired TGT from AS')
                 #output(decrypt(enc_part, key_C_AS))
+                pass
         else:
             key_C_TGS = None
             tgt = None
@@ -422,15 +450,15 @@ class Role_C(process):
 
             #Third, send KRB_TGS_REQ
             #KRB_TGS_REQ = [pvno, msg-type, padata, req-body]
-            output('Client - Sent TGT and request to TGS for credentials',
-                   'for server,', S)
-            send(('krb_tgs_req',5, 12, [tgs_krb_ap_req], tgs_req_body),
+            #output('Client - Sent TGT and request to TGS for credentials',
+            #       'for server,', S)
+            send(('krb_tgs_req', i, 5, 12, [tgs_krb_ap_req], tgs_req_body),
                  to = TGS)
 
             #await KRB_TGS_REP containing ticket and session key for server
             #KRB_TGS_REP = (pvno, msg-type, padata*, crealm, cname, ticket,
             #               enc-part)
-            await(some(received(('krb_tgs_rep', 5, 13, tgs_padata, 'TEST', _C,
+            await(some(received(('krb_tgs_rep', _i, 5, 13, tgs_padata, 'TEST', _C,
                                  ticket, tgs_enc_part), from_ = TGS)))
             
             #decrypt the enc-part of the response
@@ -446,8 +474,9 @@ class Role_C(process):
                     #check host address field (caddr), if used
                     #MAY check the last-req and key_expiration fields to
                     #recommend client change password
-                    output('Client - Acquired Ticket from TGS')
+                    #output('Client - Acquired Ticket from TGS')
                     #output(decrypt(tgs_enc_part, key_C_TGS))
+                    pass
             else:
                 key_C_S = None
                 ticket = None
@@ -461,13 +490,15 @@ class Role_C(process):
                                 None, []]
             #Next, build and send the KRB_AP_REQ
             #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
-            send(('krb_ap_req', 5, 14, dict(), ticket,
+            send(('krb_ap_req', i, 5, 14, dict(), ticket,
                   encrypt(ap_authenticator, key_C_S)), to = S)
-            output('Client - Sent authentication request to server,', S)
+            #output('Client - Sent authentication request to server,', S)
+        return i
         
 def main():
-    num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    num_clients = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+    num_servers = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     C = new(Role_C, num = num_clients)
     S = new(Role_AppServer, num = num_servers)
     TGS = new(Role_TGS)
@@ -475,7 +506,7 @@ def main():
     client_keys = dict()
     for client in C:
         key_C_AS = keygen('shared')
-        setup(client, ('TEST', S, AS, TGS, key_C_AS))
+        setup(client, ('TEST', S, AS, TGS, key_C_AS, loops))
         client_keys[client] = key_C_AS
     as_server_keys = dict()
     tgs_server_keys = dict()
@@ -484,10 +515,10 @@ def main():
         as_server_keys[server] = key_S_AS
         key_S_TGS = keygen('shared')
         tgs_server_keys[server] = key_S_TGS
-        setup(server, (AS, TGS, key_S_AS, key_S_TGS))
+        setup(server, (AS, TGS, key_S_AS, key_S_TGS, loops))
     key_AS_TGS = keygen('shared')
-    setup(AS, (C, S, TGS, client_keys, as_server_keys, key_AS_TGS))
-    setup(TGS, (S, AS, key_AS_TGS, tgs_server_keys))
+    setup(AS, (C, S, TGS, client_keys, as_server_keys, key_AS_TGS, loops))
+    setup(TGS, (S, AS, key_AS_TGS, tgs_server_keys, loops))
     start(AS)
     start(TGS)
     start(S)
