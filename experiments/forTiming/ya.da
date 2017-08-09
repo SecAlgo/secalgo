@@ -92,7 +92,7 @@ class RoleB (process):
             exit()
 
 def main():
-    loops = int(sys.argv[1]) if len(sys.argv) else 1000
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     K_AS = keygen('shared')
     K_BS = keygen('shared')
     B = new(RoleB)
