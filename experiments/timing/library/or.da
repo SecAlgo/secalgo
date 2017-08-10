@@ -1,0 +1,80 @@
+"""
+Otway-Rees Key Distribution Protocol
+Written by Christopher Kane
+
+Original Source:
+Dave Otway and Owen Rees, "Efficient and Timely Mutual Authentication", ACM 
+SIGOPS, v.21.1, Jan., 1987, pp. 8-10.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/otwayRees.html
+
+Protocol Diagram:
+  (1) I -> R : M, I, R, enc((N_I, M, I, R), K_IS)
+  (2) R -> S : M, I, R, enc((N_I, M, I, R), K_IS), enc((N_R, M, I, R), K_RS)
+  (3) S -> R : M, enc((N_I, K_IR), K_IS), enc((N_R, k_IR), K_RS)
+  (4) R -> I : M, enc((N_I, K_IR), K_IS)
+"""
+
+from sa.secalgo import *
+#configure(benchmark = True)
+
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        pass
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('msg2', (M, I, R, enc_IS, enc_RS)), from_ = R):
+        N_I, M_I, I_I, R_I = decrypt(enc_IS, key = K_IS)
+        N_R, M_R, I_R, R_R = decrypt(enc_RS, key = K_RS)
+        if (M == M_I) and (M == M_R):
+            if (I == I_I) and (I == I_R):
+                if (R == R_I) and (R == R_R):
+                    K_IR = keygen('shared')
+                    send(('msg3', (M, encrypt((N_I, K_IR), key = K_IS),
+                                   encrypt((N_R, K_IR), key = K_RS))), to = R)
+    
+class RoleI (process):
+    def setup(S, K_IS, R):
+        pass
+
+    def run():
+        M = nonce()
+        N_I = nonce()
+        send(('msg1', (M, self, R, encrypt((N_I, M, self, R), key = K_IS))), to = R)
+        await(some(received(( 'msg4', (_M, enc_SI)), from_ = _R),
+                   has = (decrypt(enc_SI, key = K_IS)[0] == N_I)))
+        K_IR = decrypt(enc_SI, key = K_IS)[1]
+        output('I - Key Exchange Complete')
+
+class RoleR (process):
+    def setup(S, K_RS):
+        pass
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+        
+    def receive(msg=('msg1', (M, I, self, enc_IS)), from_ = I):
+        N_R = nonce()
+        send(('msg2', (M, I, self, enc_IS, encrypt((N_R, M, I, self), key = K_RS))), to = S)
+        await(some(received(('msg3', (_M, enc_SI, enc_SR)), from_ = _S),
+                   has = (decrypt(enc_SR, key = K_RS)[0] == N_R)))
+        K_IR = decrypt(enc_SR, key = K_RS)[1]
+        send(('msg4', (M, enc_SI)), to = I)
+        output('R - Key Exchange Complete')
+
+def main():
+    K_IS = keygen('shared')
+    K_RS = keygen('shared')
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)
+

@@ -1,6 +1,6 @@
 import sys, os, subprocess, time, json, argparse
 
-full_path = '/home/christopher/secalgo/ProtocolImplementations/New/'
+full_path = '/home/christopher/secalgo/experiments/timing/library'
 result_path = '/home/christopher/secalgo/results/library/'
 output_path = '/home/christopher/secalgo/output/library/'
 m_buf_opt = '--message-buffer-size'
@@ -25,14 +25,15 @@ protocols = [
              'ns-pk',
              'or',
              'wl',
-             'ya'
+             'ya',
              'dhke-1',
              #'eap_archie',
              #'eke',
              #'iso9798-3-4',
              'sdh',
              'tls1_2',
-             'kerberos5'
+             'kerberos5',
+             'test_proto'
             ]
 
 p_main_skip = {
@@ -46,7 +47,8 @@ p_main_skip = {
                'dhke-1'    : 7,
                'sdh'       : 3,
                'tls1_2'    : 4,
-               'kerberos5' : 4
+               'kerberos5' : 4,
+               'test_proto': 0
               }
                  
 def time_exp01(p, iter_num, iter_label):
@@ -144,8 +146,8 @@ if __name__ == '__main__':
     if args.proto == 'all':
         for p in protocols:
             time_exp01(p, args.iterations, args.iteration_label)
-            parse_exp01(p, args.iterations, args.iteration_label, output_file)
+            parse_exp01(p, args.iterations, args.iteration_label, args.output_file)
     else:
         time_exp01(args.proto, args.iterations, args.iteration_label)
         parse_exp01(args.proto, args.iterations, args.iteration_label, 
-                    output_file)
+                    args.output_file)

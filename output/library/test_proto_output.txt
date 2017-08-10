@@ -1,0 +1,372 @@
+Results for: test_proto
+['keygen', 0.005760806, 3.00619542, 5840]
+library
+function time: keygen - 0.0005137730503424658
+['keygen', 3.006347056, 6.006532915, 5870]
+library
+function time: keygen - 0.0005111049163543441
+['keygen', 6.006632145, 9.032106723, 25]
+library
+function time: keygen - 0.12101898311999999
+['keygen', 0.007715617, 3.05437109, 21]
+library
+function time: keygen - 0.14507883204761904
+['encrypt', 9.033227942, 12.03351107, 5754]
+library
+function time: encrypt - 0.0005214256392075077
+['decrypt', 3.055280989, 6.055397502, 6942]
+library
+function time: decrypt - 0.0004321689013252665
+['encrypt', 12.03449124, 15.035181174, 4004]
+library
+function time: encrypt - 0.0007494230604395605
+['decrypt', 6.056373615, 9.059249514, 963]
+library
+function time: decrypt - 0.0031182511931464167
+['sign', 15.036372199, 18.036617588, 7184]
+library
+function time: sign - 0.0004176288124999997
+['verify', 9.060534412, 12.060914043, 7254]
+library
+function time: verify - 0.0004136172637165701
+['sign', 18.037614107, 21.039956844, 1271]
+library
+function time: sign - 0.0023621894075531074
+['verify', 12.061931466, 15.062595889, 4117]
+library
+function time: verify - 0.0007288473215933932
+[1, "test_proto", 0.27586624473379767]
+['keygen', 0.006279544000000001, 3.006611286, 5744]
+library
+function time: keygen - 0.0005223418770891365
+['keygen', 3.006760439, 6.006772921, 5743]
+library
+function time: keygen - 0.0005223772387254048
+['keygen', 6.006873833, 9.032234282, 25]
+library
+function time: keygen - 0.12101441795999995
+['keygen', 0.007137233000000001, 3.216088873, 29]
+library
+function time: keygen - 0.11065350482758621
+['encrypt', 9.033288664, 12.033647164, 5603]
+library
+function time: encrypt - 0.0005354914331608065
+['decrypt', 3.217038984, 6.21720243, 7210]
+library
+function time: decrypt - 0.00041611143495145635
+['encrypt', 12.034532776, 15.034621507, 3965]
+library
+function time: encrypt - 0.0007566428073139974
+['decrypt', 6.218136108, 9.218833164, 946]
+library
+function time: decrypt - 0.00317198420295983
+['sign', 15.035598606, 18.035764357, 7060]
+library
+function time: sign - 0.00042495265594900863
+['verify', 9.219764214, 12.219987566, 7054]
+library
+function time: verify - 0.0004253222784235896
+['sign', 18.036674368, 21.036860691, 1272]
+library
+function time: sign - 0.002358637046383649
+['verify', 12.220961795000001, 15.221049731, 4051]
+library
+function time: verify - 0.0007405795941742779
+[2, "test_proto", 0.2415423633567173]
+['keygen', 0.006169262, 3.006346731, 5800]
+library
+function time: keygen - 0.0005172719774137932
+['keygen', 3.006502299, 6.006940748, 5819]
+library
+function time: keygen - 0.000515627848255714
+['keygen', 6.007039797, 9.074242725, 25]
+library
+function time: keygen - 0.12268811711999998
+['keygen', 0.007899034000000001, 3.164018327, 25]
+library
+function time: keygen - 0.12624477172
+['encrypt', 9.075380072, 12.075782817, 5646]
+library
+function time: encrypt - 0.0005314209608572441
+['decrypt', 3.165013333, 6.165228705, 7316]
+library
+function time: decrypt - 0.0004100895806451612
+['encrypt', 12.076749925, 15.077458788, 3980]
+library
+function time: encrypt - 0.0007539469505025125
+['decrypt', 6.166210622, 9.167992511, 953]
+library
+function time: decrypt - 0.0031498235981112267
+['sign', 15.078499494, 18.07870196, 7101]
+library
+function time: sign - 0.00042250421996901835
+['verify', 9.169003056, 12.169057741, 7122]
+library
+function time: verify - 0.00042123766989609664
+['sign', 18.079678606, 21.080431552, 1273]
+library
+function time: sign - 0.0023572293369992134
+['verify', 12.170086149, 15.170409238, 4095]
+library
+function time: verify - 0.000732679631013431
+[3, "test_proto", 0.2587447206136634]
+['keygen', 0.006294480000000001, 3.006553605, 5830]
+library
+function time: keygen - 0.0005146242066895369
+['keygen', 3.006701916, 6.007058048, 5840]
+library
+function time: keygen - 0.0005137596116438356
+['keygen', 6.0071549, 9.009121242, 21]
+library
+function time: keygen - 0.14295077819047625
+['keygen', 0.007591168000000001, 3.137300734, 25]
+library
+function time: keygen - 0.12518838264
+['encrypt', 9.010256658, 12.010332776, 5698]
+library
+function time: encrypt - 0.0005265138852228854
+['decrypt', 3.138216645, 6.13849999, 7284]
+library
+function time: decrypt - 0.00041190051414058203
+['encrypt', 12.011222227, 15.011548714, 4028]
+library
+function time: encrypt - 0.0007448675489076466
+['decrypt', 6.139449732, 9.141947349, 963]
+library
+function time: decrypt - 0.003117858376947041
+['sign', 15.012479104, 18.012642366, 7206]
+library
+function time: sign - 0.0004163423899528172
+['verify', 9.142846362, 12.143042943, 7160]
+library
+function time: verify - 0.00041902186885474845
+['sign', 18.01361281, 21.013841682, 1271]
+library
+function time: sign - 0.00236052625649095
+['verify', 12.143971265, 15.144644448, 4092]
+library
+function time: verify - 0.000733302341886608
+[4, "test_proto", 0.27789787783121295]
+['keygen', 0.006334424000000001, 3.006683121, 5761]
+library
+function time: keygen - 0.0005208034537406701
+['keygen', 3.006837706, 6.006934535, 5742]
+library
+function time: keygen - 0.0005224829029954719
+['keygen', 6.007031657, 9.055799482, 21]
+library
+function time: keygen - 0.1451794202380952
+['keygen', 0.007555077, 3.129041798, 24]
+library
+function time: keygen - 0.13006194670833332
+['encrypt', 9.056880659, 12.056881467, 5627]
+library
+function time: encrypt - 0.0005331439146969966
+['decrypt', 3.129968015, 6.130177853, 7295]
+library
+function time: decrypt - 0.0004112693403701165
+['encrypt', 12.057842216, 15.058523848, 3957]
+library
+function time: encrypt - 0.0007583223735152896
+['decrypt', 6.131113638, 9.132697055, 944]
+library
+function time: decrypt - 0.0031796434502118632
+['sign', 15.059486132, 18.059596076, 7069]
+library
+function time: sign - 0.0004244037266940159
+['verify', 9.133631236, 12.134026901, 7089]
+library
+function time: verify - 0.0004232466730145297
+['sign', 18.060642077, 21.060902009, 1259]
+library
+function time: sign - 0.002383049985702938
+['verify', 12.134983661, 15.134985, 3989]
+library
+function time: verify - 0.0007520685231887693
+[5, "test_proto", 0.28514980129055917]
+['keygen', 0.007583103000000001, 3.008028224, 5798]
+library
+function time: keygen - 0.0005174965714039324
+['keygen', 3.00829525, 6.008659663, 5833]
+library
+function time: keygen - 0.0005143775780901766
+['keygen', 6.00879782, 9.073425261, 26]
+library
+function time: keygen - 0.11787028619230772
+['keygen', 0.008160353, 3.090493352, 24]
+library
+function time: keygen - 0.128430541625
+['encrypt', 9.074547253, 12.07482268, 5680]
+library
+function time: encrypt - 0.0005282175047535211
+['decrypt', 3.091441852, 6.091772388, 7383]
+library
+function time: decrypt - 0.0004063836565081945
+['encrypt', 12.075785384, 15.076195691, 3991]
+library
+function time: encrypt - 0.0007517941135053873
+['decrypt', 6.092754518, 9.095336871, 962]
+library
+function time: decrypt - 0.003121187477130978
+['sign', 15.077173668, 18.077403652, 6518]
+library
+function time: sign - 0.00046029916907026707
+['verify', 9.096363139, 12.096379798, 7197]
+library
+function time: verify - 0.00041684266486035845
+['sign', 18.078399636, 21.078579966, 1270]
+library
+function time: sign - 0.0023623467165354325
+['verify', 12.097364426, 15.097746596, 3881]
+library
+function time: verify - 0.0007730951223911363
+[6, "test_proto", 0.25615286839155715]
+['keygen', 0.006025157000000001, 3.00638131, 5926]
+library
+function time: keygen - 0.0005063037720215998
+['keygen', 3.006536625, 6.006690881, 5941]
+library
+function time: keygen - 0.0005049914586769904
+['keygen', 6.006789324, 9.069528381, 28]
+library
+function time: keygen - 0.10938353775
+['keygen', 0.008411826, 3.011285109, 27]
+library
+function time: keygen - 0.111217529
+['encrypt', 9.070615193, 12.070742484, 5682]
+library
+function time: encrypt - 0.0005280055070397748
+['decrypt', 3.012199954, 6.012564026, 7345]
+library
+function time: decrypt - 0.0004084906837304288
+['encrypt', 12.071679874, 15.072304717, 4050]
+library
+function time: encrypt - 0.0007408950229629627
+['decrypt', 6.013478131, 9.016386984, 960]
+library
+function time: decrypt - 0.0031280300552083335
+['sign', 15.073253631, 18.073357834, 7252]
+library
+function time: sign - 0.00041369335397131816
+['verify', 9.017302278, 12.017513227, 7160]
+library
+function time: verify - 0.00041902387555865913
+['sign', 18.074306655, 21.075169582, 1286]
+library
+function time: sign - 0.0023334859463452567
+['verify', 12.018458593, 15.019086751, 4098]
+library
+function time: verify - 0.0007322177057101024
+[7, "test_proto", 0.23031620413122542]
+['keygen', 0.006093866000000001, 3.006499759, 5760]
+library
+function time: keygen - 0.0005209038008680555
+['keygen', 3.006648469, 6.00694669, 5769]
+library
+function time: keygen - 0.0005200724945397816
+['keygen', 6.007047211, 9.082285756, 24]
+library
+function time: keygen - 0.12813493937499998
+['keygen', 0.007358034, 3.093994346, 24]
+library
+function time: keygen - 0.12860984633333333
+['encrypt', 9.083363646, 12.083860103, 5659]
+library
+function time: encrypt - 0.0005302167268068561
+['decrypt', 3.094935131, 6.09512127, 7397]
+library
+function time: decrypt - 0.00040559498972556437
+['encrypt', 12.084818098, 15.08535424, 3957]
+library
+function time: encrypt - 0.0007582856057619408
+['decrypt', 6.096039603, 9.096780825, 956]
+library
+function time: decrypt - 0.0031388506506276146
+['sign', 15.086348619, 18.086750859, 7167]
+library
+function time: sign - 0.0004186413059857678
+['verify', 9.097790693, 12.097946718, 7211]
+library
+function time: verify - 0.0004160527007349881
+['sign', 18.08765402, 21.087826897, 1274]
+library
+function time: sign - 0.002354923765306123
+['verify', 12.098897957, 15.098919235, 4097]
+library
+function time: verify - 0.0007322482982670247
+[8, "test_proto", 0.2665405760469571]
+['keygen', 0.006194794, 3.006323958, 5816]
+library
+function time: keygen - 0.0005158406403026135
+['keygen', 3.006474837, 6.006850955, 5834]
+library
+function time: keygen - 0.000514291415495372
+['keygen', 6.006946719, 9.049311489, 26]
+library
+function time: keygen - 0.11701402961538464
+['keygen', 0.007670466000000001, 3.018124804, 23]
+library
+function time: keygen - 0.13088931904347828
+['encrypt', 9.05037933, 12.050667647, 5680]
+library
+function time: encrypt - 0.0005282197741197181
+['decrypt', 3.019032152, 6.019264511, 7346]
+library
+function time: decrypt - 0.00040841714661040026
+['encrypt', 12.051598042, 15.052309446, 3987]
+library
+function time: encrypt - 0.0007526238786054679
+['decrypt', 6.020175362, 9.023253591, 942]
+library
+function time: decrypt - 0.0031879811348195326
+['sign', 15.053254183, 18.053409617, 7158]
+library
+function time: sign - 0.0004191331983794356
+['verify', 9.024179179, 12.02430147, 7198]
+library
+function time: verify - 0.00041679942914698507
+['sign', 18.054337935, 21.055074315, 1264]
+library
+function time: sign - 0.0023740003006329107
+['verify', 12.025244588, 15.025686506, 3725]
+library
+function time: verify - 0.0008054877632214765
+[9, "test_proto", 0.2578261433401968]
+['keygen', 0.007814296, 3.007839802, 5839]
+library
+function time: keygen - 0.0005137909755095051
+['keygen', 3.007991103, 6.008432368, 5852]
+library
+function time: keygen - 0.0005127206536226931
+['keygen', 6.008548102, 9.235970761, 22]
+library
+function time: keygen - 0.1467010299545455
+['keygen', 0.008227528000000001, 3.101180133, 21]
+library
+function time: keygen - 0.1472834573809524
+['encrypt', 9.237077287, 12.237570456, 5687]
+library
+function time: encrypt - 0.0005276056214172675
+['decrypt', 3.102212322, 6.102596701, 7361]
+library
+function time: decrypt - 0.0004076055398723
+['encrypt', 12.238477228, 15.239138286, 3995]
+library
+function time: encrypt - 0.0007511041446808507
+['decrypt', 6.103508959, 9.105325842, 951]
+library
+function time: decrypt - 0.003156484629863301
+['sign', 15.240102911, 18.240191739, 7127]
+library
+function time: sign - 0.00042094693812263237
+['verify', 9.106231979, 12.106563862, 7172]
+library
+function time: verify - 0.00041833963789737863
+['sign', 18.241150452, 21.242145727, 1278]
+library
+function time: sign - 0.0023481966158059478
+['verify', 12.107530152, 15.108052829, 4093]
+library
+function time: verify - 0.0007330864102125578
+[10, "test_proto", 0.30377436850250233]
+["avg", "test_proto", 2.6538111682383896, 10, 0.26538111682383897]
