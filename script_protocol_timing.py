@@ -89,28 +89,33 @@ def parse_exp02(p, iter_num, iter_label, output_file):
         for ir in iter_result_list:
             total_protocol_time += ir[2]
         avg_protocol_time = total_protocol_time / iter_count
-        print(json.dumps(['avg', p, total_protocol_time, '/', iter_count, '=', avg_protocol_time]),
-              file = of, flush = True)
+        print(json.dumps(['avg', p, total_protocol_time, iter_count, 
+                          avg_protocol_time]), file = of, flush = True)
         print('avg for ' + p + ':', total_protocol_time, '/', iter_count, '=',
               avg_protocol_time, flush = True)
         of.close()
 #end parse_exp01()
 
 def init_arg_parser():
-    parser = argparse.ArgumentParser(description = "Run protocol timing experiments:")
+    parser = argparse.ArgumentParser(description = "Run protocol timing' + 
+                                     ' experiments:")
     group = parser.add_mutually_exclusive_group(required = True)
     group.add_argument('-i', '--iterations', type = int,
-                        help = 'number of times protocol timing experiment will run')
+                       help = 'number of times protocol timing' + 
+                       ' experiment will run')
     group.add_argument('-I', '--iteration-label', type = int,
-                       help = 'run a single iteration with the given integer label')
+                       help = 'run a single iteration with the given' + 
+                       ' integer label')
     parser.add_argument('-l', '--loops', default = 1,
                         help = 'number of times each protocol will be run' +
                         ' during a single iteration of the experiment')
     parser.add_argument('-o', '--output-file',
                         help = 'name of output file')
     parser.add_argument('proto',
-                        help = 'name of the file (sans extension) containing the protocol one wishes to run')
+                        help = 'name of the file (sans extension) containing' + 
+                        ' the protocol one wishes to run')
     return parser
+#end init_arg_parser()
 
 if __name__ == '__main__':
     parser = init_arg_parser()
@@ -118,7 +123,10 @@ if __name__ == '__main__':
     if args.proto == 'all':
         for p in protocols:
             time_exp02(p, args.iteration_num, args.iteration_label, args.loops)
-            parse_exp02(p, args.iter_num, args.iteration_label, args.output_file)
+            parse_exp02(p, args.iter_num, args.iteration_label, 
+                        args.output_file)
     else:
-        time_exp02(args.proto, args.iterations, args.iteration_label, args.loops)
-        parse_exp02(args.proto, args.iterations, args.iteration_label, args.output_file)
+        time_exp02(args.proto, args.iterations, args.iteration_label, 
+                   args.loops)
+        parse_exp02(args.proto, args.iterations, args.iteration_label, 
+                    args.output_file)
