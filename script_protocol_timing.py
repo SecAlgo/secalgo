@@ -1,6 +1,6 @@
 import sys, os, subprocess, time, json, argparse
 
-full_path = '/home/christopher/secalgo/experiments/forTiming/'
+full_path = '/home/christopher/secalgo/experiments/timing/protocol/'
 result_path = '/home/christopher/secalgo/results/protocol/'
 output_path = '/home/christopher/secalgo/output/protocol/'
 m_buf_opt = '--message-buffer-size'
@@ -23,7 +23,8 @@ protocols = [
              #'iso9798-3-4',
              'sdh',
              'tls1_2',
-             'kerberos5'
+             'kerberos5',
+             'test_proto'
             ]
 
 
@@ -97,8 +98,8 @@ def parse_exp02(p, iter_num, iter_label, output_file):
 #end parse_exp01()
 
 def init_arg_parser():
-    parser = argparse.ArgumentParser(description = "Run protocol timing' + 
-                                     ' experiments:")
+    parser = argparse.ArgumentParser(description = 'Run protocol timing' + 
+                                     ' experiments:')
     group = parser.add_mutually_exclusive_group(required = True)
     group.add_argument('-i', '--iterations', type = int,
                        help = 'number of times protocol timing' + 

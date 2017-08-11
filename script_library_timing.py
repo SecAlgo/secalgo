@@ -1,6 +1,6 @@
 import sys, os, subprocess, time, json, argparse
 
-full_path = '/home/christopher/secalgo/experiments/timing/library'
+full_path = '/home/christopher/secalgo/experiments/timing/library/'
 result_path = '/home/christopher/secalgo/results/library/'
 output_path = '/home/christopher/secalgo/output/library/'
 m_buf_opt = '--message-buffer-size'

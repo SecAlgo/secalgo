@@ -1,75 +1,86 @@
 import time, json, sys
 from sa.secalgo import encrypt, decrypt, sign, verify, nonce, keygen, configure
-configure(benchmark = True)
 
 class RoleA(process):
-    def setup(B):
+    def setup(B, loops):
         pass
 
     def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = tp(i)
+            await(result == i)
+        print(json.dumps(['test_proto', 'roleA', start_time, time.process_time(), loops]), flush = True)
+
+    def tp(i):
         secret = 'I am a secret'
         shared_key = keygen('shared')
         mac_key = keygen('mac')
         priv_key, pub_key = keygen('public')
-        send(('1', (shared_key, mac_key, pub_key, secret)), to = B)
+        send(('1', i, (shared_key, mac_key, pub_key, secret)), to = B)
         output('Sent 1')
-        await(some(received(('2', pub_key_B), from_ = _B)))
+        await(some(received(('2', _i, pub_key_B), from_ = _B)))
         output('Received 2')
-        send(('3', encrypt(secret, key = shared_key)), to = B)
+        send(('3', i, encrypt(secret, key = shared_key)), to = B)
         output('Sent 3')
-        await(some(received(('4'), from_ = _B)))
+        await(some(received(('4', _i), from_ = _B)))
         output('Received 4')
-        send(('5', encrypt(secret, key = pub_key_B)), to = B)
+        send(('5', i, encrypt(secret, key = pub_key_B)), to = B)
         output('Sent 5')
-        await(some(received(('6'), from_ = _B)))
+        await(some(received(('6', _i), from_ = _B)))
         output('Received 6')
-        send(('7', sign(secret, key = mac_key)), to = B)
+        send(('7', i, sign(secret, key = mac_key)), to = B)
         output('Sent 7')
-        await(some(received(('8'), from_ = _B)))
+        await(some(received(('8', _i), from_ = _B)))
         output('Received 8')
-        send(('9', sign(secret, key = priv_key)), to = B)
+        send(('9', i, sign(secret, key = priv_key)), to = B)
         output('Sent 9')
-        await(some(received(('10'), from_ = _B)))
+        await(some(received(('10', _i), from_ = _B)))
         output('Received 10')
         output('RoleA done')
+        return i
 
 class RoleB(process):
-    def setup():
-        pass
+    def setup(loops):
+        self.start_time = 0
 
     def run():
+        self.start_time = time.process_time()
         await(False)
 
-    def receive(msg=('1', (shared_key, mac_key, pub_key_A, secret)), from_ = A):
+    def receive(msg=('1', i, (shared_key, mac_key, pub_key_A, secret)), from_ = A):
         output('Received 1')
         priv_key, pub_key = keygen('public')
-        send(('2', pub_key), to = A)
+        send(('2', i, pub_key), to = A)
         output('Sent 2')
-        await(some(received(('3', ct1), from_ = _A),
+        await(some(received(('3', _i, ct1), from_ = _A),
                    has = (decrypt(ct1, key = shared_key) == secret)))
         output('Received 3')
-        send(('4'), to = A)
+        send(('4', i), to = A)
         output('Sent 4')
-        await(some(received(('5', ct2), from_ = _A),
+        await(some(received(('5', _i, ct2), from_ = _A),
                    has = (decrypt(ct2, key = priv_key) == secret)))
         output('Received 5')
-        send(('6'), to = A)
+        send(('6', i), to = A)
         output('Sent 6')
-        await(some(received(('7', sig1), from_ = _A),
+        await(some(received(('7', _i, sig1), from_ = _A),
                    has = (verify(sig1, key = mac_key) == secret)))
         output('Received 7')
-        send(('8'), to = A)
+        send(('8', i), to = A)
         output('Sent 8')
-        await(some(received(('9', sig2), from_ = _A),
+        await(some(received(('9', _i, sig2), from_ = _A),
                    has = (verify(sig2, key = pub_key_A) == secret)))
         output('Received 9')
-        send(('10'), to = A)
+        send(('10', i), to = A)
         output('Sent 10')
         output('RoleB done')
-        exit()
+        if i == (loops - 1):
+            print(json.dumps(['test_proto', 'roleB', self.start_time, time.process_time(), loops]), flush = True)
+            exit()
 
 def main():
-    B = new(RoleB, ())
-    A = new(RoleA, (B,))
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    B = new(RoleB, (loops,))
+    A = new(RoleA, (B, loops))
     start(B)
     start(A)
