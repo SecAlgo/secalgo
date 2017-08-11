@@ -19,7 +19,7 @@ Protocol Diagram:
   (5) I -> R : enc(N_R - 1, K_IR)
 """
 from sa.secalgo import *
-#configure(benchmark = True)
+configure(benchmark = True)
     
 class RoleS (process):
     def setup(K_IS, K_RS):

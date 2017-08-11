@@ -15,6 +15,7 @@ Protocol Diagram:
 """
 
 from sa.secalgo import *
+configure(benchmark = True)
 
 class RoleA (process):
     def setup(B, K_PW):

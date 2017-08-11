@@ -27,6 +27,7 @@ TextX fields are optional fields that can be used for application specific
 purposes within applications that make use of this protocol.
 '''
 from sa.secalgo import *
+configure(benchmark = True)
 configure(verify_returns = 'bool')
 
 class RoleA(process):

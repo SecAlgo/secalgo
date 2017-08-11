@@ -18,7 +18,7 @@ Protocol Diagram:
 """
 
 from sa.secalgo import *
-#configure(benchmark = True)
+configure(benchmark = True)
 
 class RoleS (process):
     def setup(K_IS, K_RS):
