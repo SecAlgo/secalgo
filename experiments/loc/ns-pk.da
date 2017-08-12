@@ -1,85 +1,45 @@
-"""
-Needham-Schroeder Public Key Mutual Authentication Protocol
-Written by Christopher Kane
-
-Original Source:
-Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
-Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
-pp. 993-999.
-
-Immediate Source:
-Security Protocol Open Repository
-http://www.lsv.ens-cachan.fr/Software/spore/nspk.html
-
-Protocol Diagram:
-  (1) A -> S : (A, B)
-  (2) S -> A : sign((B, pkB), skS)
-  (3) A -> B : enc((Na, A), pkB)
-  (4) B -> S : (B, A)
-  (5) S -> B : sign((A, pkA), skS)
-  (6) B -> A : enc((Na, Nb), pkA)
-  (7) A -> B : enc(Nb, pkB)
-
-did fix for (6):
-  (6) B -> A : enc((Na, Nb, B), pkA)
-"""
-
 from sa.secalgo import *
-configure(benchmark = True)
-
 class roleS (process):
     def setup(skS, client_keys):
         pass
-
     def run():
         if await(False): pass
-        elif timeout(60): pass
-
-    def receive(msg=(A, B), from_ = A):
-        pkB = [x for (p, x) in client_keys if p == B].pop()
-        send(('signed', sign((B, pkB), skS)), to = A)
-
+        elif timeout(10): pass
+    def receive(msg=('msg1', (I, R)), from_ = I):
+        pkR = [x for (p, x) in client_keys if p == R].pop()
+        send(('msg2', sign((R, pkR), skS)), to = I)
+    def receive(msg=('msg4', (R, I)), from_ = IR):
+        pkI = [x for (p, x) in client_keys if p == I].pop()
+        send(('msg5', sign((I, pkI), skS)), to = R)
 class roleI (process):
     def setup(skI, S, pkS, R):
-        self.I = self
-
+        pass
     def run():
-        send((I, R), to = S)
-        await(some(received(((_R, pkR), _S), from_ = self)))
+        send(('msg1', (self, R)), to = S)
+        await(some(received(('msg2', sig_S), from_ = _S), has = (verify(sig_S, key = pkS)[0] == R)))
+        pkR = verify(sig_S, key = pkS)[1]
         nI = nonce()
-        send(('pub_enc', encrypt((nI, I), pkR)), to = R)
-        await(some(received(((_nI, nR, _R), _R), from_ = self)))
-        send(('pub_enc', encrypt(nR, pkR)), to = R)
+        send(('msg3', encrypt((nI, self), key = pkR)), to = R)
+        await(some(received(('msg6', enc_RI), from_ = _R), has = (decrypt(enc_RI, key = skI)[0] == nI)))
+        nR = decrypt(enc_RI, key = skI)[1]
+        send(('msg7', encrypt(nR, key = pkR)), to = R)
         output('I authenticated R')
-
-    def receive(msg=('signed', m), from_ = S):
-        send((verify(m, pkS), S), to = self)
-
-    def receive(msg=('pub_enc', m), from_ = R):
-        send((decrypt(m, skI), R), to = self)
-
 class roleR (process):
     def setup(skR, S, pkS):
-        self.R = self
-
+                pass
     def run():
         if await(False): pass
-        elif timeout(60): pass
-
-    def receive(msg=((nI, I), I), from_ = self):
-        send((R, I), to = S)
-        await(some(received(((_I, pkI), _S), from_ = self)))
+        elif timeout(10): pass
+    def receive(msg=('msg3', enc_IR), from_ = I):
+        I == decrypt(enc_IR, key = skR)[1]
+        nI = decrypt(enc_IR, key = skR)[0]
+        send(('msg4', (self, I)), to = S)
+        await(some(received(('msg5', sig_S), from_ = _S), has = (verify(sig_S, key = pkS)[0] == I)))
+        pkI = verify(sig_S, key = pkS)[1]
         nR = nonce()
-        send(('pub_enc', encrypt((nI, nR, R), pkI)), to = I)
-        await(some(received((_nR, _I), from_ = self)))
+        send(('msg6', encrypt((nI, nR, self), key = pkI)), to = I)
+        await(some(received(('msg7', enc_IR2), from_ = _I), has = (decrypt(enc_IR2, key = skR) == nR)))
         output('R authenticated I')
-
-    def receive(msg=('signed', m), from_ = S):
-        send((verify(m, pkS), S), to = self)
-
-    def receive(msg=('pub_enc', m), from_ = I):
-        send((decrypt(m, skR), I), to = self)
-
 def main():
     skS, pkS = keygen('public')
     skI, pkI = keygen('public')
