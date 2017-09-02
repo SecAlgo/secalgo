@@ -50,8 +50,7 @@ class Role_AuthServer(process):
             per_server_lifetimes[s] = DEFAULT_TGT_DURATION
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('krb_as_req', pvno, msg_type, padata,
                      req_body), from_ = C):
@@ -130,6 +129,7 @@ class Role_AuthServer(process):
         output('AS - Sent TGT to client,', cname)
         send(('krb_as_rep', 5, 11, [], 'TEST', cname, new_tgt,
               encrypt(as_rep_enc_part, client_keys[cname])), to = C)
+        exit()
             
 class Role_TGS(process):
     def setup(servers, AS, key_AS_TGS, server_keys):
@@ -141,8 +141,7 @@ class Role_TGS(process):
             per_server_lifetimes[s] = DEFAULT_TKT_DURATION
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
         #First task is to retrieve and decrypt the ticket contained in the
@@ -276,7 +275,8 @@ class Role_TGS(process):
         #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
         output('TGS - Sent Ticket for server', sname, 'to client,', C) 
         send(('krb_tgs_rep', 5, 13, [], 'TEST', tgt_cname, new_ticket,
-              encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)        
+              encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)
+        exit()
         
 class Role_AppServer(process):
     def setup(AS, TGS, key_S_AS, key_S_TGS):
@@ -284,8 +284,7 @@ class Role_AppServer(process):
         self.skew = DEFAULT_SKEW
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
     def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator),
@@ -350,6 +349,7 @@ class Role_AppServer(process):
 
         #S has now authenticated identity of client
         output('Server:', S, '- Authenticated client:', au_cname)
+        exit()
         
 class Role_C(process):
     def setup(realm, servers, AS, TGS, key_C_AS):
@@ -466,8 +466,8 @@ class Role_C(process):
             output('Client - Sent authentication request to server,', S)
         
 def main():
-    num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     C = new(Role_C, num = num_clients)
     S = new(Role_AppServer, num = num_servers)
     TGS = new(Role_TGS)

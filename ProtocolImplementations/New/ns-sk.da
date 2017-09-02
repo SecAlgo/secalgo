@@ -60,13 +60,13 @@ class RoleR (process):
         elif timeout(10): pass
 
     def receive(msg=('msg3', enc_RS), from_ = I):
-        I == decrypt(enc_RS, key = K_RS)[1]
-        K_IR = decrypt(enc_RS, key = K_RS)[0]
-        N_R = nonce()
-        send(('msg4', encrypt(N_R, key = K_IR)), to = I)
-        await(some(received(('msg5', enc_IR), from_ = _I),
-                   has = ((N_R - 1) == decrypt(enc_IR, key = K_IR))))
-        output('R - Key Exchange Complete')
+        if I == decrypt(enc_RS, key = K_RS)[1]:
+            K_IR = decrypt(enc_RS, key = K_RS)[0]
+            N_R = nonce()
+            send(('msg4', encrypt(N_R, key = K_IR)), to = I)
+            await(some(received(('msg5', enc_IR), from_ = _I),
+                       has = ((N_R - 1) == decrypt(enc_IR, key = K_IR))))
+            output('R - Key Exchange Complete')
 
 def main():
     K_IS = keygen('shared')

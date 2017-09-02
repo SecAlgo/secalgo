@@ -966,6 +966,7 @@ class TLS_Peer(process):
             send((record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
                   handshake_id, msg_counter), to = client)
             output('SERVER - Handshake Complete')
+        exit()
 
     # This is the handler for ChangeCipherSpec messages.
     # ChangeCipherSpec = Struct{type}
@@ -981,8 +982,7 @@ class TLS_Peer(process):
         if peer != None:
             initiate_handshake(peer)
         else:
-            if await(False): pass
-            elif timeout(10): pass
+            await(False)
         
 def main():
     config(channel = 'reliable')

@@ -36,12 +36,12 @@ class RoleR (process):
         self.s = 'secret'
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('encrypt_sign', m), from_ = I):
         k = verify(decrypt(m, skR), pkI)
         send(encrypt(s, k), to = I)
+        exit()
 
 def main():
     skI, pkI = keygen('public')

@@ -32,8 +32,7 @@ class roleS (process):
         pass
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg1', (I, R)), from_ = I):
         pkR = [x for (p, x) in client_keys if p == R].pop()
@@ -42,6 +41,7 @@ class roleS (process):
     def receive(msg=('msg4', (R, I)), from_ = IR):
         pkI = [x for (p, x) in client_keys if p == I].pop()
         send(('msg5', sign((I, pkI), skS)), to = R)
+        exit()
 
 class roleI (process):
     def setup(skI, S, pkS, R):
@@ -65,8 +65,7 @@ class roleR (process):
                 pass
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg3', enc_IR), from_ = I):
         I == decrypt(enc_IR, key = skR)[1]
@@ -80,7 +79,8 @@ class roleR (process):
         await(some(received(('msg7', enc_IR2), from_ = _I),
                    has = (decrypt(enc_IR2, key = skR) == nR)))
         output('R authenticated I')
-
+        exit()
+        
 def main():
     skS, pkS = keygen('public')
     skI, pkI = keygen('public')

@@ -1,0 +1,92 @@
+Results for: kerberos5
+['kerberos5', 'roleAuthServer', 0.006088525, 2.754494775, 1000]
+role time: kerberos5 : roleAuthServer - 0.00274840625
+['kerberos5', 'roleTGS', 0.006036484, 3.6897202890000003, 1000]
+role time: kerberos5 : roleTGS - 0.0036836838050000003
+['kerberos5', 'roleC', 0.006485747, 6.692810498, 1000]
+role time: kerberos5 : roleC - 0.006686324751
+['kerberos5', 'roleAppServer', 0.006068081, 1.95240896, 1000]
+role time: kerberos5 : roleAppServer - 0.0019463408790000001
+[1, "kerberos5", 0.015064755685000002]
+['kerberos5', 'roleAuthServer', 0.005416586, 2.834798383, 1000]
+role time: kerberos5 : roleAuthServer - 0.002829381797
+['kerberos5', 'roleTGS', 0.006173563, 3.752328556, 1000]
+role time: kerberos5 : roleTGS - 0.003746154993
+['kerberos5', 'roleC', 0.005974096000000001, 6.864897514, 1000]
+role time: kerberos5 : roleC - 0.0068589234179999995
+['kerberos5', 'roleAppServer', 0.005038611, 2.014638074, 1000]
+role time: kerberos5 : roleAppServer - 0.0020095994630000003
+[2, "kerberos5", 0.015444059671]
+['kerberos5', 'roleAuthServer', 0.005789053000000001, 2.819624293, 1000]
+role time: kerberos5 : roleAuthServer - 0.00281383524
+['kerberos5', 'roleTGS', 0.005851628, 3.750283559, 1000]
+role time: kerberos5 : roleTGS - 0.003744431931
+['kerberos5', 'roleC', 0.007953214, 6.879866377, 1000]
+role time: kerberos5 : roleC - 0.006871913163
+['kerberos5', 'roleAppServer', 0.00608254, 2.014258242, 1000]
+role time: kerberos5 : roleAppServer - 0.002008175702
+[3, "kerberos5", 0.015438356036000002]
+['kerberos5', 'roleAuthServer', 0.005491068, 2.826297423, 1000]
+role time: kerberos5 : roleAuthServer - 0.0028208063550000002
+['kerberos5', 'roleTGS', 0.005990998, 3.679555961, 1000]
+role time: kerberos5 : roleTGS - 0.003673564963
+['kerberos5', 'roleC', 0.007037647, 6.7586481890000005, 1000]
+role time: kerberos5 : roleC - 0.006751610542
+['kerberos5', 'roleAppServer', 0.004922681, 2.026801896, 1000]
+role time: kerberos5 : roleAppServer - 0.002021879215
+[4, "kerberos5", 0.015267861075]
+['kerberos5', 'roleAuthServer', 0.006092773, 2.891501941, 1000]
+role time: kerberos5 : roleAuthServer - 0.002885409168
+['kerberos5', 'roleTGS', 0.007463515, 3.826654085, 1000]
+role time: kerberos5 : roleTGS - 0.00381919057
+['kerberos5', 'roleC', 0.007345375, 6.915676798, 1000]
+role time: kerberos5 : roleC - 0.006908331423
+['kerberos5', 'roleAppServer', 0.0054277050000000006, 2.025160809, 1000]
+role time: kerberos5 : roleAppServer - 0.002019733104
+[5, "kerberos5", 0.015632664265]
+['kerberos5', 'roleAuthServer', 0.005827983, 2.676682804, 1000]
+role time: kerberos5 : roleAuthServer - 0.002670854821
+['kerberos5', 'roleTGS', 0.006111401000000001, 3.663936441, 1000]
+role time: kerberos5 : roleTGS - 0.0036578250400000002
+['kerberos5', 'roleC', 0.006418313, 6.650464282, 1000]
+role time: kerberos5 : roleC - 0.0066440459689999995
+['kerberos5', 'roleAppServer', 0.005972797, 1.8747334900000001, 1000]
+role time: kerberos5 : roleAppServer - 0.001868760693
+[6, "kerberos5", 0.014841486523]
+['kerberos5', 'roleAuthServer', 0.005659446, 2.827697324, 1000]
+role time: kerberos5 : roleAuthServer - 0.002822037878
+['kerberos5', 'roleTGS', 0.0064622740000000005, 3.741860162, 1000]
+role time: kerberos5 : roleTGS - 0.003735397888
+['kerberos5', 'roleC', 0.007596291000000001, 6.84304169, 1000]
+role time: kerberos5 : roleC - 0.0068354453990000005
+['kerberos5', 'roleAppServer', 0.006107808, 1.990346095, 1000]
+role time: kerberos5 : roleAppServer - 0.001984238287
+[7, "kerberos5", 0.015377119452]
+['kerberos5', 'roleAuthServer', 0.005430115, 2.734885117, 1000]
+role time: kerberos5 : roleAuthServer - 0.0027294550020000004
+['kerberos5', 'roleTGS', 0.0071067560000000005, 3.628010449, 1000]
+role time: kerberos5 : roleTGS - 0.003620903693
+['kerberos5', 'roleC', 0.0063729550000000005, 6.615199757, 1000]
+role time: kerberos5 : roleC - 0.006608826802
+['kerberos5', 'roleAppServer', 0.005951345, 1.93337724, 1000]
+role time: kerberos5 : roleAppServer - 0.001927425895
+[8, "kerberos5", 0.014886611392000001]
+['kerberos5', 'roleAuthServer', 0.006144882000000001, 2.795621893, 1000]
+role time: kerberos5 : roleAuthServer - 0.002789477011
+['kerberos5', 'roleTGS', 0.00605854, 3.660780764, 1000]
+role time: kerberos5 : roleTGS - 0.003654722224
+['kerberos5', 'roleC', 0.007570014000000001, 6.732656343, 1000]
+role time: kerberos5 : roleC - 0.006725086329000001
+['kerberos5', 'roleAppServer', 0.005712992, 1.9635617010000002, 1000]
+role time: kerberos5 : roleAppServer - 0.001957848709
+[9, "kerberos5", 0.015127134273000001]
+['kerberos5', 'roleAuthServer', 0.005755877, 2.766793354, 1000]
+role time: kerberos5 : roleAuthServer - 0.002761037477
+['kerberos5', 'roleTGS', 0.006052508000000001, 3.5884736740000003, 1000]
+role time: kerberos5 : roleTGS - 0.0035824211660000003
+['kerberos5', 'roleC', 0.006091918, 6.653332713, 1000]
+role time: kerberos5 : roleC - 0.006647240795
+['kerberos5', 'roleAppServer', 0.005936005, 2.037014908, 1000]
+role time: kerberos5 : roleAppServer - 0.0020310789030000003
+[10, "kerberos5", 0.015021778341]
+["avg", "kerberos5", 0.15210182671300002, 10, 0.015210182671300001]

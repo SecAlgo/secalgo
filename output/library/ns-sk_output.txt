@@ -1,0 +1,492 @@
+Results for: ns-sk
+['keygen', 0.089613461, 3.090110966, 5330]
+library
+skip
+['keygen', 3.090221609, 6.090486658, 5889]
+library
+skip
+['nonce', 0.009933388000000001, 3.009972576, 5735]
+library
+function time: nonce - 0.0005231105820401046
+['keygen', 0.007216308, 3.007583454, 5869]
+library
+function time: keygen - 0.0005112228907820754
+['encrypt', 3.007703044, 6.007756567, 5453]
+library
+function time: encrypt - 0.0005501656928296352
+['encrypt', 6.00785839, 9.0083123, 5441]
+library
+function time: encrypt - 0.0005514526575997059
+['decrypt', 3.010876606, 6.011298813, 6987]
+library
+function time: decrypt - 0.0004294292553313296
+['decrypt', 6.011393504, 9.011509122, 7011]
+library
+function time: decrypt - 0.0004279155067750677
+['decrypt', 9.011605881, 12.011894884, 6270]
+library
+function time: decrypt - 0.00047851499250398734
+['decrypt', 0.006916714, 3.006944276, 6431]
+library
+function time: decrypt - 0.00046649472274918366
+['decrypt', 3.00707501, 6.0071063, 7046]
+library
+function time: decrypt - 0.00042577792932160097
+['nonce', 6.007198302, 9.007407862, 5730]
+library
+function time: nonce - 0.0005235967818499129
+['encrypt', 9.007508631, 12.008029516, 5064]
+library
+function time: encrypt - 0.0005925199219984202
+['decrypt', 12.012700073, 15.013067544, 7289]
+library
+function time: decrypt - 0.00041162950624228296
+['encrypt', 15.01316397, 18.013442875, 4789]
+library
+function time: encrypt - 0.0006264938202129877
+['decrypt', 12.008866005, 15.009090079, 6308]
+library
+function time: decrypt - 0.0004756220789473684
+[1, "ns-sk", 0.006993946339183663]
+['keygen', 0.096325056, 3.096820339, 5845]
+library
+skip
+['keygen', 3.096934982, 6.097043705, 5844]
+library
+skip
+['nonce', 0.009625665, 3.009770571, 5678]
+library
+function time: nonce - 0.000528380575202536
+['keygen', 0.007018131, 3.007209949, 5845]
+library
+function time: keygen - 0.0005132920133447391
+['encrypt', 3.007333153, 6.00734752, 5108]
+library
+function time: encrypt - 0.0005873168298747063
+['encrypt', 6.007469836, 9.007651225, 5221]
+library
+function time: encrypt - 0.0005746373087531124
+['decrypt', 3.010792711, 6.010872525, 6997]
+library
+function time: decrypt - 0.00042876658768043445
+['decrypt', 6.010972749, 9.011121067, 5955]
+library
+function time: decrypt - 0.0005038032439966415
+['decrypt', 9.011220012, 12.011226971, 6973]
+library
+function time: decrypt - 0.00043023188857019913
+['decrypt', 0.006702662000000001, 3.007117784, 6371]
+library
+function time: decrypt - 0.00047094884978810236
+['decrypt', 3.007247743, 6.007444906, 7044]
+library
+function time: decrypt - 0.0004259223683986371
+['nonce', 6.007538477, 9.00760112, 5710]
+library
+function time: nonce - 0.0005254050162872156
+['encrypt', 9.007706626, 12.008082576, 5576]
+library
+function time: encrypt - 0.0005380875089670015
+['decrypt', 12.011995501, 15.012183642, 7222]
+library
+function time: decrypt - 0.0004154234479368597
+['encrypt', 15.012284254, 18.012666432, 5570]
+library
+function time: encrypt - 0.0005386682545780967
+['decrypt', 12.008925397, 15.009055458, 7153]
+library
+function time: decrypt - 0.00041942262840766116
+[2, "ns-sk", 0.006900306521785943]
+['keygen', 0.09747072100000001, 3.097680728, 6073]
+library
+skip
+['keygen', 3.097794475, 6.098221641, 6078]
+library
+skip
+['nonce', 0.006443815, 3.006619438, 5915]
+library
+function time: nonce - 0.0005072148136939983
+['keygen', 0.007498118000000001, 3.00782037, 6040]
+library
+function time: keygen - 0.0004967420947019868
+['encrypt', 3.00794118, 6.008761554, 4897]
+library
+function time: encrypt - 0.0006127874972432102
+['encrypt', 6.008880433, 9.009291147, 5143]
+library
+function time: encrypt - 0.0005833969889169747
+['decrypt', 3.007551353, 6.007974361, 7231]
+library
+function time: decrypt - 0.0004149388753975936
+['decrypt', 6.008071554, 9.008256253, 7202]
+library
+function time: decrypt - 0.0004165766035823384
+['decrypt', 9.00836619, 12.008601759, 7177]
+library
+function time: decrypt - 0.00041803477344294263
+['decrypt', 0.007006898, 3.00738762, 7238]
+library
+function time: decrypt - 0.00041453173832550424
+['decrypt', 3.007513125, 6.007662073, 7225]
+library
+function time: decrypt - 0.00041524552913494806
+['nonce', 6.007773381, 9.007916232, 5695]
+library
+function time: nonce - 0.0005268029589113257
+['encrypt', 9.008014918, 12.008521826, 5755]
+library
+function time: encrypt - 0.000521373919721981
+['decrypt', 12.009395644, 15.009559718, 7448]
+library
+function time: decrypt - 0.0004028147252953814
+['encrypt', 15.009654485, 18.009914863, 5773]
+library
+function time: encrypt - 0.0005197055912004154
+['decrypt', 12.009340192, 15.009488826, 7021]
+library
+function time: decrypt - 0.00042731072981056834
+[3, "ns-sk", 0.006677476839379169]
+['keygen', 0.09816821, 3.098437879, 5581]
+library
+skip
+['keygen', 3.098560018, 6.099003727, 5969]
+library
+skip
+['nonce', 0.011260435000000001, 3.011409289, 5831]
+library
+function time: nonce - 0.0005145170389298576
+['keygen', 0.007167614, 3.007286335, 5007]
+library
+function time: keygen - 0.0005991848853604953
+['encrypt', 3.007406248, 6.007560116, 5527]
+library
+function time: encrypt - 0.0005428177796272842
+['encrypt', 6.007658178, 9.007685537, 5308]
+library
+function time: encrypt - 0.0005651897812735494
+['decrypt', 3.012345434, 6.012374159, 7111]
+library
+function time: decrypt - 0.0004218856314161159
+['decrypt', 6.012471168, 9.012649957, 7095]
+library
+function time: decrypt - 0.00042285818026779426
+['decrypt', 9.012745825, 12.013089295, 6895]
+library
+function time: decrypt - 0.00043514771138506174
+['decrypt', 0.006650569, 3.006963912, 7219]
+library
+function time: decrypt - 0.00041561342886826426
+['decrypt', 3.007100674, 6.007263441, 7213]
+library
+function time: decrypt - 0.0004159382735338971
+['nonce', 6.007354698, 9.007618796, 5584]
+library
+function time: nonce - 0.0005372965791547276
+['encrypt', 9.007717132, 12.007958265, 5582]
+library
+function time: encrypt - 0.0005374849754568254
+['decrypt', 12.013808574, 15.013915735, 7373]
+library
+function time: decrypt - 0.00040690453831547524
+['encrypt', 15.014012447, 18.014339003, 5684]
+library
+function time: encrypt - 0.0005278547776213933
+['decrypt', 12.008762409, 15.009045861, 7138]
+library
+function time: decrypt - 0.00042032550462314393
+[4, "ns-sk", 0.006763019085833884]
+['keygen', 0.09849816500000001, 3.098972669, 5856]
+library
+skip
+['keygen', 3.099089097, 6.099577008, 5860]
+library
+skip
+['nonce', 0.00853659, 3.008612644, 5720]
+library
+function time: nonce - 0.0005244888206293706
+['keygen', 0.0070082420000000005, 3.007127323, 5732]
+library
+function time: keygen - 0.0005233983044312631
+['encrypt', 3.007251981, 6.007534519, 5347]
+library
+function time: encrypt - 0.0005611151183841406
+['encrypt', 6.007636389, 9.008176576, 5329]
+library
+function time: encrypt - 0.0005630587703133797
+['decrypt', 3.009521306, 6.009790094, 6940]
+library
+function time: decrypt - 0.0004323153873198848
+['decrypt', 6.009890368, 9.010222515, 6945]
+library
+function time: decrypt - 0.0004320132681065516
+['decrypt', 9.010319987, 12.010482495, 6920]
+library
+function time: decrypt - 0.0004335494953757224
+['decrypt', 0.0068081140000000005, 3.006866182, 6965]
+library
+function time: decrypt - 0.00043073339095477386
+['decrypt', 3.006994821, 6.007186903, 6961]
+library
+function time: decrypt - 0.00043100015543743713
+['nonce', 6.007281622, 9.00751287, 5650]
+library
+function time: nonce - 0.000531014380176991
+['encrypt', 9.007615009, 12.007993423, 5522]
+library
+function time: encrypt - 0.0005433499482071714
+['decrypt', 12.011251104, 15.011456732, 7078]
+library
+function time: decrypt - 0.0004238775964961853
+['encrypt', 15.011568094, 18.012030585, 5153]
+library
+function time: encrypt - 0.0005822748866679609
+['decrypt', 12.008820308, 15.009045503, 7085]
+library
+function time: decrypt - 0.00042346156598447405
+[5, "ns-sk", 0.006835651088485306]
+['keygen', 0.09742467, 3.097464305, 5878]
+library
+skip
+['keygen', 3.097580356, 6.097977954, 5891]
+library
+skip
+['nonce', 0.013566442000000001, 3.013952193, 5714]
+library
+function time: nonce - 0.0005250937611130556
+['keygen', 0.008279061, 3.008732388, 5863]
+library
+function time: keygen - 0.0005117607584854169
+['encrypt', 3.008853841, 6.009101822, 4443]
+library
+function time: encrypt - 0.0006752752601845599
+['encrypt', 6.009200249, 9.009539652, 5443]
+library
+function time: encrypt - 0.0005512289919162228
+['decrypt', 3.014827252, 6.014879417, 6927]
+library
+function time: decrypt - 0.00043309544752418084
+['decrypt', 6.014982712, 9.01526184, 6922]
+library
+function time: decrypt - 0.00043344107598959847
+['decrypt', 9.015362619, 12.015725434, 6944]
+library
+function time: decrypt - 0.0004320798984735024
+['decrypt', 0.007841807000000001, 3.008069289, 7067]
+library
+function time: decrypt - 0.00042454046724211116
+['decrypt', 3.008198683, 6.008832952, 6220]
+library
+function time: decrypt - 0.0004824170850482315
+['nonce', 6.008952301, 9.009032534, 5316]
+library
+function time: nonce - 0.0005643491785176823
+['encrypt', 9.009136631, 12.009317878, 5627]
+library
+function time: encrypt - 0.0005331759813399678
+['decrypt', 12.01646535, 15.016790367, 7185]
+library
+function time: decrypt - 0.0004175817699373695
+['encrypt', 15.016890202, 18.017043164, 5589]
+library
+function time: encrypt - 0.0005367960211129002
+['decrypt', 12.010162297, 15.010447342, 7192]
+library
+function time: decrypt - 0.00041716977822580645
+[6, "ns-sk", 0.006938005475110605]
+['keygen', 0.09958523000000001, 3.099780574, 5982]
+library
+skip
+['keygen', 3.099896375, 6.099900995, 5990]
+library
+skip
+['nonce', 0.006150565, 3.006393358, 5610]
+library
+function time: nonce - 0.0005348026368983957
+['keygen', 0.007201156, 3.007635765, 5925]
+library
+function time: keygen - 0.0005064024656540085
+['encrypt', 3.007756345, 6.007935518, 5521]
+library
+function time: encrypt - 0.00054341227549357
+['encrypt', 6.008034246, 9.008100563, 5509]
+library
+function time: encrypt - 0.0005445754795788708
+['decrypt', 3.007334048, 6.007407643, 7098]
+library
+function time: decrypt - 0.00042266463722175253
+['decrypt', 6.0075060240000004, 9.00793213, 6018]
+library
+function time: decrypt - 0.0004985752917912928
+['decrypt', 9.008056742, 12.008672705, 6926]
+library
+function time: decrypt - 0.00043323938247184513
+['decrypt', 0.006348814, 3.006680319, 7191]
+library
+function time: decrypt - 0.000417234251842581
+['decrypt', 3.006803971, 6.007119421, 5738]
+library
+function time: decrypt - 0.0005228852300453119
+['nonce', 6.007215767, 9.007521806, 5825]
+library
+function time: nonce - 0.000515073998111588
+['encrypt', 9.007622585, 12.008129985, 5175]
+library
+function time: encrypt - 0.000579808193236715
+['decrypt', 12.009583243, 15.009809644, 7370]
+library
+function time: decrypt - 0.00040708635020352793
+['encrypt', 15.009905362, 18.01030624, 5678]
+library
+function time: encrypt - 0.0005284256565692143
+['decrypt', 12.009065988, 15.009146129, 7311]
+library
+function time: decrypt - 0.000410351544385173
+[7, "ns-sk", 0.006864537393503845]
+['keygen', 0.098967285, 3.099494016, 5804]
+library
+skip
+['keygen', 3.099612959, 6.099973653, 5149]
+library
+skip
+['nonce', 0.006976497000000001, 3.007099783, 5665]
+library
+function time: nonce - 0.0005295892826125331
+['keygen', 0.007643157, 3.00775271, 5767]
+library
+function time: keygen - 0.0005202201409745101
+['encrypt', 3.007875477, 6.008311386, 4793]
+library
+function time: encrypt - 0.0006260037364907156
+['encrypt', 6.008414504, 9.008634215, 4860]
+library
+function time: encrypt - 0.0006173291586419754
+['decrypt', 3.008092806, 6.0084441, 6651]
+library
+function time: decrypt - 0.0004511128092016238
+['decrypt', 6.008547988, 9.008859781, 6847]
+library
+function time: decrypt - 0.00043819363122535413
+['decrypt', 9.008960274, 12.009263347, 6865]
+library
+function time: decrypt - 0.0004370434192279679
+['decrypt', 0.0067763020000000005, 3.006938003, 6589]
+library
+function time: decrypt - 0.00045532883609045383
+['decrypt', 3.007070131, 6.007138589, 6988]
+library
+function time: decrypt - 0.0004293171805953063
+['nonce', 6.007236438, 9.007341197, 5676]
+library
+function time: nonce - 0.0005285596826990841
+['encrypt', 9.007442652, 12.007606191, 5556]
+library
+function time: encrypt - 0.0005399862381209505
+['decrypt', 12.010094892, 15.010391298, 7109]
+library
+function time: decrypt - 0.00042204197580531725
+['encrypt', 15.010489209, 18.010833602, 5476]
+library
+function time: encrypt - 0.0005479080337837842
+['decrypt', 12.008449085, 15.008524156, 7118]
+library
+function time: decrypt - 0.00042147725077268887
+[8, "ns-sk", 0.006964111376242265]
+['keygen', 0.09660180800000001, 3.096629976, 5829]
+library
+skip
+['keygen', 3.096746344, 6.096754072, 5836]
+library
+skip
+['nonce', 0.0065213450000000004, 3.006540347, 5683]
+library
+function time: nonce - 0.0005278935424951611
+['keygen', 0.00788655, 3.008219919, 5777]
+library
+function time: keygen - 0.0005193583813397958
+['encrypt', 3.008339459, 6.00872449, 5371]
+library
+function time: encrypt - 0.00055862689089555
+['encrypt', 6.008826846, 9.009140218, 5379]
+library
+function time: encrypt - 0.0005577827425171966
+['decrypt', 3.007457463, 6.007710826, 6934]
+library
+function time: decrypt - 0.0004326872458898183
+['decrypt', 6.007810702, 9.008075087, 6934]
+library
+function time: decrypt - 0.0004326888354485146
+['decrypt', 9.008174361, 12.008543267, 6935]
+library
+function time: decrypt - 0.0004326415149242971
+['decrypt', 0.011357198, 3.011392823, 6918]
+library
+function time: decrypt - 0.00043365649392888123
+['decrypt', 3.011520401, 6.011537748, 6915]
+library
+function time: decrypt - 0.0004338419879971078
+['nonce', 6.011633954, 9.011914924, 5479]
+library
+function time: nonce - 0.0005475964537324328
+['encrypt', 9.012015241, 12.01216247, 5526]
+library
+function time: encrypt - 0.0005429148079985522
+['decrypt', 12.009306395, 15.009723311, 7161]
+library
+function time: decrypt - 0.0004189941231671555
+['encrypt', 15.009824282, 18.010254787, 5551]
+library
+function time: encrypt - 0.0005405207178886688
+['decrypt', 12.012979129, 15.013125335, 7024]
+library
+function time: decrypt - 0.00042712787670842826
+[9, "ns-sk", 0.006806331614931559]
+['keygen', 0.09598836200000001, 3.096247464, 5980]
+library
+skip
+['keygen', 3.096362386, 6.096438921, 5985]
+library
+skip
+['nonce', 0.006189915000000001, 3.006395697, 5808]
+library
+function time: nonce - 0.0005165643564049587
+['keygen', 0.007234629, 3.007432069, 5929]
+library
+function time: keygen - 0.0005060208196997807
+['encrypt', 3.00754998, 6.008014543, 5531]
+library
+function time: encrypt - 0.0005424813890797324
+['encrypt', 6.008115132, 9.008435863, 5508]
+library
+function time: encrypt - 0.0005447205393972405
+['decrypt', 3.007312016, 6.007504784, 7095]
+library
+function time: decrypt - 0.0004228601505285412
+['decrypt', 6.007628605, 9.007755801, 7102]
+library
+function time: decrypt - 0.00042243413066741766
+['decrypt', 9.007852885, 12.007891903, 6965]
+library
+function time: decrypt - 0.0004307306558506821
+['decrypt', 0.006699358000000001, 3.00700815, 7225]
+library
+function time: decrypt - 0.0004152676528719723
+['decrypt', 3.007159772, 6.007505335, 7188]
+library
+function time: decrypt - 0.0004174103454368392
+['nonce', 6.00760174, 9.008064884, 5823]
+library
+function time: nonce - 0.0005152778883736904
+['encrypt', 9.008166793, 12.008436206, 5690]
+library
+function time: encrypt - 0.000527288121792619
+['decrypt', 12.008668738, 15.008777018, 7337]
+library
+function time: decrypt - 0.00040890122393348767
+['encrypt', 15.008870409, 18.009072357, 5660]
+library
+function time: encrypt - 0.0005300710155477033
+['decrypt', 12.00924355, 15.009472513, 7267]
+library
+function time: decrypt - 0.00041285660699050497
+[10, "ns-sk", 0.00661288489657517]
+["avg", "ns-sk", 0.06835627063103142, 10, 0.006835627063103142]

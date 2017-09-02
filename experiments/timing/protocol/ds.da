@@ -36,7 +36,7 @@ class RoleI (process):
         send(('encrypt_sign', i, encrypt(sign(k, skI), pkR)), to = R)
         await(some(received((_i, m), from_ = R)))
         s = decrypt(m, k)
-        output('DECRYPTED MESSAGE:', s)
+        output(str(i) + ': DECRYPTED MESSAGE:', s)
         return i
 
 class RoleR (process):
@@ -52,8 +52,6 @@ class RoleR (process):
 
     def receive(msg=('encrypt_sign', i, m), from_ = I):
         k = verify(decrypt(m, skR), pkI)
-        output(i)
-        output(k)
         send((i, encrypt(s, k)), to = I)
         if i == (loops - 1):
             print(json.dumps(['ds', 'roleR', self.start_time, time.process_time(), loops]),

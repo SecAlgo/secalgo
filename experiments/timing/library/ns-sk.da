@@ -26,13 +26,13 @@ class RoleS (process):
         pass
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg1', (I, R, N_I)), from_ = I):
         K_IR = keygen('shared')
         send(('msg2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)),
                               key = K_IS)), to = I)
+        exit()
 
 class RoleI (process):
     def setup(S, K_IS, R):
@@ -56,8 +56,7 @@ class RoleR (process):
         pass
     
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg3', enc_RS), from_ = I):
         I == decrypt(enc_RS, key = K_RS)[1]
@@ -67,6 +66,7 @@ class RoleR (process):
         await(some(received(('msg5', enc_IR), from_ = _I),
                    has = ((N_R - 1) == decrypt(enc_IR, key = K_IR))))
         output('R - Key Exchange Complete')
+        exit()
 
 def main():
     K_IS = keygen('shared')

@@ -39,8 +39,7 @@ class RoleR (process):
         self.R = self
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg1', dh_X, m, cert_I), from_ = I):
         dh_y, dh_Y, _, _ = keygen('dh', dh_p = PK_I[2], dh_g = PK_I[1])
@@ -55,7 +54,8 @@ class RoleR (process):
                 await(some(received(('msg3', m2), from_ = I)))
                 if BitGen(K_IR) == m2:
                     output('R - Authenticated Exchange of Key Material Complete')
-
+        exit()
+        
 def main():
     sk_sig_I, pk_sig_I = keygen('public')
     sk_sig_R, pk_sig_R = keygen('public')

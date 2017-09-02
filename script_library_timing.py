@@ -106,18 +106,23 @@ def parse_exp01(p, iter_num, iter_label, output_file):
                     print(data_line, file = of, flush = True)
                     if data_line[0] in sec_algo_functions:
                         print('library', file = of, flush = True)
-                        if ((data_line[0] == 'genkey' or data_line[0] == 'sign') and
+                        if ((data_line[0] == 'keygen' or data_line[0] == 'sign') and
                             skip_counter < function_skip):
                             print('skip', file = of, flush = True)
+                            print('SKIP:', data_line, flush = True)
                             skip_counter += 1
                         else:
                             function_time = ((data_line[2] - data_line[1]) / data_line[3])
                             print('function time:', data_line[0], '-', function_time,
                                   file = of, flush = True)
+                            print(str(i+1) + ': ' + data_line[0] + ':', data_line[2],
+                                  '-', data_line[1], '/', data_line[3], '=',
+                                  function_time, flush = True)
                             library_time += function_time
             iter_result = [(i + 1), p, library_time]
             iter_result_list.append(iter_result)
             print(json.dumps(iter_result), file = of, flush = True)
+            print(iter_result, flush = True)
         for ir in iter_result_list:
             total_library_time += ir[2]
         avg_library_time = total_library_time / iter_count
