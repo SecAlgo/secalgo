@@ -7,7 +7,8 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
-from Crypto.PublicKey.RSA import _RSAobj
+from Crypto.Cipher import PKCS1_OAEP
+#from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA256
 from Crypto import Random
 from Crypto.Random.random import getrandbits
@@ -113,13 +114,14 @@ def keygen_mac(key_size, alg, key_mat):
     return new_key_dict
 #end keygen_mac()
 
-def keygen_shared(key_size, alg, mode, key_mat):
+def keygen_shared(key_size, alg, mode, key_mat = None):
     Random.atfork()
     if key_mat == None:
         new_key =  Random.new().read(key_size)
     else:
         new_key = key_mat
     key_dict = {'alg' : alg,
+                'size': key_size,
                 'mode' : mode,
                 'key' : new_key}
     return key_dict
@@ -131,8 +133,8 @@ def keygen_public(key_size, alg):
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
         pub_key = key_pair.publickey().exportKey()
-        priv_key_dict = {'alg' : 'RSA', 'type' : 'private', 'key' : priv_key}
-        pub_key_dict = {'alg' : 'RSA', 'type' : 'public', 'key' : pub_key}
+        priv_key_dict = {'alg' : 'RSA', 'type' : 'private', 'size': key_size, 'key' : priv_key}
+        pub_key_dict = {'alg' : 'RSA', 'type' : 'public', 'size': key_size, 'key' : pub_key}
         return priv_key_dict, pub_key_dict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -245,18 +247,19 @@ def asym_encrypt(plaintext, key):
     alg = key['alg']
     k = key['key']
     serial_pt = pickle.dumps(plaintext)
-    ct_list = None
     if alg == 'RSA':
         pubk = RSA.importKey(k)
-        kpdsb = (pubk.size() // 8)
-        frag_counter = (len(serial_pt) // kpdsb) + 1
-        ct_list = []
-        for i in range(frag_counter):
-            frag = serial_pt[(i * kpdsb):((i + 1) * kpdsb)]
-            ciphertext = pubk.encrypt(frag, '')
-            ct_list.append(ciphertext)
-        #end for
-        return ct_list
+        oaep_cipher = PKCS1_OAEP.new(pubk)
+        try:
+            ciphertext =  oaep_cipher.encrypt(serial_pt)
+        except ValueError: #Use Hybrid Encryption
+            print('**********: Using Hybrid Encryption!')
+            shared_key = keygen_shared(16, 'AES', 'CBC')
+            data_ct = sym_encrypt(serial_pt, shared_key)
+            serial_key = pickle.dumps(shared_key)
+            key_ct = oaep_cipher.encrypt(serial_key)
+            ciphertext = key_ct + data_ct
+        return ciphertext
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end asym_encrypt()
@@ -306,17 +309,22 @@ def sym_decrypt(ciphertext, key):
     return pickle.loads(serial_pt)
 #end sym_decrypt()
 
-def asym_decrypt(ct_list, key):
+def asym_decrypt(ciphertext, key):
     Random.atfork()
     serial_pt = b''
     alg = key['alg']
+    size = key['size']
     k = key['key']
     privk = None
     if alg == 'RSA':
         privk = RSA.importKey(k)
-        for ciphertext in ct_list:
-            serial_pt += privk.decrypt(ciphertext)
-        #end for
+        oaep_cipher = PKCS1_OAEP.new(privk)
+        if len(ciphertext) > (size // 8): #Hybrid Encryption Used!
+            serial_key = oaep_cipher.decrypt(ciphertext[:256])
+            session_key = pickle.loads(serial_key)
+            serial_pt = sym_decrypt(ciphertext[256:], key = session_key)
+        else:
+            serial_pt = oaep_cipher.decrypt(ciphertext)
         plaintext = pickle.loads(serial_pt)
         return plaintext
     else:
