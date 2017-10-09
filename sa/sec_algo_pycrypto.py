@@ -1,3 +1,5 @@
+
+
 import sys
 import random
 import pickle
@@ -9,90 +11,19 @@ from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 #from Crypto.PublicKey.RSA import _RSAobj
+from Crypto.Hash import SHA224
 from Crypto.Hash import SHA256
+from Crypto.Hash import SHA384
+from Crypto.Hash import SHA512
 from Crypto import Random
 from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
-'''
-KEY_PAIR_DEFAULT_SIZE_BITS = 2048
-KEY_PAIR_DEFAULT_SIZE_BYTES = 256
-SYM_KEY_DEFAULT_SIZE_BITS = 256
-SYM_KEY_DEFAULT_SIZE_BYTES = 32
-MAC_KEY_DEFAULT_SIZE_BITS = 256
-MAC_KEY_DEFAULT_SIZE_BYTES = 32
-NONCE_DEFAULT_SIZE_BITS = 128
-DH_DEFAULT_MOD_SIZE_BITS = 2048
-DH_DEFAULT_EXP_SIZE_BITS = 512
-DH_DEFAULT_MODP_GROUP = 14
-PUBLIC_CIPHERS = {'RSA', 'DSA'}
-
-#benchmark = False
-
-config_fn = 'config.sac'
-
-default_configuration = {'sym_cipher' : 'AES',
-                         'sym_mode' : 'CBC',
-                         'sym_key_size' : SYM_KEY_DEFAULT_SIZE_BITS,
-                         'mac_alg' : 'HMAC',
-                         'mac_key_size' : MAC_KEY_DEFAULT_SIZE_BITS,
-                         'pub_cipher' : 'RSA',
-                         'pub_key_size' : KEY_PAIR_DEFAULT_SIZE_BITS,
-                         'nonce_size' : NONCE_DEFAULT_SIZE_BITS,
-                         'dh_grp' : DH_DEFAULT_MODP_GROUP,
-                         'dh_mod_size' : DH_DEFAULT_MOD_SIZE_BITS,
-                         'dh_exp_size' : DH_DEFAULT_EXP_SIZE_BITS}
-
-with open(config_fn, 'w') as f:
-    json.dump(default_configuration, f)
-
-def configure(**configs):
-    with open(config_fn, 'r') as f1:
-        current_cfg = json.load(f1)
-        for k, v in configs.items():
-            if current_cfg[k] != None:
-                current_cfg[k] = v
-    with open(config_fn, 'w') as f2:
-        json.dump(current_cfg, f2)
-#end security_declarations()
-
-def dec_timer(func):
-    def timer(*args, **kwargs):
-        start_time = time.process_time()
-        result = func(*args, **kwargs)
-        print(json.dumps([func.__name__, start_time, time.process_time()]), flush = True)
-        return result
-    if benchmark:
-        return timer
-    else:
-        return func
-#end timer()
-'''
-
 def nonce(size):
     Random.atfork()
     return getrandbits(size)
 #end nonce
-
-'''
-#@dec_timer
-def keygen(key_type, key_size = None, use_dh_group = True, dh_group = None,
-           dh_mod_size = None, dh_p = None, dh_g = None):
-    Random.atfork()
-    if key_type == 'random':
-        return keygen_random(key_size)
-    elif key_type == 'mac':
-        return keygen_mac(key_size)   
-    elif key_type == 'shared':
-        return keygen_shared(key_size)
-    elif key_type == 'public':
-        return keygen_public(key_size)
-    elif key_type == 'diffie-hellman' or key_type == 'dh':
-        return keygen_dh(key_size, use_dh_group, dh_group, dh_mod_size, dh_p,
-                         dh_g)
-#end keygen()
-'''
 
 def keygen_random(key_size):
     Random.atfork()
@@ -103,13 +34,15 @@ def keygen_random(key_size):
         return Random.new().read(key_size)
 #end keygen_random()
 
-def keygen_mac(key_size, alg, key_mat):
+def keygen_mac(key_size, alg, hash_alg, key_mat):
     Random.atfork()
     if key_mat == None:
         new_key = Random.new().read(key_size)
     else:
         new_key = key_mat
     new_key_dict = {'alg' : alg,
+                    'size' : key_size, 
+                    'hash' : hash_alg,
                     'key' : new_key}
     return new_key_dict
 #end keygen_mac()
@@ -127,14 +60,16 @@ def keygen_shared(key_size, alg, mode, key_mat = None):
     return key_dict
 #end keygen_shared()
 
-def keygen_public(key_size, alg):
+def keygen_public(key_size, alg, hash_alg):
     Random.atfork()
     if alg == 'RSA':
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
         pub_key = key_pair.publickey().exportKey()
-        priv_key_dict = {'alg' : 'RSA', 'type' : 'private', 'size': key_size, 'key' : priv_key}
-        pub_key_dict = {'alg' : 'RSA', 'type' : 'public', 'size': key_size, 'key' : pub_key}
+        priv_key_dict = {'alg' : 'RSA', 'type' : 'private',
+                         'size': key_size, 'hash' : hash_alg, 'key' : priv_key}
+        pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
+                        'size': key_size, 'hash' : hash_alg, 'key' : pub_key}
         return priv_key_dict, pub_key_dict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -195,17 +130,6 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     return (dh_x, dh_X, dh_g, dh_p)
 #end gen_dh_key()
 
-'''
-#@dec_timer
-def encrypt(plaintext, key):
-    Random.atfork()
-    if key['alg'] in PUBLIC_CIPHERS:
-        return asym_encrypt(plaintext, key)
-    else:
-        return sym_encrypt(plaintext, key)
-#end encrypt
-'''
-
 def sym_encrypt(plaintext, key):
     Random.atfork()
     serial_pt = pickle.dumps(plaintext)
@@ -264,17 +188,6 @@ def asym_encrypt(plaintext, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end asym_encrypt()
 
-'''
-#@dec_timer
-def decrypt(ciphertext, key):
-    Random.atfork()
-    if key['alg'] in PUBLIC_CIPHERS:
-        return asym_decrypt(ciphertext, key)
-    else:
-        return sym_decrypt(ciphertext, key)
-#end decrypt()
-'''
-
 def sym_decrypt(ciphertext, key):
     Random.atfork()
     alg = key['alg']
@@ -331,24 +244,28 @@ def asym_decrypt(ciphertext, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end asym_decrypt()
 
-'''
-#@dec_timer
-def sign(data, key):
-    Random.atfork()
-    if key['alg'] in PUBLIC_CIPHERS:
-        return pubkey_sign(data, key)
+def get_hash_alg(hash_name):
+    if hash_name == 'SHA-224':
+        h = SHA224
+    elif hash_name == 'SHA-256':
+        h = SHA256
+    elif hash_name == 'SHA-384':
+        h = SHA384
+    elif hash_name == 'SHA-512':
+        h = SHA512
     else:
-        return mac_sign(data, key)
-#end sign()
-'''
-
+        print('SA_ERROR:', hash_name, 'is not a recognized hash function.', flush = True)
+    return h
+#end def get_hash()
+        
 def mac_sign(data, key):
     Random.atfork()
     serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'HMAC':
-        h = HMAC.new(k, serial_data, SHA256)
+        h = HMAC.new(k, serial_data, hash_alg)
         sig = h.digest()
         result = (serial_data, sig)
         s_result = pickle.dumps(result)
@@ -362,9 +279,10 @@ def pubkey_sign(data, key):
     serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
         pubk = RSA.importKey(k)
-        sig = pubk.sign(SHA256.new(serial_data).digest(), '')
+        sig = pubk.sign(hash_alg.new(serial_data).digest(), '')
         result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
                                                byteorder = 'little'))
         s_result = pickle.dumps(result)
@@ -373,39 +291,14 @@ def pubkey_sign(data, key):
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
 #end pubkey_sign()
 
-'''
-#returns signed data if verification succeeds
-#returns None if verification fails
-#@dec_timer
-def verify(data, key):
-    Random.atfork()
-    if key['alg'] in PUBLIC_CIPHERS:
-        return pubkey_verify(data, key)
-    else:
-        return mac_verify(data, key)
-#end verify()
-'''
-
-'''
-#returns True if verification succeeds
-#returns False if verification fails
-#@dec_timer
-def verify1(data, signed_data, key):
-    Random.atfork()
-    if key['alg'] in PUBLIC_CIPHERS:
-        return pubkey_verify1(data, signed_data, key)
-    else:
-        return mac_verify1(data, signed_data, key)
-#end verify1()
-'''
-
 def mac_verify(data, key):
     Random.atfork()
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'HMAC':
         serial_data, sig = pickle.loads(data)
-        verdict = (sig == HMAC.new(k, serial_data, SHA256).digest())
+        verdict = (sig == HMAC.new(k, serial_data, hash_alg).digest())
         if verdict:
             return pickle.loads(serial_data)
         else:
@@ -418,9 +311,10 @@ def mac_verify1(data, signed_data, key):
     Random.atfork()
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'HMAC':
         serial_data, sig = pickle.loads(signed_data)
-        verdict = (sig == HMAC.new(k, pickle.dumps(data), SHA256).digest())
+        verdict = (sig == HMAC.new(k, pickle.dumps(data), hash_alg).digest())
         return verdict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -432,10 +326,11 @@ def pubkey_verify(data, key):
     unp_data = pickle.loads(data)
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
         privk = RSA.importKey(k)
         sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-        verdict = privk.verify(SHA256.new(unp_data[0]).digest(), sig)
+        verdict = privk.verify(hash_alg.new(unp_data[0]).digest(), sig)
         if verdict:
             return pickle.loads(unp_data[0])
         else:
@@ -450,10 +345,11 @@ def pubkey_verify1(data, signed_data, key):
     unp_data = pickle.loads(signed_data)
     alg = key['alg']
     k = key['key']
+    hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
         privk = RSA.importKey(k)
         sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-        verdict = privk.verify(SHA256.new(pickle.dumps(data)).digest(), sig)
+        verdict = privk.verify(hash_alg.new(pickle.dumps(data)).digest(), sig)
         return verdict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)

@@ -14,17 +14,20 @@ DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 PUBLIC_CIPHERS = {'RSA', 'DSA', 'public'}
 SYM_CIPHERS = {'AES', 'DES', '3DES', 'Blowfish', 'shared'}
+MAC_ALGORITHMS = {'HMAC', 'mac'}
+HASH_FUNCTIONS = {'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'}
 
 config_fn = 'config.sac'
 
 default_cfg = {'sym_cipher'        : 'AES',
-               'sym_mode'          : 'CBC',
+               'block_mode'          : 'CBC',
                'sym_key_size'      : SYM_KEY_DEFAULT_SIZE_BITS,
                'mac_alg'           : 'HMAC',
                'mac_key_size'      : MAC_KEY_DEFAULT_SIZE_BITS,
                'pub_cipher'        : 'RSA',
                'pub_key_size'      : KEY_PAIR_DEFAULT_SIZE_BITS,
-               'verify_returns'    : 'data', 
+               'verify_returns'    : 'data',
+               'hash_alg'          : 'SHA-256',
                'nonce_size'        : NONCE_DEFAULT_SIZE_BITS,
                'dh_grp'            : DH_DEFAULT_MODP_GROUP,
                'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
@@ -92,29 +95,38 @@ def nonce(size = None):
 #end nonce()
 
 @dec_timer
-def keygen(key_type, key_size = None, key_mat = None, use_dh_group = True,
+def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
+           key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
     backend = get_backend(current_cfg['backend'])
     if key_type == 'random':
         return backend.keygen_random(key_size)
-    elif key_type == 'mac':
+    elif key_type in MAC_ALGORITHMS:
+        if key_type == 'mac':
+            key_type = current_cfg['mac_alg']
         if key_size == None:
             key_size = (current_cfg['mac_key_size'] // 8)
-        return backend.keygen_mac(key_size, current_cfg['mac_alg'], key_mat)
+        if hash_alg == None:
+            hash_alg = current_cfg['hash_alg']
+        return backend.keygen_mac(key_size, key_type, hash_alg, key_mat)
     elif key_type in SYM_CIPHERS:
         if key_type == 'shared':
             key_type = current_cfg['sym_cipher']
         if key_size == None:
             key_size = (current_cfg['sym_key_size'] // 8)
-        return backend.keygen_shared(key_size, key_type, current_cfg['sym_mode'], key_mat)
+        if block_mode == None:
+            block_mode = current_cfg['block_mode']
+        return backend.keygen_shared(key_size, key_type, block_mode, key_mat)
     elif key_type in PUBLIC_CIPHERS:
         if key_type == 'public':
             key_type = current_cfg['pub_cipher']
         if key_size == None:
             key_size = current_cfg['pub_key_size']
-        return backend.keygen_public(key_size, key_type)
+        if hash_alg == None:
+            hash_alg = current_cfg['hash_alg']
+        return backend.keygen_public(key_size, key_type, hash_alg)
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
             key_size = current_cfg['dh_exp_size']
@@ -124,8 +136,8 @@ def keygen(key_type, key_size = None, key_mat = None, use_dh_group = True,
         else:
             if dh_p == None:
                 dh_mod_size = current_cfg['dh_mod_size']
-        return backend.keygen_dh(key_size, use_dh_group, dh_group, dh_mod_size, dh_p,
-                         dh_g)
+        return backend.keygen_dh(key_size, use_dh_group, dh_group,
+                                 dh_mod_size, dh_p, dh_g)
 #end keygen()
 
 @dec_timer
