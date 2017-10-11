@@ -4,8 +4,14 @@ import sa.sec_algo_pycrypto as SA_Pycrypto
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
-SYM_KEY_DEFAULT_SIZE_BITS = 256
-SYM_KEY_DEFAULT_SIZE_BYTES = 32
+SYM_KEY_DEFAULT_SIZE_BITS = {'AES' : 256,
+                             'DES' : 64,
+                             'DES3' : 192,
+                             'Blowfish' : 448}
+SYM_KEY_DEFAULT_SIZE_BYTES = {'AES' : 32,
+                              'DES' : 8,
+                              'DES3' : 24,
+                              'Blowfish' : 56}                            
 MAC_KEY_DEFAULT_SIZE_BITS = 256
 MAC_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
@@ -13,14 +19,14 @@ DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 PUBLIC_CIPHERS = {'RSA', 'DSA', 'public'}
-SYM_CIPHERS = {'AES', 'DES', '3DES', 'Blowfish', 'shared'}
+SYM_CIPHERS = {'AES', 'DES', 'DES3', 'Blowfish', 'shared'}
 MAC_ALGORITHMS = {'HMAC', 'mac'}
 HASH_FUNCTIONS = {'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'}
 
 config_fn = 'config.sac'
 
 default_cfg = {'sym_cipher'        : 'AES',
-               'block_mode'          : 'CBC',
+               'block_mode'        : 'CBC',
                'sym_key_size'      : SYM_KEY_DEFAULT_SIZE_BITS,
                'mac_alg'           : 'HMAC',
                'mac_key_size'      : MAC_KEY_DEFAULT_SIZE_BITS,
@@ -115,7 +121,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
         if key_type == 'shared':
             key_type = current_cfg['sym_cipher']
         if key_size == None:
-            key_size = (current_cfg['sym_key_size'] // 8)
+            key_size = (current_cfg['sym_key_size'][key_type])
         if block_mode == None:
             block_mode = current_cfg['block_mode']
         return backend.keygen_shared(key_size, key_type, block_mode, key_mat)

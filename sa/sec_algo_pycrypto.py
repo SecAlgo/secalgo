@@ -6,6 +6,9 @@ import pickle
 import json
 import time
 from Crypto.Cipher import AES
+from Crypto.Cipher import DES
+from Crypto.Cipher import DES3
+from Crypto.Cipher import Blowfish
 from Crypto.Util import Counter
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
@@ -20,6 +23,32 @@ from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
+PAD_MODES = {'ECB', 'CBC'}
+IV_MODES = {'CBC', 'CFB'}
+BLOCK_CIPHERS = {'AES' : AES,
+                 'DES' : DES,
+                 'DES3' : DES3,
+                 'Blowfish' : Blowfish}
+BLOCK_SIZES = {'AES' : AES.block_size,
+               'DES' : DES.block_size,
+               'DES3': DES3.block_size,
+               'Blowfish' : Blowfish.block_size}
+BLOCK_MODES = {'AES' : {'ECB' : AES.MODE_ECB,
+                        'CBC' : AES.MODE_CBC,
+                        'CFB' : AES.MODE_CFB,
+                        'CTR' : AES.MODE_CTR},
+               'DES' : {'ECB' : DES.MODE_ECB,
+                        'CBC' : DES.MODE_CBC,
+                        'CFB' : DES.MODE_CFB,
+                        'CTR' : DES.MODE_CTR},
+               'DES3' : {'ECB' : DES3.MODE_ECB,
+                         'CBC' : DES3.MODE_CBC,
+                         'CFB' : DES3.MODE_CFB,
+                         'CTR' : DES3.MODE_CTR},
+               'Blowfish' : {'ECB' : Blowfish.MODE_ECB,
+                             'CBC' : Blowfish.MODE_CBC,
+                             'CFB' : Blowfish.MODE_CFB,
+                             'CTR' : Blowfish.MODE_CTR}}
 def nonce(size):
     Random.atfork()
     return getrandbits(size)
@@ -50,7 +79,7 @@ def keygen_mac(key_size, alg, hash_alg, key_mat):
 def keygen_shared(key_size, alg, mode, key_mat = None):
     Random.atfork()
     if key_mat == None:
-        new_key =  Random.new().read(key_size)
+        new_key =  Random.new().read(key_size // 8)
     else:
         new_key = key_mat
     key_dict = {'alg' : alg,
@@ -137,8 +166,42 @@ def sym_encrypt(plaintext, key):
     mode = key['mode']
     k = key['key']
     ciphertext = None
+    ctr = None
+    iv = b''
+    #seg_size = None
+    ctr_pre = b''
+    preamble = b''
+    encrypt_kwargs = {'mode' : BLOCK_MODES[alg][mode]}
+    if mode in PAD_MODES:
+        print('SYM_ENCRYPT: Padding Plaintext', flush = True)
+        serial_pt = pkcs7_pad(serial_pt)
+    if mode in IV_MODES:
+        print("SYM_ENCRYPT: Generating an IV", flush = True)
+        iv = Random.new().read(BLOCK_SIZES[alg])
+        encrypt_kwargs['IV'] = iv
+        preamble = iv
+    if mode == 'CTR':
+        print('SYM_ENCRYPT: Generating a Counter', flush = True)
+        ctr_pre = Random.new().read(BLOCK_SIZES[alg] // 2)
+        ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = ctr_pre)
+        encrypt_kwargs['counter'] = ctr
+        preamble = ctr_pre
+    print(encrypt_kwargs, flush = True)
     if alg == 'AES':
-        #print('$$$$$$$$$$: Encrypt: USING AES')
+        print('SYM_ENCRYPT: USING AES')
+        encrypter = AES.new(k, **encrypt_kwargs)
+    if alg == 'DES':
+        print('SYM_ENCRYPT: USING DES')
+        encrypter = DES.new(k, **encrypt_kwargs)
+    if alg == 'DES3':
+        print('SYM_ENCRYPT: USING DES3')
+        encrypter = DES3.new(k, **encrypt_kwargs)
+    if alg == 'Blowfish':
+        print('SYM_ENCRYPT: USING Blowfish')
+        encrypter = Blowfish.new(k, **encrypt_kwargs)
+    ciphertext = preamble + encrypter.encrypt(serial_pt)
+    return ciphertext
+'''        
         if mode == 'CTR':
             #print('$$$$$$$$$$: Encrypt: USING CTR')
             pre = Random.new().read(8)
@@ -164,6 +227,7 @@ def sym_encrypt(plaintext, key):
             encrypter = AES.new(k, AES.MODE_CFB, iv, segment_size=seg_size)
             ciphertext = iv + encrypter.encrypt(padded_pt)
     return ciphertext
+'''
 #end sym_encrypt()
 
 def asym_encrypt(plaintext, key):
@@ -193,8 +257,37 @@ def sym_decrypt(ciphertext, key):
     alg = key['alg']
     mode = key['mode']
     k = key['key']
+    preamble_length = None
+    decrypt_kwargs = {'mode' : BLOCK_MODES[alg][mode]}
+    if mode in IV_MODES:
+        print("SYM_DECRYPT: Generating an IV", flush = True)
+        preamble_length = BLOCK_SIZES[alg]
+        iv = ciphertext[0:preamble_length]
+        decrypt_kwargs['IV'] = iv
+    if mode == 'CTR':
+        print('SYM_DECRYPT: Generating a Counter', flush = True)
+        preamble_length = BLOCK_SIZES[alg] // 2
+        ctr_pre = ciphertext[0:preamble_length]
+        ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = ctr_pre)
+        decrypt_kwargs['counter'] = ctr
+    print(decrypt_kwargs, flush = True)    
     if alg == 'AES':
-        #print('$$$$$$$$$$: Decrypt: USING AES')
+        print('SYM_DECRYPT: USING AES')
+        decrypter = AES.new(k, **decrypt_kwargs)
+    if alg == 'DES':
+        print('SYM_DECRYPT: USING DES')
+        decrypter = DES.new(k, **decrypt_kwargs)
+    if alg == 'DES3':
+        print('SYM_DECRYPT: USING DES3')
+        decrypter = DES3.new(k, **decrypt_kwargs)
+    if alg == 'Blowfish':
+        print('SYM_DECRYPT: USING Blowfish')
+        decrypter = Blowfish.new(k, **decrypt_kwargs)
+    serial_pt = decrypter.decrypt(ciphertext[preamble_length:])
+    if mode in PAD_MODES:
+        serial_pt = pkcs7_unpad(serial_pt)
+    return pickle.loads(serial_pt)
+'''
         if mode == 'CTR':
             #print('$$$$$$$$$$: Decrypt: USING CTR')
             pre = ciphertext[0:8]
@@ -220,6 +313,7 @@ def sym_decrypt(ciphertext, key):
             padded_pt = decrypter.decrypt(ciphertext[16:])
             serial_pt = pkcs7_unpad(padded_pt, seg_size)
     return pickle.loads(serial_pt)
+'''
 #end sym_decrypt()
 
 def asym_decrypt(ciphertext, key):

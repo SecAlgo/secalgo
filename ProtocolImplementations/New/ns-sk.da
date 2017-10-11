@@ -20,6 +20,7 @@ Protocol Diagram:
 """
 from sa.secalgo import *
 #configure(benchmark = True)
+configure(sym_cipher = 'Blowfish', block_mode = 'CFB')
     
 class RoleS (process):
     def setup(K_IS, K_RS):
