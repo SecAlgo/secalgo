@@ -12,7 +12,7 @@ http://www.lsv.fr/Software/spore/nssk_amended.html
 
 Protocol Diagram:
   (1) I -> R : A
-  (2) R -> I : enc((I, N1_R, K_RS)
+  (2) R -> I : enc((I, N1_R), K_RS)
   (3) I -> S : (I, R, N_I, enc((I, N1_R), K_RS))
   (4) S -> I : enc((N_I, K_IR, R, enc((K_IR, N1_R, I), K_RS)), K_IS)
   (5) I -> R : enc((K_IR, N1_R, I), K_RS)
