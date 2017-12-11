@@ -173,31 +173,31 @@ def sym_encrypt(plaintext, key):
     preamble = b''
     encrypt_kwargs = {'mode' : BLOCK_MODES[alg][mode]}
     if mode in PAD_MODES:
-        print('SYM_ENCRYPT: Padding Plaintext', flush = True)
+        #print('SYM_ENCRYPT: Padding Plaintext', flush = True)
         serial_pt = pkcs7_pad(serial_pt)
     if mode in IV_MODES:
-        print("SYM_ENCRYPT: Generating an IV", flush = True)
+        #print("SYM_ENCRYPT: Generating an IV", flush = True)
         iv = Random.new().read(BLOCK_SIZES[alg])
         encrypt_kwargs['IV'] = iv
         preamble = iv
     if mode == 'CTR':
-        print('SYM_ENCRYPT: Generating a Counter', flush = True)
+        #print('SYM_ENCRYPT: Generating a Counter', flush = True)
         ctr_pre = Random.new().read(BLOCK_SIZES[alg] // 2)
         ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = ctr_pre)
         encrypt_kwargs['counter'] = ctr
         preamble = ctr_pre
-    print(encrypt_kwargs, flush = True)
+    #print(encrypt_kwargs, flush = True)
     if alg == 'AES':
-        print('SYM_ENCRYPT: USING AES')
+        #print('SYM_ENCRYPT: USING AES')
         encrypter = AES.new(k, **encrypt_kwargs)
     if alg == 'DES':
-        print('SYM_ENCRYPT: USING DES')
+        #print('SYM_ENCRYPT: USING DES')
         encrypter = DES.new(k, **encrypt_kwargs)
     if alg == 'DES3':
-        print('SYM_ENCRYPT: USING DES3')
+        #print('SYM_ENCRYPT: USING DES3')
         encrypter = DES3.new(k, **encrypt_kwargs)
     if alg == 'Blowfish':
-        print('SYM_ENCRYPT: USING Blowfish')
+        #print('SYM_ENCRYPT: USING Blowfish')
         encrypter = Blowfish.new(k, **encrypt_kwargs)
     ciphertext = preamble + encrypter.encrypt(serial_pt)
     return ciphertext
@@ -241,7 +241,7 @@ def asym_encrypt(plaintext, key):
         try:
             ciphertext =  oaep_cipher.encrypt(serial_pt)
         except ValueError: #Use Hybrid Encryption
-            print('**********: Using Hybrid Encryption!')
+            #print('**********: Using Hybrid Encryption!')
             shared_key = keygen_shared(16, 'AES', 'CBC')
             data_ct = sym_encrypt(serial_pt, shared_key)
             serial_key = pickle.dumps(shared_key)
@@ -260,28 +260,28 @@ def sym_decrypt(ciphertext, key):
     preamble_length = None
     decrypt_kwargs = {'mode' : BLOCK_MODES[alg][mode]}
     if mode in IV_MODES:
-        print("SYM_DECRYPT: Generating an IV", flush = True)
+        #print("SYM_DECRYPT: Generating an IV", flush = True)
         preamble_length = BLOCK_SIZES[alg]
         iv = ciphertext[0:preamble_length]
         decrypt_kwargs['IV'] = iv
     if mode == 'CTR':
-        print('SYM_DECRYPT: Generating a Counter', flush = True)
+        #print('SYM_DECRYPT: Generating a Counter', flush = True)
         preamble_length = BLOCK_SIZES[alg] // 2
         ctr_pre = ciphertext[0:preamble_length]
         ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = ctr_pre)
         decrypt_kwargs['counter'] = ctr
-    print(decrypt_kwargs, flush = True)    
+    #print(decrypt_kwargs, flush = True)    
     if alg == 'AES':
-        print('SYM_DECRYPT: USING AES')
+        #print('SYM_DECRYPT: USING AES')
         decrypter = AES.new(k, **decrypt_kwargs)
     if alg == 'DES':
-        print('SYM_DECRYPT: USING DES')
+        #print('SYM_DECRYPT: USING DES')
         decrypter = DES.new(k, **decrypt_kwargs)
     if alg == 'DES3':
-        print('SYM_DECRYPT: USING DES3')
+        #print('SYM_DECRYPT: USING DES3')
         decrypter = DES3.new(k, **decrypt_kwargs)
     if alg == 'Blowfish':
-        print('SYM_DECRYPT: USING Blowfish')
+        #print('SYM_DECRYPT: USING Blowfish')
         decrypter = Blowfish.new(k, **decrypt_kwargs)
     serial_pt = decrypter.decrypt(ciphertext[preamble_length:])
     if mode in PAD_MODES:
