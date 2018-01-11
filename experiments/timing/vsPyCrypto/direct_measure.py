@@ -172,7 +172,7 @@ def time_SA_mac_verify(loops):
         
     end_wallclock = time.perf_counter()
     end_data = resource.getrusage(resource.RUSAGE_SELF)
-
+    
     output_results('SA_mac_verify',
                    (start_wallclock, start_data),
                    (end_wallclock, end_data),
@@ -377,7 +377,7 @@ def time_PyCrypto_pub_verify(loops):
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
         h = SHA256.new(serial_data)
         verifier = PKCS1_v1_5.new(pubk)
-        sig = (int.from_bytes(pickle.loads(TEST_PUB_SIG)[1], byteorder = 'little'), )
+        sig = pickle.loads(TEST_PUB_SIG)[1]
         verdict = verifier.verify(h, sig)
         result = serial_data if verdict else None
         assert result != None
@@ -417,29 +417,29 @@ def run_tests(loops):
     print('\n***** SA_mac_sign *****')
     time_SA_mac_sign(loops)
     print('\n***** PyCrypto_mac_sign *****')
-    time_PyCrypto_mac_sign(loops)
+    time_PyCrypto_mac_sign(loops * 10)
     print('\n***** SA_mac_verify *****')
     time_SA_mac_verify(loops)
     print('\n***** PyCrypto_mac_verify *****')
-    time_PyCrypto_mac_verify(loops)
+    time_PyCrypto_mac_verify(loops * 10)
     print('\n***** SA_pub_encrypt *****')
-    time_SA_pub_encrypt(loops)
+    time_SA_pub_encrypt(loops // 10)
     print('\n***** PyCrypto_pub_encrypt *****')
-    time_PyCrypto_pub_encrypt(loops)
+    time_PyCrypto_pub_encrypt(loops // 10)
     print('\n***** SA_pub_decrypt *****')
-    time_SA_pub_decrypt(loops)
+    time_SA_pub_decrypt(loops // 10)
     print('\n***** PyCrypto_pub_decrypt *****')
-    time_PyCrypto_pub_decrypt(loops)
+    time_PyCrypto_pub_decrypt(loops // 10)
     print('\n***** SA_pub_sign *****')
-    time_SA_pub_sign(loops)
+    time_SA_pub_sign(loops // 10)
     print('\n***** PyCrypto_pub_sign *****')
-    time_PyCrypto_pub_sign(loops)
+    time_PyCrypto_pub_sign(loops // 10)
     print('\n***** SA_pub_verify *****')
-    time_SA_pub_verify(loops)
+    time_SA_pub_verify(loops // 10)
     print('\n***** PyCrypto_pub_verify *****')
-    time_PyCrypto_pub_verify(loops)
+    time_PyCrypto_pub_verify(loops // 10)
     print('\n********** Tests Complete **********\n')
 
 if __name__ == "__main__":
-    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 100000
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 20000
     run_tests(loops)
