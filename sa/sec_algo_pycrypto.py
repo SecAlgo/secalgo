@@ -13,6 +13,7 @@ from Crypto.Util import Counter
 from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Signature import PKCS1_v1_5
 #from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA224
 from Crypto.Hash import SHA256
@@ -375,10 +376,11 @@ def pubkey_sign(data, key):
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
-        pubk = RSA.importKey(k)
-        sig = pubk.sign(hash_alg.new(serial_data).digest(), '')
-        result = (serial_data, sig[0].to_bytes(((sig[0].bit_length() // 8) + 1), 
-                                               byteorder = 'little'))
+        privk = RSA.importKey(k)
+        h = hash_alg.new(serial_data)
+        signer = PKCS1_v1_5.new(privk)
+        sig = signer.sign(h)
+        result = (serial_data, sig)
         s_result = pickle.dumps(result)
         return s_result
     else:
@@ -422,9 +424,11 @@ def pubkey_verify(data, key):
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
-        privk = RSA.importKey(k)
-        sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-        verdict = privk.verify(hash_alg.new(unp_data[0]).digest(), sig)
+        pubk = RSA.importKey(k)
+        h = hash_alg.new(unp_data[0])
+        sig = unp_data[1]
+        verifier = PKCS1_v1_5.new(pubk)
+        verdict = verifier.verify(h, sig)
         if verdict:
             return pickle.loads(unp_data[0])
         else:
@@ -441,9 +445,11 @@ def pubkey_verify1(data, signed_data, key):
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
     if alg == 'RSA':
-        privk = RSA.importKey(k)
-        sig = (int.from_bytes(unp_data[1], byteorder = 'little'), )
-        verdict = privk.verify(hash_alg.new(pickle.dumps(data)).digest(), sig)
+        pubk = RSA.importKey(k)
+        h = hash_alg.new(unp_data[0])
+        sig = unp_data[1]
+        verifier = PKCS1_v1_5.new(pubk)
+        verdict = verifier.verify(h, sig)
         return verdict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
