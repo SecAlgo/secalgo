@@ -242,7 +242,7 @@ def asym_encrypt(plaintext, key):
             ciphertext =  oaep_cipher.encrypt(serial_pt)
         except ValueError: #Use Hybrid Encryption
             #print('**********: Using Hybrid Encryption!')
-            shared_key = keygen_shared(16, 'AES', 'CBC')
+            shared_key = keygen_shared(256, 'AES', 'CBC')
             data_ct = sym_encrypt(serial_pt, shared_key)
             serial_key = pickle.dumps(shared_key)
             key_ct = oaep_cipher.encrypt(serial_key)
