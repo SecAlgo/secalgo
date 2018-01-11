@@ -18,8 +18,7 @@ class RoleS (process):
             cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
             iv_rs = Random.new().read(AES.block_size)
             cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
-            send(('msg5', (iv_is + cipher_is.encrypt(pad(pickle.dumps((R, N_I, N_R, K_IR)))),
-                           iv_rs + cipher_rs.encrypt(pad(pickle.dumps((I, N_I, N_R, K_IR)))))), to = R)
+            send(('msg5', (iv_is + cipher_is.encrypt(pad(pickle.dumps((R, N_I, N_R, K_IR)))), iv_rs + cipher_rs.encrypt(pad(pickle.dumps((I, N_I, N_R, K_IR)))))), to = R)
 class RoleI (process):
     def setup(S, K_IS, R):
         Random.atfork()

@@ -3,8 +3,6 @@ from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Cipher import AES
 from Crypto import Random
 from Crypto.Random import random
-
-
 class RoleS (process):
     def setup(K_IS, K_RS):
         Random.atfork()
@@ -16,9 +14,7 @@ class RoleS (process):
         cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
         iv_is = Random.new().read(AES.block_size)
         cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
-        send(('msg2',
-              iv_is + cipher_is.encrypt(pkcs7_pad(pickle.dumps((N_I, R, K_IR,
-                    iv_rs + cipher_rs.encrypt(pkcs7_pad(pickle.dumps((K_IR, I))))))))), to = I)
+        send(('msg2', iv_is + cipher_is.encrypt(pkcs7_pad(pickle.dumps((N_I, R, K_IR, iv_rs + cipher_rs.encrypt(pkcs7_pad(pickle.dumps((K_IR, I))))))))), to = I)
 class RoleI (process):
     def setup(S, K_IS, R):
         Random.atfork()
