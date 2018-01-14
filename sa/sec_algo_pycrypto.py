@@ -14,7 +14,6 @@ from Crypto.Hash import HMAC
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Signature import PKCS1_v1_5
-#from Crypto.PublicKey.RSA import _RSAobj
 from Crypto.Hash import SHA224
 from Crypto.Hash import SHA256
 from Crypto.Hash import SHA384
@@ -51,12 +50,10 @@ BLOCK_MODES = {'AES' : {'ECB' : AES.MODE_ECB,
                              'CFB' : Blowfish.MODE_CFB,
                              'CTR' : Blowfish.MODE_CTR}}
 def nonce(size):
-    Random.atfork()
     return getrandbits(size)
 #end nonce
 
 def keygen_random(key_size):
-    Random.atfork()
     if key_size == None:
         print('SA_ERROR: \'random\' option for keygen requires a size argument.')
         return None
@@ -65,7 +62,6 @@ def keygen_random(key_size):
 #end keygen_random()
 
 def keygen_mac(key_size, alg, hash_alg, key_mat):
-    Random.atfork()
     if key_mat == None:
         new_key = Random.new().read(key_size)
     else:
@@ -78,7 +74,6 @@ def keygen_mac(key_size, alg, hash_alg, key_mat):
 #end keygen_mac()
 
 def keygen_shared(key_size, alg, mode, key_mat = None):
-    Random.atfork()
     if key_mat == None:
         new_key =  Random.new().read(key_size // 8)
     else:
@@ -91,7 +86,6 @@ def keygen_shared(key_size, alg, mode, key_mat = None):
 #end keygen_shared()
 
 def keygen_public(key_size, alg, hash_alg):
-    Random.atfork()
     if alg == 'RSA':
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
@@ -106,7 +100,6 @@ def keygen_public(key_size, alg, hash_alg):
 #end keygen_public()
 
 def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
-    Random.atfork()
     if use_group == True:        
         dh_p = modp_groups[dh_group]['p']
         dh_g = modp_groups[dh_group]['g']
@@ -161,7 +154,6 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
 #end gen_dh_key()
 
 def sym_encrypt(plaintext, key):
-    Random.atfork()
     serial_pt = pickle.dumps(plaintext)
     alg = key['alg']
     mode = key['mode']
@@ -202,37 +194,9 @@ def sym_encrypt(plaintext, key):
         encrypter = Blowfish.new(k, **encrypt_kwargs)
     ciphertext = preamble + encrypter.encrypt(serial_pt)
     return ciphertext
-'''        
-        if mode == 'CTR':
-            #print('$$$$$$$$$$: Encrypt: USING CTR')
-            pre = Random.new().read(8)
-            ctr = Counter.new(64, prefix = pre)
-            encrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
-            ciphertext =  pre + encrypter.encrypt(serial_pt)
-        elif mode == 'CBC':
-            #print('$$$$$$$$$$: Encrypt: USING CBC')
-            padded_pt = pkcs7_pad(serial_pt)
-            iv = Random.new().read(16)
-            encrypter = AES.new(k, AES.MODE_CBC, iv)
-            ciphertext = iv + encrypter.encrypt(padded_pt)
-        elif mode == 'ECB':
-            #print('$$$$$$$$$$: Encrypt: USING ECB')
-            padded_pt = pkcs7_pad(serial_pt)
-            encrypter = AES.new(k, AES.MODE_ECB)
-            ciphertext = encrypter.encrypt(padded_pt)
-        elif mode == 'CFB':
-            #print('$$$$$$$$$$: Encrypt: USING CFB')
-            seg_size = 8
-            padded_pt = pkcs7_pad(serial_pt, seg_size)
-            iv = Random.new().read(16)
-            encrypter = AES.new(k, AES.MODE_CFB, iv, segment_size=seg_size)
-            ciphertext = iv + encrypter.encrypt(padded_pt)
-    return ciphertext
-'''
 #end sym_encrypt()
 
 def asym_encrypt(plaintext, key):
-    Random.atfork()
     alg = key['alg']
     k = key['key']
     serial_pt = pickle.dumps(plaintext)
@@ -254,7 +218,6 @@ def asym_encrypt(plaintext, key):
 #end asym_encrypt()
 
 def sym_decrypt(ciphertext, key):
-    Random.atfork()
     alg = key['alg']
     mode = key['mode']
     k = key['key']
@@ -288,37 +251,9 @@ def sym_decrypt(ciphertext, key):
     if mode in PAD_MODES:
         serial_pt = pkcs7_unpad(serial_pt)
     return pickle.loads(serial_pt)
-'''
-        if mode == 'CTR':
-            #print('$$$$$$$$$$: Decrypt: USING CTR')
-            pre = ciphertext[0:8]
-            ctr = Counter.new(64, prefix = pre)
-            decrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
-            serial_pt = decrypter.decrypt(ciphertext[8:])
-        elif mode == 'CBC':
-            #print('$$$$$$$$$$: Decrypt: USING CBC')
-            iv = ciphertext[0:16]
-            decrypter = AES.new(k, AES.MODE_CBC, iv)
-            padded_pt = decrypter.decrypt(ciphertext[16:])
-            serial_pt = pkcs7_unpad(padded_pt)
-        elif mode == 'ECB':
-            #print('$$$$$$$$$$: Decrypt: USING ECB')
-            decrypter = AES.new(k, AES.MODE_ECB)
-            padded_pt = decrypter.decrypt(ciphertext)
-            serial_pt = pkcs7_unpad(padded_pt)
-        elif mode == 'CFB':
-            #print('$$$$$$$$$$: Encrypt: USING CFB')
-            seg_size = 8
-            iv = ciphertext[0:16]
-            decrypter = AES.new(k, AES.MODE_CFB, iv, segment_size = seg_size)
-            padded_pt = decrypter.decrypt(ciphertext[16:])
-            serial_pt = pkcs7_unpad(padded_pt, seg_size)
-    return pickle.loads(serial_pt)
-'''
 #end sym_decrypt()
 
 def asym_decrypt(ciphertext, key):
-    Random.atfork()
     serial_pt = b''
     alg = key['alg']
     size = key['size']
@@ -354,7 +289,6 @@ def get_hash_alg(hash_name):
 #end def get_hash()
         
 def mac_sign(data, key):
-    Random.atfork()
     serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
@@ -370,7 +304,6 @@ def mac_sign(data, key):
 #end mac_sign()    
         
 def pubkey_sign(data, key):
-    Random.atfork()
     serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
@@ -388,7 +321,6 @@ def pubkey_sign(data, key):
 #end pubkey_sign()
 
 def mac_verify(data, key):
-    Random.atfork()
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
@@ -404,7 +336,6 @@ def mac_verify(data, key):
 #end mac_verify()
 
 def mac_verify1(data, signed_data, key):
-    Random.atfork()
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
@@ -418,7 +349,6 @@ def mac_verify1(data, signed_data, key):
     
 #returns None when verfication fails
 def pubkey_verify(data, key):
-    Random.atfork()
     unp_data = pickle.loads(data)
     alg = key['alg']
     k = key['key']
@@ -439,7 +369,6 @@ def pubkey_verify(data, key):
 
 def pubkey_verify1(data, signed_data, key):
     #print('$$$$$$$$$$: verify1', flush = True)
-    Random.atfork()
     unp_data = pickle.loads(signed_data)
     alg = key['alg']
     k = key['key']
