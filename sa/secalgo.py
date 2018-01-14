@@ -1,5 +1,5 @@
 import json, time, pickle
-import sa.sec_algo_pycrypto as SA_Pycrypto
+import sa.sec_algo_pycrypto as SA_PyCrypto
 from Crypto.Random import atfork as raf
 #import sa.sec_algo_charm as SA_Charm
 
@@ -40,7 +40,7 @@ default_cfg = {'sym_cipher'        : 'AES',
                'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
                'benchmark'         : False,
-               'backend'           : 'SA_Pycrypto'}
+               'backend'           : 'SA_PyCrypto'}
 
 with open(config_fn, 'w') as f:
     json.dump(default_cfg, f)
@@ -81,8 +81,8 @@ def dec_timer(func):
 
 def get_backend(cfg_backend):
     backend = None
-    if cfg_backend == 'SA_Pycrypto':
-        backend =  SA_Pycrypto
+    if cfg_backend == 'SA_PyCrypto':
+        backend =  SA_PyCrypto
     elif cfg_backend == 'SA_Charm':
         backend = SA_Charm
     else:
@@ -91,7 +91,10 @@ def get_backend(cfg_backend):
     return backend
 
 def at_fork():
-    raf()
+    with open(config_fn, 'r') as f:
+        current_cfg = json.load(f)
+    if current_cfg['backend'] == 'SA_PyCrypto':
+        raf()
 #end def atfork()
 
 @dec_timer
