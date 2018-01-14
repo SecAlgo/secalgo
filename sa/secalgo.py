@@ -1,5 +1,6 @@
 import json, time, pickle
 import sa.sec_algo_pycrypto as SA_Pycrypto
+from Crypto.Random import atfork as raf
 #import sa.sec_algo_charm as SA_Charm
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
@@ -88,6 +89,10 @@ def get_backend(cfg_backend):
         print('SA_ERROR: Backend library, ' + current_cfg['backend'] +
               ', not recognized.', flush = True)
     return backend
+
+def at_fork():
+    raf()
+#end def atfork()
 
 @dec_timer
 def nonce(size = None):

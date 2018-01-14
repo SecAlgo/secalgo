@@ -12,69 +12,62 @@ Security Protocol Open Repository
 http://www.lsv.ens-cachan.fr/Software/spore/nssk.html
 
 Protocol Diagram:
-  (1) I -> S : (I, R, N_I)
-  (2) S -> I : enc((N_I, K_IR, R, enc((K_IR, I), K_RS)), K_IS)
-  (3) I -> R : enc((K_IR, I), K_RS)
-  (4) R -> I : enc(N_R, K_IR)
-  (5) I -> R : enc(N_R - 1, K_IR)
+  (1) A -> S : (A, B, nI)
+  (2) S -> A : enc((nI, kAB, B, enc((kAB, A), kBS)), kAS)
+  (3) A -> B : enc((kAB, A), kBS)
+  (4) B -> A : enc(nB, kAB)
+  (5) A -> B : enc(nR - 1, kAB)
 """
 from sa.secalgo import *
-#configure(benchmark = True)
-configure(sym_cipher = 'Blowfish', block_mode = 'CFB')
     
 class RoleS (process):
-    def setup(K_IS, K_RS):
-        pass
+    def setup(kAS, kBS):
+        at_fork()
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
-    def receive(msg=('msg1', (I, R, N_I)), from_ = I):
-        K_IR = keygen('shared')
-        send(('msg2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)),
-                              key = K_IS)), to = I)
+    def receive(msg=('msg1', (A, B, nA)), from_ = A):
+        kAB = keygen('shared')
+        send(('msg2', encrypt((nA, kAB, B, encrypt((kAB, A), key = kBS)),
+                              key = kAS)), to = A)
 
-class RoleI (process):
-    def setup(S, K_IS, R):
-        pass
+class RoleA (process):
+    def setup(S, kAS, B):
+        at_fork()
 
     def run():
-        N_I = nonce()
-        send(('msg1', (self, R, N_I)), to = S)
-        await(some(received(('msg2', enc_IS), from_ = _S),
-                   has = ((decrypt(enc_IS, key = K_IS)[0] == N_I) and
-                          (decrypt(enc_IS, key = K_IS)[2] == R))))
-        _, K_IR, _, enc_RS = decrypt(enc_IS, key = K_IS)
-        send(('msg3', enc_RS), to = R)
-        await(some(received(('msg4', enc_RI), from_ = _R)))
-        N_R = decrypt(enc_RI, key = K_IR)
-        send(('msg5', encrypt((N_R - 1), key = K_IR)), to = R)
-        output('I - Key Exchange Complete')
+        nA = nonce()
+        send(('msg1', (self, B, nA)), to = S)
+        await(some(received(('msg2', encAS), from_ = _S),
+                   has = some((_nA, kAB, _B, encBS) in [decrypt(encAS, key = kAS)])))
+        send(('msg3', encBS), to = B)
+        await(some(received(('msg4', encBA), from_ = _B)))
+        nR = decrypt(encBA, key = kAB)
+        send(('msg5', encrypt((nR - 1), key = kAB)), to = B)
+        output('A - Key Exchange Complete')
 
-class RoleR (process):
-    def setup(S, K_RS):
-        pass
+class RoleB (process):
+    def setup(S, kBS):
+        at_fork()
     
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
-    def receive(msg=('msg3', enc_RS), from_ = I):
-        if I == decrypt(enc_RS, key = K_RS)[1]:
-            K_IR = decrypt(enc_RS, key = K_RS)[0]
-            N_R = nonce()
-            send(('msg4', encrypt(N_R, key = K_IR)), to = I)
-            await(some(received(('msg5', enc_IR), from_ = _I),
-                       has = ((N_R - 1) == decrypt(enc_IR, key = K_IR))))
-            output('R - Key Exchange Complete')
+    def receive(msg=('msg3', encBS), from_ = A):
+        if some((kAB, _A) in [decrypt(encBS, key = kBS)]):
+            nB = nonce()
+            send(('msg4', encrypt(nB, key = kAB)), to = A)
+            await(some(received(('msg5', encAB), from_ = _A),
+                       has = ((nB - 1) == decrypt(encAB, key = kAB))))
+            output('B - Key Exchange Complete')
 
 def main():
-    K_IS = keygen('shared')
-    K_RS = keygen('shared')
-    S = new(RoleS, (K_IS, K_RS))
-    R = new(RoleR, (S, K_RS))
-    I = new(RoleI, (S, K_IS, R))
+    kAS = keygen('shared')
+    kBS = keygen('shared')
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
     start(S)
-    start(R)
-    start(I)
+    start(B)
+    start(A)
