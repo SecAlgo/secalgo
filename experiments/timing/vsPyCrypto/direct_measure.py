@@ -39,6 +39,45 @@ with open('test_pub_ct.sac', 'rb') as f:
 with open('test_pub_sig.sac', 'rb') as f:
     TEST_PUB_SIG = pickle.load(f)
     
+def time_SA_sym_keygen(loops):
+
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    for i in range(loops):
+        import sa.secalgo as SA
+        result = SA.keygen('shared')
+
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    output_results('SA_sym_keygen',
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
+                   loops)
+#end def time_SA_sym_encrypt()
+
+def time_PyCrypto_sym_keygen(loops):
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    for i in range(loops):
+        from Crypto import Random
+        new_key = Random.new().read(256 // 8)
+        result = {'alg' : 'AES',
+                  'size' : 256,
+                  'mode' : 'CBC',
+                  'key' : new_key}
+
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    output_results('PC_sym_keygen',
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
+                   loops)
+#end def time_PyCrypto_sym_keygen()    
+
 def time_SA_sym_encrypt(loops):
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -195,6 +234,49 @@ def time_PyCrypto_mac_verify(loops):
                    (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_mac_verify()
+
+def time_SA_pub_keygen(loops):
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    for i in range(loops):
+        import sa.secalgo as SA
+        result = SA.keygen('public')
+        
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    
+    output_results('SA_pub_keygen',
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
+                   loops)
+#end def time_SA_pub_keygen()
+
+def time_PyCrypto_pub_keygen(loops):
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
+
+    for i in range(loops):
+        from Crypto.PublicKey import RSA
+        key_pair = RSA.generate(2048)
+        priv_key = key_pair.exportKey()
+        pub_key = key_pair.publickey().exportKey()
+        priv_key_dict = {'alg' : 'RSA', 'type' : 'private',
+                         'size' : 2048, 'hash' : 'SHA-256',
+                         'key' : priv_key}
+        pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
+                        'size' : 2048, 'hash' : 'SHA-256',
+                        'key' : pub_key}
+        result = (priv_key_dict, pub_key_dict)
+
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    
+    output_results('PC_pub_keygen',
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
+                   loops)
+#end def time_PyCrypto_pub_keygen()
 
 def time_SA_pub_encrypt(loops):
     start_wc = time.perf_counter()
@@ -393,47 +475,78 @@ def output_results(op, start, end, loops):
     ptime_avg = (ptime_total / loops) * 1000 #miliseconds
 
     print('OP:', op)
+    print('Loops:', loops)
     print('WC Total:', end_wc, '-', start_wc, '=', wtime_total)
     print('WC Avg:', wtime_avg)
     print('CPU Total:', ptime_end, '-', ptime_start, '=', ptime_total)
     print('CPU Avg:', ptime_avg)
 
-def run_tests(loops):
+#def run_tests(loops):
+def run_tests():
     print('********** Starting Tests **********')
+    print('\n***** SA_sym_keygen *****')
+    time_SA_sym_keygen(30000)
+
+    print('\n***** PyCrypto_sym_keygen *****')
+    time_PyCrypto_sym_keygen(60000)
+
     print('\n***** SA_sym_encrypt *****')
-    time_SA_sym_encrypt(loops)
+    time_SA_sym_encrypt(20000)
+
     print('\n***** PyCrypto_sym_encrypt *****')
-    time_PyCrypto_sym_encrypt(loops)
+    time_PyCrypto_sym_encrypt(40000)
+
     print('\n***** SA_sym_decrypt *****')
-    time_SA_sym_decrypt(loops)
+    time_SA_sym_decrypt(40000)
+
     print('\n***** PyCrypto_sym_decrypt *****')
-    time_PyCrypto_sym_decrypt(loops)
+    time_PyCrypto_sym_decrypt(200000)
+
     print('\n***** SA_mac_sign *****')
-    time_SA_mac_sign(loops)
+    time_SA_mac_sign(30000)
+
     print('\n***** PyCrypto_mac_sign *****')
-    time_PyCrypto_mac_sign(loops * 10)
+    time_PyCrypto_mac_sign(200000)
+
     print('\n***** SA_mac_verify *****')
-    time_SA_mac_verify(loops)
+    time_SA_mac_verify(30000)
+
     print('\n***** PyCrypto_mac_verify *****')
-    time_PyCrypto_mac_verify(loops * 10)
+    time_PyCrypto_mac_verify(200000)
+
+    print('\n***** SA_pub_keygen *****')
+    time_SA_pub_keygen(50)
+
+    print('\n***** PyCrypto_pub_keygen *****')
+    time_PyCrypto_pub_keygen(50)
+    
     print('\n***** SA_pub_encrypt *****')
-    time_SA_pub_encrypt(loops // 10)
+    time_SA_pub_encrypt(3000)
+
     print('\n***** PyCrypto_pub_encrypt *****')
-    time_PyCrypto_pub_encrypt(loops // 10)
+    time_PyCrypto_pub_encrypt(3000)
+
     print('\n***** SA_pub_decrypt *****')
-    time_SA_pub_decrypt(loops // 10)
+    time_SA_pub_decrypt(1000)
+
     print('\n***** PyCrypto_pub_decrypt *****')
-    time_PyCrypto_pub_decrypt(loops // 10)
+    time_PyCrypto_pub_decrypt(1000)
+
     print('\n***** SA_pub_sign *****')
-    time_SA_pub_sign(loops // 10)
+    time_SA_pub_sign(1000)
+
     print('\n***** PyCrypto_pub_sign *****')
-    time_PyCrypto_pub_sign(loops // 10)
+    time_PyCrypto_pub_sign(1000)
+
     print('\n***** SA_pub_verify *****')
-    time_SA_pub_verify(loops // 10)
+    time_SA_pub_verify(4000)
+
     print('\n***** PyCrypto_pub_verify *****')
-    time_PyCrypto_pub_verify(loops // 10)
+
+    time_PyCrypto_pub_verify(4000)
     print('\n********** Tests Complete **********\n')
 
 if __name__ == "__main__":
-    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 20000
-    run_tests(loops)
+    #loops = int(sys.argv[1]) if len(sys.argv) > 1 else 20000
+    #run_tests(loops)
+    run_tests()
