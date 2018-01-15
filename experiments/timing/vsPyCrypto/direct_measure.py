@@ -40,198 +40,190 @@ with open('test_pub_sig.sac', 'rb') as f:
     TEST_PUB_SIG = pickle.load(f)
     
 def time_SA_sym_encrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    import sa.secalgo as SA
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.encrypt(TEST_DATA, key = TEST_SYM_KEY)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_sym_encrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_encrypt(loops):
-    serial_data = pickle.dumps(TEST_DATA)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    from Crypto.Cipher import AES
-    from Crypto import Random
-    from sa.Misc.Padding import pkcs7_pad as pad
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        from Crypto.Cipher import AES
+        from Crypto import Random
+        from sa.Misc.Padding import pkcs7_pad as pad
+        serial_data = pickle.dumps(TEST_DATA)
+        serial_data = pad(serial_data)
         IV = Random.new().read(AES.block_size)
         cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, IV)
-        result = IV + cipher.encrypt(pad(serial_data))
+        result = IV + cipher.encrypt(serial_data)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('PC_sym_encrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_sym_encrypt()
 
 def time_SA_sym_decrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    import sa.secalgo as SA
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.decrypt(TEST_SYM_CT, key = TEST_SYM_KEY)
-    
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_sym_decrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_sym_decrypt()
 
 def time_PyCrypto_sym_decrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    from Crypto.Cipher import AES
-    from Crypto import Random
-    from sa.Misc.Padding import pkcs7_unpad as unpad
-    
-    for i in range(loops):
-        IV = Random.new().read(AES.block_size)
-        cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, IV)
-        result = unpad(cipher.decrypt(TEST_SYM_CT))
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
-    end_wallclock = time.perf_counter()
+    for i in range(loops):
+        from Crypto.Cipher import AES
+        from Crypto import Random
+        from sa.Misc.Padding import pkcs7_unpad as unpad
+        iv = TEST_SYM_CT[:16]
+        cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, iv)
+        serial_pt = cipher.decrypt(TEST_SYM_CT[16:])
+        serial_pt = unpad(serial_pt)
+        result = pickle.loads(serial_pt)
+
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
     output_results('PC_sym_decrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_sym_decrypt()
 
 def time_SA_mac_sign(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    import sa.secalgo as SA
-
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.sign(TEST_DATA, key = TEST_MAC_KEY)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_mac_sign',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_mac_sign()
 
 def time_PyCrypto_mac_sign(loops):
-    serial_data = pickle.dumps(TEST_DATA)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    from Crypto.Hash import HMAC
-    from Crypto.Hash import SHA256
-
     for i in range(loops):
+        from Crypto.Hash import HMAC
+        from Crypto.Hash import SHA256
+        serial_data = pickle.dumps(TEST_DATA)
         h = HMAC.new(TEST_MAC_KEY['key'], serial_data, SHA256)
         sig = h.digest()
-        result = (serial_data, sig)
+        result = pickle.dumps((serial_data, sig))
         
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
-
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    
     output_results('PC_mac_sign',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_mac_sign()
 
 def time_SA_mac_verify(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    import sa.secalgo as SA
-
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.verify(TEST_MAC, key = TEST_MAC_KEY)
     assert result != None
         
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
     output_results('SA_mac_verify',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_mac_verify()
 
 def time_PyCrypto_mac_verify(loops):
-    data, sig = pickle.loads(TEST_MAC)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    from Crypto.Hash import HMAC
-    from Crypto.Hash import SHA256
-
     for i in range(loops):
-        h = HMAC.new(TEST_MAC_KEY['key'], data, SHA256)
-        verdict = (sig == h.digest())
-        result = data if verdict else None
+        from Crypto.Hash import HMAC
+        from Crypto.Hash import SHA256
+        data, sig = pickle.loads(TEST_MAC)
+        verdict = (sig == HMAC.new(TEST_MAC_KEY['key'], data, SHA256).digest())
+        result = pickle.loads(data) if verdict else None
         assert result != None
         
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
-
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    
     output_results('PC_mac_verify',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_mac_verify()
 
 def time_SA_pub_encrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    import sa.secalgo as SA
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.encrypt(TEST_DATA, key = TEST_PUB_KEY)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_pub_encrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_pub_encrypt()
 
 def time_PyCrypto_pub_encrypt(loops):
-    serial_data = pickle.dumps(TEST_DATA)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    from Crypto.PublicKey import RSA
-    from Crypto.Cipher import PKCS1_OAEP
-    from Crypto import Random
-    from Crypto.Cipher import AES
-    from sa.Misc.Padding import pkcs7_pad as pad
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto import Random
+        from Crypto.Cipher import AES
+        from sa.Misc.Padding import pkcs7_pad as pad
+        serial_data = pickle.dumps(TEST_DATA)
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
         cipher = PKCS1_OAEP.new(pubk)
         try:
@@ -241,168 +233,170 @@ def time_PyCrypto_pub_encrypt(loops):
             iv = Random.new().read(AES.block_size)
             sym_cipher = AES.new(shared_key, AES.MODE_CBC, iv)
             data_ct = iv + sym_cipher.encrypt(pad(serial_data))
-            key_ct = cipher.encrypt(shared_key)
+            serial_key = pickle.dumps(shared_key)
+            key_ct = cipher.encrypt(serial_key)
             result = key_ct + data_ct
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+            
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('PC_pub_encrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_pub_encrypt()
 
 def time_SA_pub_decrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    import sa.secalgo as SA
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.decrypt(TEST_PUB_CT, key = TEST_PRIV_KEY)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_pub_decrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_pub_decrypt()
 
 def time_PyCrypto_pub_decrypt(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    from Crypto.PublicKey import RSA
-    from Crypto.Cipher import PKCS1_OAEP
-    from Crypto import Random
-    from Crypto.Cipher import AES
-    from sa.Misc.Padding import pkcs7_unpad as unpad
-
     for i in range(loops):
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_OAEP
+        from Crypto import Random
+        from Crypto.Cipher import AES
+        from sa.Misc.Padding import pkcs7_unpad as unpad
         privk = RSA.importKey(TEST_PRIV_KEY['key'])
         cipher = PKCS1_OAEP.new(privk)
         if len(TEST_PUB_CT) > (TEST_PRIV_KEY['size'] // 8):
             key_ct = TEST_PUB_CT[:256]
             data_ct = TEST_PUB_CT[256:]
-            shared_key = pickle.loads(cipher.decrypt(key_ct))
-            iv = data_ct[:16]
-            sym_cipher = AES.new(shared_key['key'], AES.MODE_CBC, iv)
-            result = unpad(sym_cipher.decrypt(data_ct[16:]))
+            serial_key = cipher.decrypt(key_ct)
+            shared_key = pickle.loads(serial_key)
+            sym_cipher = AES.new(shared_key['key'], AES.MODE_CBC, data_ct[:16])
+            serial_result = unpad(sym_cipher.decrypt(data_ct[16:]))
         else:
-            result = cipher.decrypt(TEST_PUB_CT)
-
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+            serial_result = cipher.decrypt(TEST_PUB_CT)
+            result = pickle.loads(serial_result)
+        
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('PC_pub_decrypt',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_pub_decrypt()
 
 def time_SA_pub_sign(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-    
-    import sa.secalgo as SA
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.sign(TEST_DATA, key = TEST_PRIV_KEY)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_pub_sign',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_pub_sign()
 
 def time_PyCrypto_pub_sign(loops):
-    serial_data = pickle.dumps(TEST_DATA)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import PKCS1_v1_5
-    from Crypto.Hash import SHA256
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        from Crypto.Hash import SHA256
+        serial_data = pickle.dumps(TEST_DATA)
         privk = RSA.importKey(TEST_PRIV_KEY['key'])
         h = SHA256.new(serial_data)
         signer = PKCS1_v1_5.new(privk)
         sig = signer.sign(h)
         result = (serial_data, sig)
+        s_result = pickle.dumps(result)
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('PC_pub_sign',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_pub_sign()
 
 def time_SA_pub_verify(loops):
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    import sa.secalgo as SA
-
     for i in range(loops):
+        import sa.secalgo as SA
         result = SA.verify(TEST_PUB_SIG, key = TEST_PUB_KEY)
     assert result != None
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('SA_pub_verify',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_SA_pub_verify()
 
 def time_PyCrypto_pub_verify(loops):
-    serial_data = pickle.dumps(TEST_DATA)
-    start_wallclock = time.perf_counter()
-    start_data = resource.getrusage(resource.RUSAGE_SELF)
-
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import PKCS1_v1_5
-    from Crypto.Hash import SHA256
-
+    start_wc = time.perf_counter()
+    start_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    
     for i in range(loops):
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        from Crypto.Hash import SHA256
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
-        h = SHA256.new(serial_data)
+        data, sig = pickle.loads(TEST_PUB_SIG)
+        h = SHA256.new(data)
         verifier = PKCS1_v1_5.new(pubk)
-        sig = pickle.loads(TEST_PUB_SIG)[1]
         verdict = verifier.verify(h, sig)
-        result = serial_data if verdict else None
+        result = pickle.loads(data) if verdict else None
         assert result != None
 
-    end_wallclock = time.perf_counter()
-    end_data = resource.getrusage(resource.RUSAGE_SELF)
+    end_wc = time.perf_counter()
+    end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     output_results('PC_pub_verify',
-                   (start_wallclock, start_data),
-                   (end_wallclock, end_data),
+                   (start_wc, start_cpu ),
+                   (end_wc, end_cpu),
                    loops)
 #end def time_PyCrypto_pub_verify()
 
 def output_results(op, start, end, loops):
-    print('OP:', op)
-    wtime_total = end[0] - start[0]
-    wtime_avg = (wtime_total / loops) * 1000 #miliseconds
-    print('Wallclock:', end[0], '-', start[0], '=', wtime_total)
-    print('Wallclock Avg:', wtime_avg)
-    ptime_start = getattr(start[1], 'ru_utime') + getattr(start[1], 'ru_stime')
-    ptime_end = getattr(end[1], 'ru_utime') + getattr(end[1], 'ru_stime')
+    start_wc, start_cpu = start
+    end_wc, end_cpu = end
+
+    wtime_total = end_wc - start_wc
+    wtime_avg = wtime_total / loops * 1000 #miliseconds
+
+    ptime_start = getattr(start_cpu, 'ru_utime') + getattr(start_cpu, 'ru_stime')
+    ptime_end = getattr(end_cpu, 'ru_utime') + getattr(end_cpu, 'ru_stime')
     ptime_total = ptime_end - ptime_start
     ptime_avg = (ptime_total / loops) * 1000 #miliseconds
-    print('Process:', ptime_end, '-', ptime_start, '=', ptime_total)
-    print('Process Avg:', ptime_avg)
+
+    print('OP:', op)
+    print('WC Total:', end_wc, '-', start_wc, '=', wtime_total)
+    print('WC Avg:', wtime_avg)
+    print('CPU Total:', ptime_end, '-', ptime_start, '=', ptime_total)
+    print('CPU Avg:', ptime_avg)
 
 def run_tests(loops):
     print('********** Starting Tests **********')
