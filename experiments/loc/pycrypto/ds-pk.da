@@ -1,13 +1,14 @@
 import time
-from sa.secalgo import *
-configure(verify_returns = 'bool')
 class roleA(process):
     def setup(B, S, sk_A, pk_A, pk_S):
         pass
     def run():
         send(('msg01', self, B), to = S)
-        await(some(received(('msg02', (A, _pk_A, t_A, sig_A), (_B, pk_B, t_B, sig_B)), from_ = S), has = (A == self)))
-        if (verify(((A, pk_A, t_A), sig_A), pk_S) and verify(((B, pk_B, t_B), sig_B), pk_S)):
+        await(some(received(('msg02', (A, _pk_A, t_A, sig_A),
+                             (_B, pk_B, t_B, sig_B)), from_ = S),
+                   has = (A == self)))
+        if (verify(((A, pk_A, t_A), sig_A), pk_S) and
+            verify(((B, pk_B, t_B), sig_B), pk_S)):
             k_AB = keygen('shared')
             t_AB = time.time()
             send(('msg03', (A, pk_A, t_A, sig_A), (B, pk_B, t_B, sig_B), encrypt(((k_AB, t_AB), sign((k_AB, t_AB), sk_A)), pk_B)), to = B)
