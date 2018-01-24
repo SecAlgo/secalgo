@@ -57,12 +57,17 @@
 # participant in the Handshake has switched to the new connection state
 # successfully. The TLS peers are now free to share protected application
 # data.
-
+from sa.secalgo import *
 import time, sys, pickle
 from Crypto.Hash import SHA256
 from Crypto.Hash import HMAC
-from sa.secalgo import *
-configure(verify_returns = 'bool')
+from Crypto.Cipher import AES
+from Crypto.Cipher import DES3
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto import Random
+from Crypto.Random import random
+from sa.Misc.Padding import pkcs7_pad as pad, pkcs7_unpad as unpad
 
 # Protocol version number for SSL/TLS
 PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
@@ -238,7 +243,7 @@ class TLS_Peer(process):
         pt_fragment = tls_message
 
         # will need to determine length of fragment in bytes
-        pt_length = None
+        pt_length = len(pickle.dumps(tls_message))
 
         # First, build a TLSPlaintext message
         # TLSPlaintext = (type, version, length, fragment
@@ -272,35 +277,41 @@ class TLS_Peer(process):
             # will also be NULL and so there is no MAC.
             if current_wsp.mac_algorithm == MAC_NULL:
                 cipher_mac = b''
+            elif current_wsp.mac_algorithm == MAC_HMAC_SHA256:
+                h = HMAC.new(current_write_state.mac_key, digestmod = SHA256)
+                h.update(pickle.dumps((current_write_state.sequence_number, content_type,
+                                       version, comp_length, comp_fragment)))
+                cipher_mac = h.digest()
             else:
-                cipher_mac = sign((current_write_state.sequence_number,
-                                   content_type, version, comp_length,
-                                   comp_fragment),
-                                  key = current_write_state.mac_key)
+                print('***** OH NO! MAC??? *****')
+                return
             stream_ciphered = (comp_fragment, cipher_mac)
-
+            
             # The cipher fragment must now be encrypted, unless the agreed-upon
             # encryption algorithm is none
-            if current_wsp.bulk_cipher_algorithm != BULK_NULL:
-                cipher_fragment = encrypt(stream_ciphered,
-                                    key = current_write_state.cipher_state[0])
-            else:
+            if current_wsp.bulk_cipher_algorithm == BULK_NULL:
                 cipher_fragment = stream_ciphered
+            else:
+                print('***** OH NO! NO STREAM CIPHERS??? *****')
+                return
 
         # GenericBlockCipher = (iv, encrypt(content, mac, padding,
         # padding_length))
         elif current_wsp.cipher_type == CIPHER_BLOCK:
             # For block encryption we first generate an IV
-            iv = keygen('random', current_wsp.record_iv_length)
+            iv = Random.new().read(current_wsp.record_iv_length)
 
             # Then we generate the MAC just as above
             if current_wsp.mac_algorithm == MAC_NULL:
                 cipher_mac = b''
+            elif current_wsp.mac_algorithm == MAC_HMAC_SHA256:
+                h = HMAC.new(current_write_state.mac_key, digestmod = SHA256)
+                h.update(pickle.dumps((current_write_state.sequence_number, content_type,
+                                       version, comp_length, comp_fragment)))
+                cipher_mac = h.digest()
             else:
-                cipher_mac = sign((current_write_state.sequence_number,
-                                   content_type, version, comp_length,
-                                   comp_fragment),
-                                  key = current_write_state.mac_key)
+                print('***** OH NO! MAC??? *****')
+                return
 
             # Padding must then be computed
             # In order to do explicit padding here, padding done by the library
@@ -313,8 +324,11 @@ class TLS_Peer(process):
             cipher_pad_length = 0
             block_ciphered = (comp_fragment, cipher_mac,
                                cipher_padding, cipher_pad_length)
-            cipher_fragment = (iv, encrypt(block_ciphered,
-                                    key = current_write_state.cipher_state[0]))
+            if current_wsp.bluk_cipher_algorithm == BULK_AES:
+                encrypter = AES.new(current_write_state.cipher_state[0], AES.MODE_CBC, iv)
+                cipher_fragment = (iv, encrypter.encrypt(pad(pickle.dumps(block_ciphered))))
+            else:
+                print('***** OH NO! WHAT BLOCK CIPHER??? *****')
 
         tls_cipher = (content_type, version, cipher_length, cipher_fragment)
         return tls_cipher
@@ -335,19 +349,26 @@ class TLS_Peer(process):
             if current_rsp.bulk_cipher_algorithm == BULK_NULL:
                 (comp_fragment, cipher_mac) = cipher_fragment
             else:
-                (comp_fragment, cipher_mac) = decrypt(cipher_fragment,
-                                    key = current_read_state.cipher_state[0])
+                print('***** OH NO! NO STREAM CIPHERS??? *****')                
+                
         elif current_rsp.cipher_type == CIPHER_BLOCK:
             (iv, block_ciphered) = cipher_fragment
-            (comp_fragment, cipher_mac,
-             cipher_padding, cipher_pad_length) = decrypt(block_ciphered,
-                                    key = current_read_state.cipher_state[0])
+            if current_rsp.bulk_cipher_algorithm == BULK_AES:
+                decrypter = AES.new(current_read_state.cipher_state[0], AES.MODE_CBC, iv)
+                (comp_fragment, cipher_mac, cipher_padding,
+                 cipher_pad_length) = pickle.loads(unpad(decrypter.decrypt(block_ciphered)))
         comp_length = cipher_length
+
         # Third, verify the MAC
         if current_rsp.mac_algorithm != MAC_NULL:
-            if not verify(((current_read_state.sequence_number, content_type,
-                           version, comp_length, comp_fragment), cipher_mac),
-                          key = current_read_state.mac_key):
+            if current_wsp.mac_algorithm == MAC_HMAC_SHA256:            
+                h = HMAC.new(current_read_state.mac_key, digestmod = SHA256)
+                h.update(pickle.dumps((current_read_state.sequence_number, content_type,
+                                       version, comp_length, comp_fragment)))
+                verdict = h.digest() == cipher_mac
+            else:
+                print('***** OH NO! MAC??? *****')
+            if not verdict:
                 #send message authentication error
                 output('MAC VERIFICATION ERROR')
                 return
@@ -355,8 +376,7 @@ class TLS_Peer(process):
         # Fourth, apply the active decompression method
         pt_length = comp_length
         if current_rsp.compression_method != COMP_NULL:
-            pt_fragment = current_rsp.compression_method(comp_fragment,
-                                                         'decompress')
+            pt_fragment = current_rsp.compression_method(comp_fragment, 'decompress')
         else:
             pt_fragment = comp_fragment
 
@@ -478,6 +498,7 @@ class TLS_Peer(process):
                    has = (msg[0] == TYPE_HANDSHAKE and
                           counter > msg_counter and
                           SERVER_HELLO == record_unwrapper(msg)[0])))
+        output('CLIENT - RECEIVED SERVER HELLO')
         msg_counter = counter
         handshake_sh = record_unwrapper(msg)
         handshake_messages.append(handshake_sh)
@@ -504,6 +525,7 @@ class TLS_Peer(process):
                        has = (msg[0] == TYPE_HANDSHAKE and
                               counter > msg_counter and
                               CERTIFICATE  == record_unwrapper(msg)[0])))
+            output('CLIENT - RECEIVED SERVER CERTIFICATE LIST')
             msg_counter = counter
             handshake_sc = record_unwrapper(msg)
             handshake_messages.append(handshake_sc)
@@ -520,13 +542,16 @@ class TLS_Peer(process):
             verdict = True
             for i, cert in enumerate(cert_list):
                 if i < (len(cert_list) - 1):
-                    if not verify(((cert[0], cert[1]), cert[2]),
-                                  key = cert_list[i + 1][1]):
-                        verdict = False
+                    if key_exchange_alg == KE_RSA:
+                        h = SHA256.new(pickle.dumps((cert[0], cert[1])))
+                        verifier = PKCS1_v1_5.new(RSA.importKey(cert_list[i+1][1]))
+                        verdict = verifier.verify(h, cert[2])
                 else:
                     # final (root) certificate is self-signed
-                    if not verify(((cert[0], cert[1]), cert[2]), key = cert[1]):
-                        verdict = False
+                    if key_exchange_alg == KE_RSA:
+                        h = SHA256.new(pickle.dumps((cert[0], cert[1])))
+                        verifier = PKCS1_v1_5.new(RSA.importKey(cert[1]))
+                        verdict = verifier.verify(h, cert[2])
             if not verdict:
                 #send alert
                 output('CLIENT - CERTIFICATE AUTHENTICATION FAILURE')
@@ -704,12 +729,12 @@ class TLS_Peer(process):
         
     # Receives Handshake type TLS messages, but the messages are still enclosed
     # within the Record layer structure
-    def receive(msg=((22, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
+    def receive(msg=((22, _PROTOCOL_VERSION_1_2, cipher_length, cipher_fragment),
                      handshake_id, counter), from_ = client):
         msg_counter = counter
         handshake_messages = []
         handshake_msg = record_unwrapper((TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2,
-                                          None, cipher_fragment))
+                                          cipher_length, cipher_fragment))
 
         # Handshake messages must be recieved in the proper order. Handling of
         # other types of Handshake messages are handled further into the
@@ -717,7 +742,7 @@ class TLS_Peer(process):
         # from here.
         if CLIENT_HELLO != handshake_msg[0]:
             return
-        output('SEVER - begin Handshake')
+        output('SERVER - begin Handshake')
 
         # Will first set the connection end in the security parameters to
         # indicate that this peer is acting as the server

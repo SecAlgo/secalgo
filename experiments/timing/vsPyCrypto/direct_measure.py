@@ -12,6 +12,22 @@ TEST_PRIV_KEY = None
 TEST_PUB_CT = None
 TEST_PUB_SIG = None
 
+ops = ['SA_sym_keygen', 'PC_sym_keygen', 'SA_sym_encrypt', 'PC_sym_encrypt',
+       'SA_sym_decrypt', 'PC_sym_decrypt', 'SA_mac_sign', 'PC_mac_sign',
+       'SA_mac_verify', 'PC_mac_verify', 'SA_pub_keygen', 'PC_pub_keygen',
+       'SA_pub_encrypt', 'PC_pub_encrypt', 'SA_pub_decrypt', 'PC_pub_decrypt',
+       'SA_pub_sign', 'PC_pub_sign', 'SA_pub_verify', 'PC_pub_verify']
+
+raw_data = dict()
+for op in ops:
+    raw_data[op] = []
+
+result_ops = ['sym_keygen', 'sym_encrypt', 'sym_decrypt', 'mac_sign', 'mac_verify',
+              'pun_keygen', 'pub_encryp', 'pub_decrypt', 'pub_sign', 'pub_verify']
+results = dict()
+for op in result_ops:
+    results[op] = dict()
+
 with open('test_sym_key.sac', 'rb') as f:
     TEST_SYM_KEY = pickle.load(f)
 
@@ -51,10 +67,10 @@ def time_SA_sym_keygen(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_sym_keygen',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_sym_keygen',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_keygen(loops):
@@ -72,10 +88,10 @@ def time_PyCrypto_sym_keygen(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_sym_keygen',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_sym_keygen',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_sym_keygen()    
 
 def time_SA_sym_encrypt(loops):
@@ -89,10 +105,10 @@ def time_SA_sym_encrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_sym_encrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_sym_encrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_encrypt(loops):
@@ -112,10 +128,10 @@ def time_PyCrypto_sym_encrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_sym_encrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_sym_encrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_sym_encrypt()
 
 def time_SA_sym_decrypt(loops):
@@ -129,10 +145,10 @@ def time_SA_sym_decrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_sym_decrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_sym_decrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_sym_decrypt()
 
 def time_PyCrypto_sym_decrypt(loops):
@@ -152,10 +168,10 @@ def time_PyCrypto_sym_decrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('PC_sym_decrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_sym_decrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_sym_decrypt()
 
 def time_SA_mac_sign(loops):
@@ -169,10 +185,10 @@ def time_SA_mac_sign(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_mac_sign',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_mac_sign',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_mac_sign()
 
 def time_PyCrypto_mac_sign(loops):
@@ -190,10 +206,10 @@ def time_PyCrypto_mac_sign(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('PC_mac_sign',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_mac_sign',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_mac_sign()
 
 def time_SA_mac_verify(loops):
@@ -208,10 +224,10 @@ def time_SA_mac_verify(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('SA_mac_verify',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_mac_verify',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_mac_verify()
 
 def time_PyCrypto_mac_verify(loops):
@@ -229,10 +245,10 @@ def time_PyCrypto_mac_verify(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('PC_mac_verify',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_mac_verify',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_mac_verify()
 
 def time_SA_pub_keygen(loops):
@@ -246,10 +262,10 @@ def time_SA_pub_keygen(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('SA_pub_keygen',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_pub_keygen',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_pub_keygen()
 
 def time_PyCrypto_pub_keygen(loops):
@@ -272,10 +288,10 @@ def time_PyCrypto_pub_keygen(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
-    output_results('PC_pub_keygen',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_pub_keygen',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_pub_keygen()
 
 def time_SA_pub_encrypt(loops):
@@ -289,10 +305,10 @@ def time_SA_pub_encrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_pub_encrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_pub_encrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_pub_encrypt()
 
 def time_PyCrypto_pub_encrypt(loops):
@@ -322,10 +338,10 @@ def time_PyCrypto_pub_encrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_pub_encrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_pub_encrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_pub_encrypt()
 
 def time_SA_pub_decrypt(loops):
@@ -339,10 +355,10 @@ def time_SA_pub_decrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_pub_decrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_pub_decrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_pub_decrypt()
 
 def time_PyCrypto_pub_decrypt(loops):
@@ -371,10 +387,10 @@ def time_PyCrypto_pub_decrypt(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_pub_decrypt',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_pub_decrypt',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_pub_decrypt()
 
 def time_SA_pub_sign(loops):
@@ -388,10 +404,10 @@ def time_SA_pub_sign(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_pub_sign',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_pub_sign',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_pub_sign()
 
 def time_PyCrypto_pub_sign(loops):
@@ -413,10 +429,10 @@ def time_PyCrypto_pub_sign(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_pub_sign',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_pub_sign',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_pub_sign()
 
 def time_SA_pub_verify(loops):
@@ -431,10 +447,10 @@ def time_SA_pub_verify(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('SA_pub_verify',
-                   (start_wc, start_cpu),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('SA_pub_verify',
+                       (start_wc, start_cpu),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_SA_pub_verify()
 
 def time_PyCrypto_pub_verify(loops):
@@ -456,13 +472,13 @@ def time_PyCrypto_pub_verify(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
-    output_results('PC_pub_verify',
-                   (start_wc, start_cpu ),
-                   (end_wc, end_cpu),
-                   loops)
+    return collect_raw('PC_pub_verify',
+                       (start_wc, start_cpu ),
+                       (end_wc, end_cpu),
+                       loops)
 #end def time_PyCrypto_pub_verify()
 
-def output_results(op, start, end, loops):
+def collect_raw(op, start, end, loops):
     start_wc, start_cpu = start
     end_wc, end_cpu = end
 
@@ -474,6 +490,8 @@ def output_results(op, start, end, loops):
     ptime_total = ptime_end - ptime_start
     ptime_avg = (ptime_total / loops) * 1000 #miliseconds
 
+    data = {'Op' : op, 'start' : ptime_start, 'end' : ptime_end, 'loops' : loops}
+    
     print('OP:', op)
     print('Loops:', loops)
     print('WC Total:', end_wc, '-', start_wc, '=', wtime_total)
@@ -481,72 +499,86 @@ def output_results(op, start, end, loops):
     print('CPU Total:', ptime_end, '-', ptime_start, '=', ptime_total)
     print('CPU Avg:', ptime_avg)
 
-#def run_tests(loops):
-def run_tests():
-    print('********** Starting Tests **********')
-    print('\n***** SA_sym_keygen *****')
-    time_SA_sym_keygen(30000)
+    return data
 
-    print('\n***** PyCrypto_sym_keygen *****')
-    time_PyCrypto_sym_keygen(60000)
-
-    print('\n***** SA_sym_encrypt *****')
-    time_SA_sym_encrypt(20000)
-
-    print('\n***** PyCrypto_sym_encrypt *****')
-    time_PyCrypto_sym_encrypt(40000)
-
-    print('\n***** SA_sym_decrypt *****')
-    time_SA_sym_decrypt(40000)
-
-    print('\n***** PyCrypto_sym_decrypt *****')
-    time_PyCrypto_sym_decrypt(200000)
-
-    print('\n***** SA_mac_sign *****')
-    time_SA_mac_sign(30000)
-
-    print('\n***** PyCrypto_mac_sign *****')
-    time_PyCrypto_mac_sign(200000)
-
-    print('\n***** SA_mac_verify *****')
-    time_SA_mac_verify(30000)
-
-    print('\n***** PyCrypto_mac_verify *****')
-    time_PyCrypto_mac_verify(200000)
-
-    print('\n***** SA_pub_keygen *****')
-    time_SA_pub_keygen(50)
-
-    print('\n***** PyCrypto_pub_keygen *****')
-    time_PyCrypto_pub_keygen(50)
+def compute_results():
+    for op in raw_data:
+        per_round_avgs = []
+        for round_data in op:
+            avg = ((round_data['end'] - round_data['start']) / round_data['loops']) * 1000 #miliseconds
+            per_round_avgs.append(avg)
+        total_avg = sum(per_round_avgs) / len(per_round_avgs)
+        results[op[2:]][op] = total_avg
+        
     
-    print('\n***** SA_pub_encrypt *****')
-    time_SA_pub_encrypt(3000)
+def run_tests(rounds):
+    for i in range(rounds):
+        print('********** Starting Tests **********')
+        print('\n***** SA_sym_keygen *****')
+        raw_data['SA_sym_keygen'].append(time_SA_sym_keygen(30000))
+        
+        print('\n***** PyCrypto_sym_keygen *****')
+        raw_data['PC_sym_keygen'].append(time_PyCrypto_sym_keygen(60000))
+        
+        print('\n***** SA_sym_encrypt *****')
+        raw_data['SA_sym_encrypt'].append(time_SA_sym_encrypt(20000))
+        
+        print('\n***** PyCrypto_sym_encrypt *****')
+        raw_data['PC_sym_encrypt'].append(time_PyCrypto_sym_encrypt(40000))
+        
+        print('\n***** SA_sym_decrypt *****')
+        raw_data['SA_sym_decrypt'].append(time_SA_sym_decrypt(40000))
+        
+        print('\n***** PyCrypto_sym_decrypt *****')
+        raw_data['PC_sym_decrypt'].append(time_PyCrypto_sym_decrypt(200000))
+        
+        print('\n***** SA_mac_sign *****')
+        raw_data['SA_mac_sign'].append(time_SA_mac_sign(30000))
+        
+        print('\n***** PyCrypto_mac_sign *****')
+        raw_data['PC_mac_sign'].append(time_PyCrypto_mac_sign(200000))
+        
+        print('\n***** SA_mac_verify *****')
+        raw_data['SA_mac_verify'].append(time_SA_mac_verify(30000))
+        
+        print('\n***** PyCrypto_mac_verify *****')
+        raw_data['PC_mac_verify'].append(time_PyCrypto_mac_verify(200000))
+        
+        print('\n***** SA_pub_keygen *****')
+        raw_data['SA_pub_keygen'].append(time_SA_pub_keygen(50))
+        
+        print('\n***** PyCrypto_pub_keygen *****')
+        raw_data['PC_pub_keygen'].append(time_PyCrypto_pub_keygen(50))
+        
+        print('\n***** SA_pub_encrypt *****')
+        raw_data['SA_pub_encrypt'].append(time_SA_pub_encrypt(3000))
+        
+        print('\n***** PyCrypto_pub_encrypt *****')
+        raw_data['PC_pub_encrypt'].append(time_PyCrypto_pub_encrypt(3000))
+        
+        print('\n***** SA_pub_decrypt *****')
+        raw_data['SA_pub_decrypt'].append(time_SA_pub_decrypt(1000))
+        
+        print('\n***** PyCrypto_pub_decrypt *****')
+        raw_data['PC_pub_decrypt'].append(time_PyCrypto_pub_decrypt(1000))
+        
+        print('\n***** SA_pub_sign *****')
+        raw_data['SA_pub_sign'].append(time_SA_pub_sign(1000))
+        
+        print('\n***** PyCrypto_pub_sign *****')
+        raw_data['PC_pub_sign'].append(time_PyCrypto_pub_sign(1000))
+        
+        print('\n***** SA_pub_verify *****')
+        raw_data['SA_pub_verify'].append(time_SA_pub_verify(4000))
+        
+        print('\n***** PyCrypto_pub_verify *****')
+        raw_data['PC_pub_verify'].append(time_PyCrypto_pub_verify(4000))
 
-    print('\n***** PyCrypto_pub_encrypt *****')
-    time_PyCrypto_pub_encrypt(3000)
+        print('\n********** Round ' + str(i) + ' Complete **********\n')
 
-    print('\n***** SA_pub_decrypt *****')
-    time_SA_pub_decrypt(1000)
-
-    print('\n***** PyCrypto_pub_decrypt *****')
-    time_PyCrypto_pub_decrypt(1000)
-
-    print('\n***** SA_pub_sign *****')
-    time_SA_pub_sign(1000)
-
-    print('\n***** PyCrypto_pub_sign *****')
-    time_PyCrypto_pub_sign(1000)
-
-    print('\n***** SA_pub_verify *****')
-    time_SA_pub_verify(4000)
-
-    print('\n***** PyCrypto_pub_verify *****')
-
-    time_PyCrypto_pub_verify(4000)
     print('\n********** Tests Complete **********\n')
-
+        
 if __name__ == "__main__":
-    #loops = int(sys.argv[1]) if len(sys.argv) > 1 else 20000
-    #run_tests(loops)
-    run_tests()
+    rounds = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+    run_tests(rounds)
+    print(json.dumps(raw_data))
