@@ -77,7 +77,6 @@ class RoleS (process):
         # perform a key exchange with this initiator.
         if some((_I, nR1) in [decrypt(encRS, key = kRS)]):
             kIR = keygen('shared', key_size = (test_size * 8))
-            print('&&&&&&&&&&:', len(kIR['key']))
             send(('msg4', i, encrypt((nI, kIR, R, encrypt((kIR, nR1, I), key = kRS)),
                                   key = kIS)), to = I)
 

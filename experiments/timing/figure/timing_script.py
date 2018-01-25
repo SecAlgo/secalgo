@@ -16,10 +16,10 @@ protocols = ['ns-sk_fixed_rk',
 #             'ns-sk_fixed_rn',
 #             'ns-sk_fixed_fn']
 
-testsizes = ['5000', '10000', '15000', '20000', '25000']
-#testsizes = ['100', '200', '300', '400', '500']
+#testsizes = ['5000', '10000', '15000', '20000', '25000']
+testsizes = ['100', '200', '300', '400', '500']
 
-def time_exp(iter_num):
+def time_exp(loops, iter_num):
     print('Protocol Timing Experiment - Varied Data Size', flush = True)
     for p in protocols:
         for i in range(iter_num):
@@ -27,7 +27,7 @@ def time_exp(iter_num):
             for ts in testsizes:
                 print('Test Data Size -- ' + ts + ':', flush = True)
                 cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size,
-                       full_path + p + da_ext, '1000', ts]
+                       full_path + p + da_ext, str(loops), ts]
                 print('Running:', cmd, flush = True)
                 f_txt = open(result_path + p + '_' + ts + '_' +
                              str(i + 1) + results_ext, 'w')
@@ -86,12 +86,18 @@ def parse_exp(iter_num, output_file):
             print('avg for ' + p + ', ' + ts + ':', total_protocol_time, '/', iter_num, '=',
               avg_protocol_time, flush = True)
         print(results)
-        title_line = 'Results for -- :'
+        title_line = 'Results for -- Protocol running time for NS-SK,'
+        title_line += ' with increasing key size, :'
         file_line = 'File: ' + results[p] + da_ext
         sizes_line = ''
         iter_lines = [''] * iter_num
         h_line = '-' * 70
         avg_line = ''
+        cols_desc = 'Columns: Size of new session key in bytes.'
+        rows_desc = 'Rows: Total protocol running time (sum of each particpant' 
+        rows_desc += ' process running time) in\nmiliseconds (of CPU time),'
+        rows_desc += ' averaged over 1000 executions of each protocol.'
+        avg_desc = 'Average running time of protocol over 10 runs of the experiment.'
         for ts1 in testsizes:
             if ts1 == '5000':
                 sizes_line += '\t' + ts1
@@ -101,17 +107,23 @@ def parse_exp(iter_num, output_file):
                 iter_lines[i1] += '\t' + str(round(results[ts1][i1][3], 6))
             avg_line += '\t' + str(round(results[ts1 + '_avg'], 6))
         print(title_line, file = of)
-        print(file_line, file = of)
-        print(sizes_line, file = of)
+        print(file_line + '\n', file = of)
+        print('Size' + sizes_line, file = of)
+        cntr = 1
         for line in iter_lines:
-            print(line, file = of)
-        print(h_line)
-        print(avg_line, file = of)
+            print('R' + str(cntr) + line, file = of)
+            cntr += 1
+        print(h_line, file = of)
+        print('AVG' + avg_line, file = of)
+        print('\n' + cols_desc, file = of)
+        print('\n' + rows_desc, file = of)
+        print('\n' + avg_desc, file = of)
         of.close()
 #end parse_exp()
 
 if __name__ == '__main__':
-    iter_num = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    output_file = sys.argv[2] if len(sys.argv) > 2 else None
-    time_exp(iter_num)
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    iter_num = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    output_file = sys.argv[3] if len(sys.argv) > 3 else None
+    time_exp(loops, iter_num)
     parse_exp(iter_num, output_file)
