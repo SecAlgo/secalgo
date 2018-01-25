@@ -1,0 +1,16 @@
+Results for -- NS-SK, DistAlgo-Secure, varying the session key size:
+File: ns-sk_fixed_rk.da
+	5000		10000		15000		20000		25000
+R1	0.011665	0.012132	0.012254	0.012297	0.012654
+R2	0.011228	0.011447	0.011976	0.012078	0.012259
+R3	0.011135	0.011564	0.011974	0.012166	0.012383
+R4	0.011032	0.012643	0.011928	0.012288	0.012405
+R5	0.011388	0.011332	0.011872	0.012551	0.01265
+------------------------------------------------------------------------------------
+AVG	0.01129	        0.011824	0.012001	0.012276	0.01247
+
+
+Rows: Running time of the protocol in seconds (CPU time) for a run of the experiment;
+      last row is the average running time across all runs.
+
+Columns: Size of the session key in bytes
