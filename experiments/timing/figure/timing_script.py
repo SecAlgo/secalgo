@@ -11,8 +11,10 @@ error_ext = '_error.log'
 
 protocols = ['ns-sk_fixed_rk',
              'ns-sk_fixed_fk',
-             'ns-sk_fixed_rn',
-             'ns-sk_fixed_fn']
+             'pc_ns-sk_fixed_rk',
+             'pc_ns-sk_fixed_fk']
+#             'ns-sk_fixed_rn',
+#             'ns-sk_fixed_fn']
 
 testsizes = ['5000', '10000', '15000', '20000', '25000']
 
@@ -52,6 +54,7 @@ def parse_exp(iter_num, output_file):
         #print('Results for:', p, file = of, flush = True)
         print('Results for:', p, flush = True)
         for ts in testsizes:
+            avg_protocol_time = 0
             total_protocol_time = 0
             iter_result_list = []
             for i in range(iter_num):
