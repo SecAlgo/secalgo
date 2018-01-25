@@ -17,6 +17,7 @@ protocols = ['ns-sk_fixed_rk',
 #             'ns-sk_fixed_fn']
 
 testsizes = ['5000', '10000', '15000', '20000', '25000']
+#testsizes = ['100', '200', '300', '400', '500']
 
 def time_exp(iter_num):
     print('Protocol Timing Experiment - Varied Data Size', flush = True)
@@ -26,10 +27,12 @@ def time_exp(iter_num):
             for ts in testsizes:
                 print('Test Data Size -- ' + ts + ':', flush = True)
                 cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size,
-                       full_path + p + da_ext, '1000', ts]
+                       full_path + p + da_ext, '2000', ts]
                 print('Running:', cmd, flush = True)
-                f_txt = open(result_path + p + '_' + ts + '_' + str(i + 1) + results_ext, 'w')
-                f_err = open(result_path + p + '_' + ts + '_' + str(i + 1) + error_ext, 'w')
+                f_txt = open(result_path + p + '_' + ts + '_' +
+                             str(i + 1) + results_ext, 'w')
+                f_err = open(result_path + p + '_' + ts + '_' +
+                             str(i + 1) + error_ext, 'w')
                 child = subprocess.Popen(cmd, bufsize= -1, stdout = f_txt,
                                          stderr = f_err, universal_newlines = True)
                 child.wait()
@@ -40,7 +43,7 @@ def time_exp(iter_num):
                 time.sleep(1)
             print('Completed Iteration', str(i + 1), flush = True)
         print('Finished', p, flush = True)
-    print('Completed Timing Experiment 01', flush = True)
+    print('Completed Protocol Timing Experiment - Varied Data Size', flush = True)
 #end time_exp01()
 
 def parse_exp(iter_num, output_file):
@@ -59,7 +62,8 @@ def parse_exp(iter_num, output_file):
             iter_result_list = []
             for i in range(iter_num):
                 protocol_time = 0
-                with open(result_path + p + '_' + ts +'_' + str(i + 1) + results_ext, 'r') as f:
+                with open(result_path + p + '_' + ts +'_' +
+                          str(i + 1) + results_ext, 'r') as f:
                     for read_line in f:                    
                         data_line = json.loads(read_line)
                         #print(data_line, file = of, flush = True)
@@ -86,6 +90,7 @@ def parse_exp(iter_num, output_file):
         file_line = 'File: ' + results[p] + da_ext
         sizes_line = ''
         iter_lines = [''] * iter_num
+        h_line = '-' * 70
         avg_line = ''
         for ts1 in testsizes:
             if ts1 == '5000':
@@ -94,12 +99,13 @@ def parse_exp(iter_num, output_file):
                 sizes_line += '\t\t' + ts1
             for i1 in range(iter_num):
                 iter_lines[i1] += '\t' + str(round(results[ts1][i1][3], 6))
-            avg_line += '\t' + str(round(results[ts + '_avg'], 6))
+            avg_line += '\t' + str(round(results[ts1 + '_avg'], 6))
         print(title_line, file = of)
         print(file_line, file = of)
         print(sizes_line, file = of)
         for line in iter_lines:
             print(line, file = of)
+        print(h_line)
         print(avg_line, file = of)
         of.close()
 #end parse_exp()
