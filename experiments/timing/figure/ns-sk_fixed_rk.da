@@ -76,7 +76,8 @@ class RoleS (process):
         # request. This assures the keyserver that the receiver wants to
         # perform a key exchange with this initiator.
         if some((_I, nR1) in [decrypt(encRS, key = kRS)]):
-            kIR = keygen('random', key_size = test_size)
+            kIR = keygen('shared', key_size = (test_size * 8))
+            print('&&&&&&&&&&:', len(kIR['key']))
             send(('msg4', i, encrypt((nI, kIR, R, encrypt((kIR, nR1, I), key = kRS)),
                                   key = kIS)), to = I)
 
@@ -117,7 +118,8 @@ class RoleI (process):
         # nonce in the encrypted tuple being passed back to the receiver.
         await(some(received(('msg4', _i, encIS), from_ = _S),
                    has = some((_nI, kIR, _R, encSR) in [decrypt(encIS, key = kIS)])))
-        kIRu = keygen('shared', key_mat = kIR[:32])
+        kIRu = kIR
+        kIRu['key'] = kIRu['key'][:32]
 
         # Msg 5 of the corrected version of NS-SK is identical (again, from the
         # perspective of the initiator) to the third message of the uncorrected
@@ -181,7 +183,8 @@ class RoleR (process):
             # the saved valued before the protocol can proceed.
             await(some(received(('msg5', _i, encSR), from_ = _I),
                        has = some((kIR, _nR1, _I) in [decrypt(encSR, key = kRS)])))
-            kIRu = keygen('shared', key_mat = kIR[:32])
+            kIRu = kIR
+            kIRu['key'] = kIRu['key'][:32]
             # The receiver now generates a new nonce it can use to assure
             # itself and the initiator that each is in possession of the new
             # session key.
