@@ -27,7 +27,7 @@ def time_exp(iter_num):
             for ts in testsizes:
                 print('Test Data Size -- ' + ts + ':', flush = True)
                 cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size,
-                       full_path + p + da_ext, '2000', ts]
+                       full_path + p + da_ext, '1000', ts]
                 print('Running:', cmd, flush = True)
                 f_txt = open(result_path + p + '_' + ts + '_' +
                              str(i + 1) + results_ext, 'w')
@@ -74,7 +74,7 @@ def parse_exp(iter_num, output_file):
                         #print('role time:', data_line[0], ':', data_line[1], '-', role_time,
                         #      flush = True)
                         protocol_time += role_time
-                iter_result = [(i + 1), p, ts, protocol_time]
+                iter_result = [(i + 1), p, ts, (protocol_time * 1000)]
                 iter_result_list.append(iter_result)
                 #print(json.dumps(iter_result), file = of, flush = True)
                 print(json.dumps(iter_result), flush = True)
