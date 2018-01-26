@@ -27,7 +27,7 @@ from Crypto.Random import random
 from sa.Misc.Padding import pkcs7_pad as pad, pkcs7_unpad as unpad
     
 class RoleS (process):
-    def setup(kAS, kBS, loops):
+    def setup(kAS, kBS, loops, testsize):
         Random.atfork()
         self.results = []
 
@@ -43,9 +43,10 @@ class RoleS (process):
         results.append(['decrypt', start_time, time.process_time(), loops])
         
         if A2 == A:
+            
             start_time = time.process_time()
             for i in range(loops):
-                kAB = Random.new().read(32)
+                kAB = Random.new().read(testsize)
             results.append(['keygen', start_time, time.process_time(), loops])
 
             start_time = time.process_time()
@@ -63,6 +64,7 @@ class RoleS (process):
             results.append(['encrypt', start_time, time.process_time(), loops])
             
             send(('msg4', encSA), to = A)
+
         for result in self.results:
             print(json.dumps(result))
         exit()
@@ -89,6 +91,8 @@ class RoleA (process):
             cipherAS = AES.new(kAS, AES.MODE_CBC, encAS[:AES.block_size])
             nA2, kAB, B2, encSB = pickle.loads(unpad(cipherAS.decrypt(encAS[AES.block_size:])))
         results.append(['decrypt', start_time, time.process_time(), loops])
+
+        kAB = kAB[:32]
         
         if nA2 == nA and B2 == B:
             send(('msg5', encSB), to = B)
@@ -109,6 +113,7 @@ class RoleA (process):
 
             send(('msg7', encAB), to = B)
             output('A - Key Exchange Complete')
+
         for result in self.results:
             print(json.dumps(result))
 
@@ -142,6 +147,8 @@ class RoleB (process):
             kAB, nB12, A2 = pickle.loads(unpad(cipherBS.decrypt(encSB[AES.block_size:])))
         results.append(['decrypt', start_time, time.process_time(), loops])
 
+        kAB = kAB[:32]
+        
         if nB12 == nB1 and A2 == A:
 
             start_time = time.process_time()
@@ -167,15 +174,17 @@ class RoleB (process):
             
             if nB22 == (nB2 - 1):
                 output('B - Key Exchange Complete')
+
         for result in self.results:
             print(json.dumps(result))
         exit()
         
 def main():
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
+    testsize = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
     kAS = Random.new().read(32)
     kBS = Random.new().read(32)
-    S = new(RoleS, (kAS, kBS, loops))
+    S = new(RoleS, (kAS, kBS, loops, testsize))
     B = new(RoleB, (S, kBS, loops))
     A = new(RoleA, (S, kAS, B, loops))
     start(S)
