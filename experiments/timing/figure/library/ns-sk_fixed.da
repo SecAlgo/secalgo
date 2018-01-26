@@ -31,26 +31,33 @@ class RoleS (process):
         await(False)
 
     def receive(msg=('msg3', (I1, R, N_I, enc_RS)), from_ = I):
+
         start_time = time.process_time()
         for i1 in range(loops):
             I2, N1_R = decrypt(enc_RS, key = K_RS)
         results.append(['decrypt', start_time, time.process_time(), loops])
+
         if I2 == I1:
+
             start_time = time.process_time()
             for i2 in range(loops):
                 K_IR = keygen('shared')
             results.append(['keygen', start_time, time.process_time(), loops])
+
             start_time = time.process_time()
             for i3 in range(loops):
                 encSR = encrypt((K_IR, N1_R, I2), key = K_RS)
             results.append(['encrypt', start_time, time.process_time(), loops])
+
             start_time = time.process_time()
             for i4 in range(loops):
                 encSI = encrypt((N_I, K_IR, R, encSR), key = K_IS)
             results.append(['encrypt', start_time, time.process_time(), loops])
+
             send(('msg4', encSI), to = I)
+
         for result in results:
-            print(result)
+            print(json.dumps(result))
         exit()
 
 class RoleI (process):
@@ -61,32 +68,39 @@ class RoleI (process):
     def run():
         send(('msg1', self), to = R)
         await(some(received(('msg2', enc_RS), from_ = _R)))
+
         start_time = time.process_time()
         for i5 in range(loops):
             N_I = nonce()
         results.append(['nonce', start_time, time.process_time(), loops])
+
         send(('msg3', (self, R, N_I, enc_RS)), to = S)
         await(some(received(('msg4', enc_IS), from_ = _S)))
+
         start_time = time.process_time()
         for i6 in range(loops):
             N_I2, K_IR, R2, enc_SR = decrypt(enc_IS, key = K_IS)
         results.append(['decrypt', start_time, time.process_time(), loops])
+
         if N_I2 == N_I and R2 == R:
             send(('msg5', enc_SR), to = R)
             await(some(received(('msg6', enc_RI), from_ = _R)))
+
             start_time = time.process_time()
             for i7 in range(loops):
                 N_R = decrypt(enc_RI, key = K_IR)
             results.append(['decrypt', start_time, time.process_time(), loops])
+
             start_time = time.process_time()
             for i8 in range(loops):
                 encIR = encrypt((N_R - 1), key = K_IR)
             results.append(['encrypt', start_time, time.process_time(), loops])
+
             send(('msg7', encIR), to = R)
             output('I - Key Exchange Complete')
+
         for result in results:
-                print(result)
-        
+            print(json.dumps(result))        
 
 class RoleR (process):
     def setup(S, K_RS, loops):
@@ -98,39 +112,50 @@ class RoleR (process):
 
     def receive(msg=('msg1', I1), from_ = I2):
         if I1 == I2:
+
             start_time = time.process_time()
             for i9 in range(loops):
                 N1_R = nonce()
             results.append(['nonce', start_time, time.process_time(), loops])
+
             start_time = time.process_time()
             for i10 in range(loops):
                 encRS = encrypt((I1, N1_R), key = K_RS)
             results.append(['encrypt', start_time, time.process_time(), loops])
+
             send(('msg2', encRS), to = I1)
             await(some(received(('msg5', enc_SR), from_ = _I1)))
+
             start_time = time.process_time()
             for i11 in range(loops):
                 K_IR, N1_R2, I3 = decrypt(enc_SR, key = K_RS)
             results.append(['decrypt', start_time, time.process_time(), loops])
+
             if N1_R2 == N1_R and I3 == I1:
+
                 start_time = time.process_time()
                 for i12 in range(loops):
                     N2_R = nonce()
                 results.append(['nonce', start_time, time.process_time(), loops])
+
                 start_time = time.process_time()
                 for i13 in range(loops):
                     encRI = encrypt(N2_R, key = K_IR)
                 results.append(['encrypt', start_time, time.process_time(), loops])
+
                 send(('msg6', encRI), to = I1)
                 await(some(received(('msg7', enc_IR), from_ = _I1)))
+
                 start_time = time.process_time()
                 for i14 in range(loops):
                     N2_R2 = decrypt(enc_IR, key = K_IR)
                 results.append(['decrypt', start_time, time.process_time(), loops])
+
                 if N2_R2 == (N2_R - 1):
                     output('R - Key Exchange Complete')
+
         for result in results:
-                print(result)
+            print(json.dumps(result))
         exit()
 
 def main():
