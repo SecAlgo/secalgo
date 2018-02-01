@@ -40,7 +40,8 @@ class RoleA (process):
         nA = nonce()
         send(('msg1', (self, B, nA)), to = S)
         await(some(received(('msg2', encAS), from_ = _S),
-                   has = some((_nA, kAB, _B, encBS) in [decrypt(encAS, key = kAS)])))
+                   has = some((_nA, kAB, _B, encBS)
+                              in [decrypt(encAS, key = kAS)])))
         send(('msg3', encBS), to = B)
         await(some(received(('msg4', encBA), from_ = _B)))
         nR = decrypt(encBA, key = kAB)

@@ -9,11 +9,11 @@ Communications of the ACM, v.24.8, Aug. 1981, p. 533-536.
 Protocol Diagram:
   (1) A -> S: (A, B)
   (2) S -> A: (CA, CB)
-  (3) A -> B: (CA, CB, enc(sign((K, T), SK_A), PK_B))
+  (3) A -> B: (CA, CB, enc(sign((K, T), skA), pkB))
 
 CA and CB are certificates containing the name and public key of A and B
 respecitively signed by the key server S. Certificates look like this:
-  CX == (X, PK_X, T, sign((X, PK_X, T), SK_S))
+  CX == (X, pkX, T, sign((X, pkX, T), skS))
 T is a timestamp. Denning and Sacco give no details concerning the format of
 the timestamp, and, though they discuss how the timestamp can be validated,
 they do not explain how this validation should be incorporated into the
@@ -23,40 +23,38 @@ protocol.
 import sys, time
 from sa.secalgo import *
 configure(verify_returns = 'bool')
-configure(benchmark = True)
 
 class roleA(process):
-    def setup(B, S, sk_A, pk_A, pk_S):
-        pass
+    def setup(B, S, skA, pkA, pkS):
+        at_fork()
 
     def run():
         send(('msg01', self, B), to = S)
-        await(some(received(('msg02', (A, _pk_A, t_A, sig_A),
-                             (_B, pk_B, t_B, sig_B)), from_ = S),
+        await(some(received(('msg02', (A, _pkA, tA, sigA),
+                             (_B, pkB, tB, sigB)), from_ = _S),
                    has = (A == self)))
-        if (verify(((A, pk_A, t_A), sig_A), pk_S) and
-            verify(((B, pk_B, t_B), sig_B), pk_S)):
-            k_AB = keygen('shared')
-            t_AB = time.time()
-            send(('msg03', (A, pk_A, t_A, sig_A), (B, pk_B, t_B, sig_B),
-                  encrypt(((k_AB, t_AB), sign((k_AB, t_AB), sk_A)), pk_B)),
+        if (verify(((A, pkA, tA), sigA), pkS) and
+            verify(((B, pkB, tB), sigB), pkS)):
+            kAB = keygen('shared')
+            tAB = time.time()
+            send(('msg03', (A, pkA, tA, sigA), (B, pkB, tB, sigB),
+                  encrypt(((kAB, tAB), sign((kAB, tAB), skA)), pkB)),
                  to = B)
             output('Initiator: Key Exchange Complete')
         else:
             output('Initiator: Could not verify certificates')
 
 class roleB(process):
-    def setup(S, sk_B, pk_B, pk_S):
-        pass
+    def setup(S, skB, pkB, pkS):
+        at_fork()
 
     def run():
-        await(some(received(('msg03', (A, pk_A, t_A, sig_A),
-                             (B, _pk_B, t_B, sig_B),
-                             encrypted_key), from_ = A), has = (B == self)))
-        if (verify(((A, pk_A, t_A), sig_A), pk_S) and
-            verify(((B, pk_B, t_B), sig_B), pk_S)):
-            (k_AB, t_AB), sig_AB = decrypt(encrypted_key, sk_B)
-            if verify(((k_AB, t_AB), sig_AB), pk_A):
+        await(some(received(('msg03', (A, pkA, tA, sigA), (B, _pkB, tB, sigB),
+                             encKey), from_ = A), has = (B == self)))
+        if (verify(((A, pkA, tA), sigA), pkS) and
+            verify(((B, pkB, tB), sigB), pkS)):
+            (kAB, tAB), sigAB = decrypt(encKey, skB)
+            if verify(((kAB, tAB), sigAB), pkA):
                 output('Recipient: Key Exchange Complete')
             else:
                 output('Recipient: Could not verify signature on shared key')
@@ -64,26 +62,28 @@ class roleB(process):
             output('Recipient: Could not verify certificates')
 
 class roleS(process):
-    def setup(sk_S, pk_S, client_keys):
-        pass
+    def setup(skS, pkS, client_keys):
+        at_fork()
 
     def run():
-        await(some(received(('msg01', A, B), from_ = A)))
-        pk_A = [x for (p, x) in client_keys if p == A].pop()
-        pk_B = [x for (p, x) in client_keys if p == B].pop()
-        t_A = t_B = time.time()
-        send(('msg02', (A, pk_A, t_A, sign((A, pk_A, t_A), sk_S)),
-              (B, pk_B, t_B, sign((B, pk_B, t_B), sk_S))), to = A)
+        await(False)
+        
+    def receive(msg=('msg01', A, B), from_ = _A):
+        pkA = [x for (p, x) in client_keys if p == A].pop()
+        pkB = [x for (p, x) in client_keys if p == B].pop()
+        tA = tB = time.time()
+        send(('msg02', (A, pkA, tA, sign((A, pkA, tA), skS)),
+            (B, pkB, tB, sign((B, pkB, tB), skS))), to = A)
         output('Server: Certificates Sent')
 
 def main():
-    sk_S, pk_S = keygen('public')
-    sk_A, pk_A = keygen('public')
-    sk_B, pk_B = keygen('public')
+    skS, pkS = keygen('public')
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
     S = new(roleS)
-    B = new(roleB, (S, sk_B, pk_B, pk_S))
-    A = new(roleA, (B, S, sk_A, pk_A, pk_S))
-    setup(S, (sk_S, pk_S, [(A, pk_A), (B, pk_B)]))
+    B = new(roleB, (S, skB, pkB, pkS))
+    A = new(roleA, (B, S, skA, pkA, pkS))
+    setup(S, (skS, pkS, [(A, pkA), (B, pkB)]))
     start(S)
     start(B)
     start(A)
