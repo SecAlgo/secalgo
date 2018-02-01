@@ -12,8 +12,7 @@ def pcEncrypt(data, key):
     cipher = PKCS1_OAEP.new(pubk)
     try:
         ct = cipher.encrypt(data)
-    except ValueError:
-        #print('********hybrid encrypt', flush = True)
+    except ValueError: #print('********hybrid encrypt', flush = True)
         sharedk = Random.new().read(32)
         iv = Random.new().read(AES.block_size)
         sharedCipher = AES.new(sharedk, AES.MODE_CBC, iv)
@@ -24,8 +23,7 @@ def pcEncrypt(data, key):
 def pcDecrypt(ct, key):
     privk = RSA.importKey(key)
     cipher = PKCS1_OAEP.new(privk)
-    if len(ct) > (2048 // 8): #RSA keysize, PyCrypto's size method cannot be trusted.
-        #print('*******hybrid decrypt', flush = True)
+    if len(ct) > (2048 // 8): #RSA keysize, PyCrypto's size method cannot be trusted. #print('*******hybrid decrypt', flush = True)
         sharedk = cipher.decrypt(ct[:256])
         iv = ct[256:272]
         sharedCipher = AES.new(sharedk, AES.MODE_CBC, iv)

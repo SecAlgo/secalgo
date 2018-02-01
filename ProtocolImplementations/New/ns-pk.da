@@ -25,16 +25,14 @@ did fix for (6):
 """
 
 from sa.secalgo import *
-#configure(benchmark = True)
 
 class roleS (process):
     def setup(skS, client_keys):
-        pass
+        at_fork()
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
-
+        await(False)
+        
     def receive(msg=('msg1', (I, R)), from_ = I):
         pkR = [x for (p, x) in client_keys if p == R].pop()
         send(('msg2', sign((R, pkR), skS)), to = I)
@@ -45,36 +43,31 @@ class roleS (process):
 
 class roleI (process):
     def setup(skI, S, pkS, R):
-        pass
+        at_fork()
     
     def run():
         send(('msg1', (self, R)), to = S)
         await(some(received(('msg2', sig_S), from_ = _S),
-                   has = (verify(sig_S, key = pkS)[0] == R)))
-        pkR = verify(sig_S, key = pkS)[1]
+                   has = some((_R, pkR) in [verify(sig_S, key = pkS)])))
         nI = nonce()
         send(('msg3', encrypt((nI, self), key = pkR)), to = R)
         await(some(received(('msg6', enc_RI), from_ = _R),
-                   has = (decrypt(enc_RI, key = skI)[0] == nI)))
-        nR = decrypt(enc_RI, key = skI)[1]
+                   has = some((_nI, nR, _R) in [decrypt(enc_RI, key = skI)])))
         send(('msg7', encrypt(nR, key = pkR)), to = R)
         output('I authenticated R')
 
 class roleR (process):
     def setup(skR, S, pkS):
-                pass
+        at_fork()
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('msg3', enc_IR), from_ = I):
-        I == decrypt(enc_IR, key = skR)[1]
-        nI = decrypt(enc_IR, key = skR)[0]
-        send(('msg4', (self, I)), to = S)
-        await(some(received(('msg5', sig_S), from_ = _S),
-                   has = (verify(sig_S, key = pkS)[0] == I)))
-        pkI = verify(sig_S, key = pkS)[1]
+        if some((nI, _I) in [decrypt(enc_IR, key = skR)]):
+            send(('msg4', (self, I)), to = S)
+            await(some(received(('msg5', sig_S), from_ = _S),
+                       has = some((_I, pkI) in [verify(sig_S, key = pkS)])))
         nR = nonce()
         send(('msg6', encrypt((nI, nR, self), key = pkI)), to = I)
         await(some(received(('msg7', enc_IR2), from_ = _I),
