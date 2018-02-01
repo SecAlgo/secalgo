@@ -92,7 +92,7 @@ def parse_exp(iter_num, output_file):
         rows_desc = 'Rows: Total crypto library running time (sum of each particpant'
         rows_desc += ' process running time) in\nmiliseconds (of CPU time),'
         rows_desc += ' averaged over 1000 executions of each protocol.'
-        avg_desc = 'Average running time of protocol over 10 runs of the experiment.'
+        avg_desc = 'Average running time of protocol over 20 runs of the experiment.'
         for ts1 in testsizes:
             sizes_line += '\t' + ts1
             for i1 in range(iter_num):

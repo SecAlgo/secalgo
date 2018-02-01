@@ -16,9 +16,9 @@ protocols = ['ns-sk_fixed_rk',
 #             'ns-sk_fixed_rn',
 #             'ns-sk_fixed_fn']
 
-#testsizes = ['5000', '10000', '15000', '20000', '25000']
+testsizes = ['1250', '2500', '5000', '10000', '15000', '20000', '25000']
 #testsizes = ['100', '200', '300', '400', '500']
-testsizes = ['1250', '2500']
+#testsizes = ['1250', '2500']
 
 def time_exp(loops, iter_num):
     print('Protocol Timing Experiment - Varied Data Size', flush = True)
