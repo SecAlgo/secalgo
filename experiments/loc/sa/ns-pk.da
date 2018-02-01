@@ -3,8 +3,7 @@ class roleS (process):
     def setup(skS, client_keys):
         pass
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
     def receive(msg=('msg1', (I, R)), from_ = I):
         pkR = [x for (p, x) in client_keys if p == R].pop()
         send(('msg2', sign((R, pkR), skS)), to = I)
@@ -16,12 +15,10 @@ class roleI (process):
         pass
     def run():
         send(('msg1', (self, R)), to = S)
-        await(some(received(('msg2', sig_S), from_ = _S), has = (verify(sig_S, key = pkS)[0] == R)))
-        pkR = verify(sig_S, key = pkS)[1]
+        await(some(received(('msg2', sig_S), from_ = _S), has = some((_R, pkR) in [verify(sig_S, key = pkS)])))
         nI = nonce()
         send(('msg3', encrypt((nI, self), key = pkR)), to = R)
-        await(some(received(('msg6', enc_RI), from_ = _R), has = (decrypt(enc_RI, key = skI)[0] == nI)))
-        nR = decrypt(enc_RI, key = skI)[1]
+        await(some(received(('msg6', enc_RI), from_ = _R), has = some((_nI, nR) in [decrypt(enc_RI, key = skI)])))
         send(('msg7', encrypt(nR, key = pkR)), to = R)
         output('I authenticated R')
 class roleR (process):
