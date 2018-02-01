@@ -100,6 +100,12 @@ def keygen_public(key_size, alg, hash_alg):
 #end keygen_public()
 
 def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
+    print(key_size)
+    print(use_group)
+    print(dh_group)
+    print(dh_mod_size)
+    print(dh_p)
+    print(dh_g)
     if use_group == True:        
         dh_p = modp_groups[dh_group]['p']
         dh_g = modp_groups[dh_group]['g']
@@ -119,8 +125,8 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
                 count += 1
                 q = getPrime(dh_mod_size - 1)
                 dh_p = (2 * q) + 1
-            #print('Fresh q:', count, q, flush = True)
-            #print('Fresh p:', count, dh_p, flush = True) 
+            print('Fresh q:', count, q, flush = True)
+            print('Fresh p:', count, dh_p, flush = True) 
 
         #define new generator for the finite field
         if dh_g == None:

@@ -144,12 +144,18 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
             key_size = current_cfg['dh_exp_size']
-        if use_dh_group == True:
+        if use_dh_group:
             if dh_group == None:
                 dh_group = current_cfg['dh_grp']
         else:
-            if dh_p == None:
+            if dh_p == None or dh_mod_size == None:
                 dh_mod_size = current_cfg['dh_mod_size']
+        print(key_size)
+        print(use_dh_group)
+        print(dh_group)
+        print(dh_mod_size)
+        print(dh_p)
+        print(dh_g)
         return backend.keygen_dh(key_size, use_dh_group, dh_group,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
