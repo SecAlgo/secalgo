@@ -1,7 +1,7 @@
 """
 Diffie-Hellman Key Exchange (DHKE-1)
 A protocol based on classical Diffie-Hellman, given in Shoup 1999.
-Models available for Scyther, and in Gupta and Shamtikov 2005.
+Models available for Scyther, and in Gupta and Shmatikov 2005.
 
 1. A -> B : g^x, sign((g^x, B), skA), certA
 2. B -> A : g^y, k, sign(g^x, g^y, k, A), certB
@@ -60,8 +60,8 @@ def main():
     skSigA, pkSigA = keygen('public')
     skSigB, pkSigB = keygen('public')
     skSigT, pkSigT = keygen('public')
-    dh_grpA = keygen('dh', 1, dh_mod_size = 2048)
-    dh_grpB = keygen('dh', 1, dh_mod_size = 2048)
+    dh_grpA = keygen('dh', 1, use_dh_group = False, dh_mod_size = 2048)
+    dh_grpB = keygen('dh', 1, use_dh_group = False, dh_mod_size = 2048)
     print(dh_grpA)
     print(dh_grpB)
     skA = skSigA
