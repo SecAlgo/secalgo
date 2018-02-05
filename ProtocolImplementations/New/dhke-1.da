@@ -60,8 +60,8 @@ def main():
     skSigA, pkSigA = keygen('public')
     skSigB, pkSigB = keygen('public')
     skSigT, pkSigT = keygen('public')
-    dh_grpA = keygen('dh', 1, use_dh_group = False, dh_mod_size = 2048)
-    dh_grpB = keygen('dh', 1, use_dh_group = False, dh_mod_size = 2048)
+    dh_grpA = keygen('dh', 1)
+    dh_grpB = keygen('dh', 1)
     print(dh_grpA)
     print(dh_grpB)
     skA = skSigA

@@ -28,7 +28,7 @@ S  = Application Server
 
 import sys, time, random
 from sa.secalgo import *
-configure(benchmark = True)
+
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_TKT_DURATION = 3600 #one hour
@@ -50,8 +50,7 @@ class Role_AuthServer(process):
             per_server_lifetimes[s] = DEFAULT_TGT_DURATION
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('krb_as_req', pvno, msg_type, padata,
                      req_body), from_ = C):
@@ -141,8 +140,7 @@ class Role_TGS(process):
             per_server_lifetimes[s] = DEFAULT_TKT_DURATION
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
         #First task is to retrieve and decrypt the ticket contained in the
@@ -284,8 +282,7 @@ class Role_AppServer(process):
         self.skew = DEFAULT_SKEW
 
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
 
     #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
     def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator),
