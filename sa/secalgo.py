@@ -142,12 +142,6 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
             hash_alg = current_cfg['hash_alg']
         return backend.keygen_public(key_size, key_type, hash_alg)
     elif key_type == 'diffie-hellman' or key_type == 'dh':
-        print(key_size)
-        print(use_dh_group)
-        print(dh_group)
-        print(dh_mod_size)
-        print(dh_p)
-        print(dh_g)
         if key_size == None:
             key_size = current_cfg['dh_exp_size']
         if use_dh_group:

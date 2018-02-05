@@ -11,77 +11,73 @@ Using the extended version: http://eprint.iacr.org/2001/040.ps, p. 22.
 
 Protocol Diagram:
   (1) A -> B : A, s, g^x
-  (2) B -> A : B, s, g^y, sign((B, s, g^y, g^x, A), SK_sig_B)
-  (3) A -> B : A, s, sign((A, s, g^x, g^y, B), SK_sig_A)
+  (2) B -> A : B, s, g^y, sign((B, s, g^y, g^x, A), skSigB)
+  (3) A -> B : A, s, sign((A, s, g^x, g^y, B), skSigA)
 
 Both parties are in possession of Diffie-Hellman mod_p group information, a
 prime, 'p', and a generator, 'g'. In addition, each participant possesses a
 public and private key for a signature scheme (we will use RSA), denoted
-SK_sig_I, for participant, 'I'. Each participant possesses the public key of
+skSigX, for participant, 'X'. Each participant possesses the public key of
 the others for this signature scheme. 's' is a session identifier (I will use
 a nonce). 
 '''
-import time, json, sys
+import time, sys, json
 from sa.secalgo import *
 configure(verify_returns = 'bool')
 
+
 class RoleA(process):
-    def setup(SK_sig_A, PK_sig_A, B, PK_sig_B, p, g, loops):
-        self.A = self
+    def setup(skSigA, pkSigA, B, pkSigB, p, g, loops):
+        at_fork()
 
     def run():
         start_time = time.process_time()
         for i in range(loops):
             result = sdh(i)
-            await(result == i)
-        print(json.dumps(['sdh', 'roleA', start_time, time.process_time(), loops]), flush = True)
+        print(json.dumps(['sdh', 'roleA', start_time, time.process_time(), loops]))
 
     def sdh(i):
         s = nonce(128)
         dh_x, dh_X, _, _ = keygen('dh', dh_p = p, dh_g = g)
-        send(('msg1', i, A, s, dh_X), to = B)
-        await(some(received(('msg2', _i, _B, _s, dh_Y, m), from_ = B)))
-        if verify(((B, s, dh_Y, dh_X, A), m), key = PK_sig_B) != None:
-            send(('msg3', i, A, s, sign((A, s, dh_X, dh_Y, B), key = SK_sig_A)), to = B)
-            K_AB = pow(dh_Y, dh_x, p)
+        send(('msg1', i, self, s, dh_X), to = B)
+        await(some(received(('msg2', _i, _B, _s, dh_Y, m), from_ = _B)))
+        if verify(((B, s, dh_Y, dh_X, self), m), key = pkSigB) != None:
+            send(('msg3', i, self, s, sign((self, s, dh_X, dh_Y, B), key = skSigA)), to = B)
+            kAB = pow(dh_Y, dh_x, p)
             dh_x = None
-            output('A - Authenticated Exchange of Key Material Complete', '(', i, ')')
-            #output('Session Key:', (K_AB, s), '(', i, ')')
+            output('A - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
         return i
 
 class RoleB(process):
-    def setup(SK_sig_B, PK_sig_B, PK_sig_A, p, g, loops):
-        self.B = self
+    def setup(skSigB, pkSigB, pkSigA, p, g, loops):
+        at_fork()
         self.start_time = 0
-
+        
     def run():
         self.start_time = time.process_time()
         await(False)
-        #if await(False): pass
-        #elif timeout(10): pass
 
-    def receive(msg=('msg1', i, A, s, dh_X), from_ = A):
+    def receive(msg=('msg1', i, A, s, dh_X), from_ = _A):
         dh_y, dh_Y, _, _ = keygen('dh', dh_p = p, dh_g = g)
-        send(('msg2', i, B, s, dh_Y, sign((B, s, dh_Y, dh_X, A), key = SK_sig_B)), to = A)
-        K_AB = pow(dh_X, dh_y, p)
+        send(('msg2', i, self, s, dh_Y, sign((self, s, dh_Y, dh_X, A), key = skSigB)), to = A)
+        kAB = pow(dh_X, dh_y, p)
         dh_y = None
-        await(some(received(('msg3', _i, _A, _s, m), from_ = A)))
-        if verify(((A, s, dh_X, dh_Y, B), m), key = PK_sig_A) != None:
-            output('B - Authenticated Exchange of Key Material Complete', '(', i, ')')
-            #output('Session Key:', (K_AB, s), '(', i, ')')
+        await(some(received(('msg3', _i, _A, _s, m), from_ = _A)))
+        if verify(((A, s, dh_X, dh_Y, self), m), key = pkSigA) != None:
+            output('B - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
         if i == (loops - 1):
-            print(json.dumps(['sdh', 'roleB', start_time, time.process_time(), loops]), flush = True)
+            print(json.dumps(['sdh', 'roleB', self.start_time, time.process_time(), loops]))
             exit()
 
 def main():
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
-    SK_sig_A, PK_sig_A = keygen('public')
-    SK_sig_B, PK_sig_B = keygen('public')
+    skSigA, pkSigA = keygen('public')
+    skSigB, pkSigB = keygen('public')
     _, _, dh_g, dh_p = keygen('dh', dh_group = 17)
-    A = new(RoleA)
-    B = new(RoleB)
-    setup(A, (SK_sig_A, PK_sig_A, B, PK_sig_B, dh_p, dh_g, loops))
-    setup(B, (SK_sig_B, PK_sig_B, PK_sig_A, dh_p, dh_g, loops))
+    B = new(RoleB, (skSigB, pkSigB, pkSigA, dh_p, dh_g, loops))
+    A = new(RoleA, (skSigA, pkSigA, B, pkSigB, dh_p, dh_g, loops))
     start(B)
     start(A)
     
