@@ -1,6 +1,6 @@
 import time, sys, pickle
-from Crypto.Hash import HMAC
 from Crypto.Hash import SHA256
+from Crypto.Hash import HMAC
 from sa.secalgo import *
 configure(verify_returns = 'bool')
 PROTOCOL_VERSION_3_0 = (3, 0) #SSL 3.0
@@ -75,7 +75,7 @@ def _a(n, secret, seed):
         h = HMAC.new(secret, digestmod = SHA256)
         h.update(_a(n - 1, secret, seed))
         return h.digest()
-def _p_hash(secret, seed, output_length):    
+def _p_hash(secret, seed, output_length):
     result = bytearray()
     i = 1
     while len(result) < output_length:
@@ -251,8 +251,7 @@ class TLS_Peer(process):
         handshake_sh = record_unwrapper(msg)
         handshake_messages.append(handshake_sh)
         (_, _, body_sh) = handshake_sh
-        (server_version, server_random, session_id,
-         cipher_suite, compression_method, extensions) = body_sh
+        (server_version, server_random, session_id, cipher_suite, compression_method, extensions) = body_sh
         if server_version != PROTOCOL_VERSION_1_2:
             return
         key_exchange_alg = update_pending_parameters(cipher_suite, compression_method, client_random[1], server_random[1])
@@ -309,13 +308,20 @@ class TLS_Peer(process):
         pending_wsp = Security_Parameters(current_wsp.connection_end)
         pending_write_state = Connection_State()
         shm = b''
+        m_count = 1
         for m in handshake_messages:
-            shm += pickle.dumps(m)
+            shm += b'msg' + str(m_count).encode('ascii')
+            m_count += 1
+        print('CLIENT_SHM1:\n', shm)
         verification_data = tls_prf_sha256(current_wsp.master_secret, b'client finished', SHA256.new(shm).digest(), VERIFY_DATA_LENGTH)
+        print('CURRENT_WSP_MS:\n', current_wsp.master_secret)
+        print('HASH:', SHA256.new(shm).digest())
+        print('CLIENT:\n', verification_data)
         finished = (verification_data,)
         handshake_cfin = (FINISHED, None, finished)
         handshake_messages.append(handshake_cfin)
-        shm += pickle.dumps(handshake_cfin)
+        shm += b'msg' + str(m_count).encode('ascii')
+        print('CLIENT_SHM2:\n', shm)
         msg_counter += 1
         send((record_wrapper(TYPE_HANDSHAKE, handshake_cfin), handshake_id, msg_counter), to = server)
         await(some(received((msg, _handshake_id, counter), from_ = server), has = (msg[0] == TYPE_CHANGE_CIPHER_SPEC and counter > msg_counter)))
@@ -334,7 +340,7 @@ class TLS_Peer(process):
         handshake_msg = record_unwrapper((TYPE_HANDSHAKE, PROTOCOL_VERSION_1_2, None, cipher_fragment))
         if CLIENT_HELLO != handshake_msg[0]:
             return
-        output('SEVER - begin Handshake')
+        output('SERVER - begin Handshake')
         current_rsp.connection_end = CONN_SERVER
         current_wsp.connection_end = CONN_SERVER
         pending_rsp.connection_end = CONN_SERVER
@@ -383,14 +389,18 @@ class TLS_Peer(process):
             handshake_cfin = record_unwrapper(msg)
             (_, _, (finish_data,)) = handshake_cfin
             shm = b''
+            m_count = 1
             for m in handshake_messages:
-                shm += pickle.dumps(m)
+                shm += b'msg' + str(m_count).encode('ascii')
+                m_count += 1
+            print('SERVER_SHM1:\n', shm)
             server_data = tls_prf_sha256(current_rsp.master_secret, b'client finished', SHA256.new(shm).digest(), VERIFY_DATA_LENGTH)
             if server_data != finish_data:
                 output('SERVER - Handshake failed')
                 return
             handshake_messages.append(handshake_cfin)
-            shm += pickle.dumps(handshake_cfin)
+            shm += b'msg' + str(m_count).encode('ascii')
+            print('SERVER_SHM2:\n', shm)
             handshake_ccs = (CHANGE_CIPHER_SPEC_BODY,)
             msg_counter += 1
             send((record_wrapper(TYPE_CHANGE_CIPHER_SPEC, handshake_ccs), handshake_id, msg_counter), to = client)
@@ -414,8 +424,7 @@ class TLS_Peer(process):
         if peer != None:
             initiate_handshake(peer)
         else:
-            if await(False): pass
-            elif timeout(10): pass
+            await(False)
 def main():
     config(channel = 'reliable')
     tls_server = new(TLS_Peer)

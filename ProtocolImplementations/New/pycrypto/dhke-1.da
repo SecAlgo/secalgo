@@ -1,3 +1,19 @@
+"""
+Diffie-Hellman Key Exchange (DHKE-1)
+A protocol based on classical Diffie-Hellman, given in Shoup 1999.
+Models available for Scyther, and in Gupta and Shmatikov 2005.
+
+1. A -> B : g^x, sign((g^x, B), skA), certA
+2. B -> A : g^y, k, sign(g^x, g^y, k, A), certB
+3. A -> B : BitGen(H_k(g^xy))
+
+g is a generator for a group G of prime order q, all decided in advance. In
+Shoup, a "description" of G and g are included in each participant's public
+key. I will simulate this by passing this information to each process during 
+its setup. The certificates, certA and certB, are certificates granted by a 
+Certification Authority linking each participant's public key to their
+identity. k is a randomly generated index for a hash function.
+"""
 import random, pickle
 from Crypto.Random.random import StrongRandom
 from Crypto.Hash import SHA256
@@ -5,79 +21,125 @@ from Crypto import Random
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Util.number import getRandomNBitInteger
 from Crypto.PublicKey import RSA
+
 DH_P = 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF
+
 DH_G = 2
+
 class RoleA (process):
     def setup(skA, pkA, B, pkB, certA, pkSigT):
         Random.atfork()
+
     def run():
+        # dh_x, dh_X, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
         dh_x = getRandomNBitInteger(512)
         dh_X = pow(pkA[1], dh_x, pkA[2])
+        
+        # send(('msg1', dh_X, sign((dh_X, B), key = skA), certA), to = B)
         h1 = SHA256.new(pickle.dumps((dh_X, B)))
         signer = PKCS1_v1_5.new(RSA.importKey(skA))
         sig = signer.sign(h1)
         send(('msg1', dh_X, sig, certA), to = B)
+        
         await(some(received(('msg2', dh_Y, k, m, certB), from_ = _B)))
+        # if verify(((B, pkB), certB), pkSigT):
         h2 = SHA256.new(pickle.dumps((B, pkB)))
         verifier2 = PKCS1_v1_5.new(RSA.importKey(pkSigT))
         if verifier2.verify(h2, certB):
+            
+            # if verify(((dh_X, dh_Y, k, self), m), pkB[0]):
             h3 = SHA256.new(pickle.dumps((dh_X, dh_Y, k, self)))
             verifier3 = PKCS1_v1_5.new(RSA.importKey(pkB[0]))
             if verifier3.verify(h3, m):
+                
+                # Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
+                # Hash function whose index is k
                 kAB = key_derivation(dh_Y, dh_x, pkA[2])
                 send(('msg3', BitGen(kAB)), to = B)
                 output('A - Authenticated Exchange of Key Material Complete')
+        
 class RoleB (process):
     def setup(skB, pkB, pkA, certB, pkSigT):
         Random.atfork()
+
     def run():
         await(False)
+
     def receive(msg=('msg1', dh_X, m, certA), from_ = A):
+        # dh_y, dh_Y, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
         dh_y = getRandomNBitInteger(512)
         dh_Y = pow(pkA[1], dh_y, pkA[2])
+        
+        # if verify(((A, pkA), certA), pkSigT):
         h1 = SHA256.new(pickle.dumps((A, pkA)))
         verifier1 = PKCS1_v1_5.new(RSA.importKey(pkSigT))
         if verifier1.verify(h1, certA):
+
+            # if verify(((dh_X, self), m), pkA[0]):
             h2 = SHA256.new(pickle.dumps((dh_X, self)))
             verifier2 = PKCS1_v1_5.new(RSA.importKey(pkA[0]))
             if verifier2.verify(h2, m):
+
                 k = StrongRandom().randint(1, 100) #k supposed to be bitstring
+
+                # send(('msg2', dh_Y, k, sign((dh_X, dh_Y, k, A), key = skB), certB), to = A)
                 h3 = SHA256.new(pickle.dumps((dh_X, dh_Y, k, A)))
                 signer = PKCS1_v1_5.new(RSA.importKey(skB))
                 sig = signer.sign(h3)
                 send(('msg2', dh_Y, k, sig, certB), to = A)
+                
+                #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
+                #Hash function whose index is k
                 kAB = key_derivation(dh_X, dh_y, pkA[2])
                 await(some(received(('msg3', m2), from_ = _A)))
                 if BitGen(kAB) == m2:
                     output('B - Authenticated Exchange of Key Material Complete')
+
 def main():
+    # skSigA, pkSigA = keygen('public')
     skSigA = RSA.generate(2048)
     pkSigA = skSigA.publickey()
+
+    # skSigB, pkSigB = keygen('public')
     skSigB = RSA.generate(2048)
     pkSigB = skSigB.publickey()
+
+    # skSigT, pkSigT = keygen('public')
     skSigT = RSA.generate(2048)
     pkSigT = skSigT.publickey()
+    
+    # dh_grpA = keygen('dh', 1)
     dh_grpA = (DH_P, DH_G)
+    
+    # dh_grpB = keygen('dh', 1)
     dh_grpB = (DH_P, DH_G)
+    
     skA = skSigA
     skB = skSigB
     pkA = (pkSigA.exportKey(), dh_grpA[0], dh_grpA[1])
     pkB = (pkSigB.exportKey(), dh_grpB[0], dh_grpB[1])
     B = new(RoleB)
     A = new(RoleA)
+
+    # certA = sign((A, pkA), skSigT)
     h1 = SHA256.new(pickle.dumps((A, pkA)))
     signer1 = PKCS1_v1_5.new(skSigT)
     certA = signer1.sign(h1)
+    
+    # certB = sign((B, pkB), skSigT)
     h2 = SHA256.new(pickle.dumps((B, pkB)))
     signer2 = PKCS1_v1_5.new(skSigT)
     certB = signer2.sign(h2)
+    
     setup(B, (skB.exportKey(), pkB, pkA, certB, pkSigT.exportKey()))
     setup(A, (skA.exportKey(), pkA, B, pkB, certA, pkSigT.exportKey()))
     start(B)
     start(A)
+
 def BitGen(x):
     random.seed(x)
     return random.getrandbits(256)
+    
 def key_derivation(public, private, mod_p):
     shared_secret = pow(public, private, mod_p)
     ss_length_bits = shared_secret.bit_length()

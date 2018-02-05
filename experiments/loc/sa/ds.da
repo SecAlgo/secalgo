@@ -1,27 +1,26 @@
 from sa.secalgo import *
-configure(benchmark = True)
-class RoleI (process):
-    def setup(skI, R, pkR):
-        pass
+class RoleA (process):
+    def setup(skA, B, pkB):
+        at_fork()
     def run():
         k = keygen('shared')
-        send(('encrypt_sign', encrypt(sign(k, skI), pkR)), to = R)
-        await(some(received(m, from_ = R)))
+        send(('msg01', encrypt(sign(k, skA), pkB)), to = B)
+        await(some(received(('msg02', m), from_ = _B)))
         s = decrypt(m, k)
         output('DECRYPTED MESSAGE:', s)
-class RoleR (process):
-    def setup(skR, pkI):
+class RoleB (process):
+    def setup(skB, pkA):
+        at_fork()
         self.s = 'secret'
     def run():
-        if await(False): pass
-        elif timeout(10): pass
-    def receive(msg=('encrypt_sign', m), from_ = I):
-        k = verify(decrypt(m, skR), pkI)
-        send(encrypt(s, k), to = I)
+        await(False)
+    def receive(msg=('msg01', m), from_ = A):
+        k = verify(decrypt(m, skB), pkA)
+        send(('msg02', encrypt(s, k)), to = A)
 def main():
-    skI, pkI = keygen('public')
-    skR, pkR = keygen('public')
-    R = new(RoleR, (skR, pkI))
-    I = new(RoleI, (skI, R, pkR))
-    start(I)
-    start(R)
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    B = new(RoleB, (skB, pkA))
+    A = new(RoleA, (skA, B, pkB))
+    start(A)
+    start(B)

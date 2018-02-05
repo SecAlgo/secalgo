@@ -16,8 +16,7 @@ class Role_AuthServer(process):
         for s in servers:
             per_server_lifetimes[s] = DEFAULT_TGT_DURATION
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
     def receive(msg=('krb_as_req', pvno, msg_type, padata, req_body), from_ = C):
         (kdc_options, cname, realm, sname, krb_from, till, rtime, nonce, etype, addresses, enc_authorization_data, additional_tickets) = req_body
         if cname not in clients:
@@ -50,8 +49,7 @@ class Role_TGS(process):
         for s in server_keys:
             per_server_lifetimes[s] = DEFAULT_TKT_DURATION
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
     def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
         _, msg_type, ap_options, tgt, authenticator = padata[0]
         if msg_type != 14:
@@ -92,8 +90,7 @@ class Role_AppServer(process):
         self.S = self
         self.skew = DEFAULT_SKEW
     def run():
-        if await(False): pass
-        elif timeout(10): pass
+        await(False)
     def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator), from_ = C):
         tkt_vno, realm , sname, tkt_enc_part = ticket
         (tkt_flags, key_C_S, tkt_crealm, tkt_cname, tkt_transited, tkt_authtime, tkt_starttime, tkt_endtime, tkt_renew_till, tkt_caddr, tkt_authorization_data) = decrypt(tkt_enc_part, key_S_TGS)
@@ -127,8 +124,7 @@ class Role_C(process):
             tgt = None
         if tgt != None:
             authenticator = [5, realm, C, None, 0, time.time(), None, None, []]
-            tgs_krb_ap_req = [5, 14, dict(), tgt,
-                              encrypt(authenticator, key_C_TGS)]
+            tgs_krb_ap_req = [5, 14, dict(), tgt, encrypt(authenticator, key_C_TGS)]
             nonce_C_TGS = nonce()
             tgs_req_body = [dict(), None, 'TEST', S, 0, time.time() + (5 * 3600), 0, nonce_C_TGS, [18, 17], [], [], []]
             output('Client - Sent TGT and request to TGS for credentials', 'for server,', S)
@@ -144,7 +140,7 @@ class Role_C(process):
         if key_C_S != None:
             ap_authenticator = [5, realm, C, None, None, time.time(), None, None, []]
             send(('krb_ap_req', 5, 14, dict(), ticket, encrypt(ap_authenticator, key_C_S)), to = S)
-            output('Client - Sent authentication request to server,', S)        
+            output('Client - Sent authentication request to server,', S)
 def main():
     num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 10

@@ -31,7 +31,6 @@ def pcDecrypt(ct, key):
     else:
         data = cipher.decrypt(ct)
     return data
-
 class RoleI (process):
     def setup(skI, R, pkR):
         Random.atfork()        

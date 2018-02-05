@@ -36,8 +36,7 @@ class roleA(process):
         Random.atfork()
     def run():
         send(('msg01', self, B), to = S)
-        await(some(received(('msg02', (A, _pkA, tA, sigA),
-                             (_B, pkB, tB, sigB)), from_ = S), has = (A == self)))
+        await(some(received(('msg02', (A, _pkA, tA, sigA), (_B, pkB, tB, sigB)), from_ = S), has = (A == self)))
         hA = SHA256.new(pickle.dumps((A, pkA, tA)))
         hB = SHA256.new(pickle.dumps((B, pkB, tB)))
         verifier = PKCS1_v1_5.new(RSA.importKey(pkS))
@@ -47,8 +46,7 @@ class roleA(process):
             hAB = SHA256.new(pickle.dumps((kAB, tAB)))
             signer = PKCS1_v1_5.new(RSA.importKey(skA))
             sigAB = signer.sign(hAB)
-            send(('msg03', (A, pkA, tA, sigA), (B, pkB, tB, sigB),
-                  pcEncrypt(pickle.dumps(((kAB, tAB), sigAB)), pkB)), to = B)
+            send(('msg03', (A, pkA, tA, sigA), (B, pkB, tB, sigB), pcEncrypt(pickle.dumps(((kAB, tAB), sigAB)), pkB)), to = B)
             output('Initiator: Key Exchange Complete')
         else:
             output('Initiator: Could not verify certificates')
@@ -56,8 +54,7 @@ class roleB(process):
     def setup(S, skB, pkB, pkS):
         Random.atfork()
     def run():
-        await(some(received(('msg03', (A, pkA, tA, sigA),
-                             (B, _pkB, tB, sigB), encAB), from_ = A), has = (B == self)))
+        await(some(received(('msg03', (A, pkA, tA, sigA), (B, _pkB, tB, sigB), encAB), from_ = A), has = (B == self)))
         hA = SHA256.new(pickle.dumps((A, pkA, tA)))
         hB = SHA256.new(pickle.dumps((B, pkB, tB)))
         verifierS = PKCS1_v1_5.new(RSA.importKey(pkS))

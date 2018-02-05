@@ -1,52 +1,47 @@
 from sa.secalgo import *
 class roleS (process):
-    def setup(skS, client_keys):
-        pass
+    def setup(skS, clientKeys):
+        at_fork()
     def run():
         await(False)
-    def receive(msg=('msg1', (I, R)), from_ = I):
-        pkR = [x for (p, x) in client_keys if p == R].pop()
-        send(('msg2', sign((R, pkR), skS)), to = I)
-    def receive(msg=('msg4', (R, I)), from_ = IR):
-        pkI = [x for (p, x) in client_keys if p == I].pop()
-        send(('msg5', sign((I, pkI), skS)), to = R)
-class roleI (process):
-    def setup(skI, S, pkS, R):
-        pass
+    def receive(msg=('msg1', (A, B)), from_ = _A):
+        pkB = [x for (p, x) in clientKeys if p == B].pop()
+        send(('msg2', sign((B, pkB), skS)), to = A)
+    def receive(msg=('msg4', (B, A)), from_ = _B):
+        pkA = [x for (p, x) in clientKeys if p == A].pop()
+        send(('msg5', sign((A, pkA), skS)), to = B)
+class roleA (process):
+    def setup(skA, S, pkS, B):
+        at_fork()
     def run():
-        send(('msg1', (self, R)), to = S)
-        await(some(received(('msg2', sig_S), from_ = _S), has = some((_R, pkR) in [verify(sig_S, key = pkS)])))
-        nI = nonce()
-        send(('msg3', encrypt((nI, self), key = pkR)), to = R)
-        await(some(received(('msg6', enc_RI), from_ = _R), has = some((_nI, nR) in [decrypt(enc_RI, key = skI)])))
-        send(('msg7', encrypt(nR, key = pkR)), to = R)
-        output('I authenticated R')
-class roleR (process):
-    def setup(skR, S, pkS):
-                pass
+        send(('msg1', (self, B)), to = S)
+        await(some(received(('msg2', sigS), from_ = _S), has = some((_B, pkB) in [verify(sigS, key = pkS)])))
+        nA = nonce()
+        send(('msg3', encrypt((nA, self), key = pkB)), to = B)
+        await(some(received(('msg6', encBA), from_ = _B), has = some((_nA, nB, _B) in [decrypt(encBA, key = skA)])))
+        send(('msg7', encrypt(nB, key = pkB)), to = B)
+        output('A authenticated B')
+class roleB (process):
+    def setup(skB, S, pkS):
+        at_fork()
     def run():
-        if await(False): pass
-        elif timeout(10): pass
-    def receive(msg=('msg3', enc_IR), from_ = I):
-        I == decrypt(enc_IR, key = skR)[1]
-        nI = decrypt(enc_IR, key = skR)[0]
-        send(('msg4', (self, I)), to = S)
-        await(some(received(('msg5', sig_S), from_ = _S), has = (verify(sig_S, key = pkS)[0] == I)))
-        pkI = verify(sig_S, key = pkS)[1]
-        nR = nonce()
-        send(('msg6', encrypt((nI, nR, self), key = pkI)), to = I)
-        await(some(received(('msg7', enc_IR2), from_ = _I), has = (decrypt(enc_IR2, key = skR) == nR)))
-        output('R authenticated I')
+        await(False)
+    def receive(msg=('msg3', encAB), from_ = A):
+        if some((nA, _A) in [decrypt(encAB, key = skB)]):
+            send(('msg4', (self, A)), to = S)
+            await(some(received(('msg5', sigS), from_ = _S), has = some((_A, pkA) in [verify(sigS, key = pkS)])))
+        nB = nonce()
+        send(('msg6', encrypt((nA, nB, self), key = pkA)), to = A)
+        await(some(received(('msg7', encAB2), from_ = _A), has = (decrypt(encAB2, key = skB) == nB)))
+        output('B authenticated A')
 def main():
     skS, pkS = keygen('public')
-    skI, pkI = keygen('public')
-    skR, pkR = keygen('public')
-    I = new(roleI)
-    R = new(roleR)
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
     S = new(roleS)
-    setup(S, (skS, [(I, pkI), (R, pkR)]))
-    setup(I, (skI, S, pkS, R))
-    setup(R, (skR, S, pkS))
+    B = new(roleB, (skB, S, pkS))
+    A = new(roleA, (skA, S, pkS, B))
+    setup(S, (skS, [(A, pkA), (B, pkB)]))
     start(S)
-    start(R)
-    start(I)
+    start(B)
+    start(A)

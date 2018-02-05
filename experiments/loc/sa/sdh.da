@@ -1,39 +1,38 @@
 from sa.secalgo import *
 configure(verify_returns = 'bool')
 class RoleA(process):
-    def setup(SK_sig_A, PK_sig_A, B, PK_sig_B, p, g):
-        self.A = self
+    def setup(skSigA, pkSigA, B, pkSigB, p, g):
+        at_fork()
     def run():
         s = nonce(128)
         dh_x, dh_X, _, _ = keygen('dh', dh_p = p, dh_g = g)
-        send(('msg1', A, s, dh_X), to = B)
-        await(some(received(('msg2', _B, _s, dh_Y, m), from_ = B)))
-        if verify(((B, s, dh_Y, dh_X, A), m), key = PK_sig_B) != None:
-            send(('msg3', A, s, sign((A, s, dh_X, dh_Y, B), key = SK_sig_A)), to = B)
-            K_AB = pow(dh_Y, dh_x, p)
+        send(('msg1', self, s, dh_X), to = B)
+        await(some(received(('msg2', _B, _s, dh_Y, m), from_ = _B)))
+        if verify(((B, s, dh_Y, dh_X, self), m), key = pkSigB) != None:
+            send(('msg3', self, s, sign((self, s, dh_X, dh_Y, B), key = skSigA)), to = B)
+            kAB = pow(dh_Y, dh_x, p)
             dh_x = None
             output('A - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
 class RoleB(process):
-    def setup(SK_sig_B, PK_sig_B, PK_sig_A, p, g):
-        self.B = self
+    def setup(skSigB, pkSigB, pkSigA, p, g):
+        at_fork()
     def run():
-        if await(False): pass
-        elif timeout(10): pass
-    def receive(msg=('msg1', A, s, dh_X), from_ = A):
+        await(False)
+    def receive(msg=('msg1', A, s, dh_X), from_ = _A):
         dh_y, dh_Y, _, _ = keygen('dh', dh_p = p, dh_g = g)
-        send(('msg2', B, s, dh_Y, sign((B, s, dh_Y, dh_X, A), key = SK_sig_B)), to = A)
-        K_AB = pow(dh_X, dh_y, p)
+        send(('msg2', self, s, dh_Y, sign((self, s, dh_Y, dh_X, A), key = skSigB)), to = A)
+        kAB = pow(dh_X, dh_y, p)
         dh_y = None
-        await(some(received(('msg3', _A, _s, m), from_ = A)))
-        if verify(((A, s, dh_X, dh_Y, B), m), key = PK_sig_A) != None:
+        await(some(received(('msg3', _A, _s, m), from_ = _A)))
+        if verify(((A, s, dh_X, dh_Y, self), m), key = pkSigA) != None:
             output('B - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
 def main():
-    SK_sig_A, PK_sig_A = keygen('public')
-    SK_sig_B, PK_sig_B = keygen('public')
+    skSigA, pkSigA = keygen('public')
+    skSigB, pkSigB = keygen('public')
     _, _, dh_g, dh_p = keygen('dh', dh_group = 17)
-    A = new(RoleA)
-    B = new(RoleB)
-    setup(A, (SK_sig_A, PK_sig_A, B, PK_sig_B, dh_p, dh_g))
-    setup(B, (SK_sig_B, PK_sig_B, PK_sig_A, dh_p, dh_g))
+    B = new(RoleB, (skSigB, pkSigB, pkSigA, dh_p, dh_g))
+    A = new(RoleA, (skSigA, pkSigA, B, pkSigB, dh_p, dh_g))
     start(B)
     start(A)
