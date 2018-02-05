@@ -3,6 +3,22 @@ import sa.sec_algo_pycrypto as SA_PyCrypto
 from Crypto.Random import atfork as raf
 #import sa.sec_algo_charm as SA_Charm
 
+# Constants for testing and measurements
+proto_loops = {
+    'ds' : 400,
+    'ds-pk' : 300,
+    'ns-sk': 1000,
+    'ns-sk_fixed' : 800,
+    'ns-pk' : 300,
+    'or' : 1000,
+    'wl' : 500,
+    'ya' : 1000,
+    'dhke-1' : 100,
+    'sdh' : 50,
+    'kerberos5' : 300,
+    'tls1_2' : 50}
+# End Constants for testing and measurements
+
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
 SYM_KEY_DEFAULT_SIZE_BITS = {'AES' : 256,
@@ -55,26 +71,34 @@ def configure(**configs):
         json.dump(current_cfg, f2)
 #end security_declarations()
 
+# This decorator is applied to the run function of process classes in protocols
+# we wish to time.
+def dec_proto_timer(func):
+    def proto_timer(*args, **kwargs):
+        start_time = time.process_time()
+        for i in range(proto_loops[func.__module__]):
+            func(*args, **kwargs)
+        print(json.dumps([func.__qualname__, start_time, time.process_time(), i]))
+    #end proto_timer()
+    return proto_timer
+#end dec_proto_timer()
+
 def dec_timer(func):
     def timer(*args, **kwargs):
-        with open(config_fn, 'r') as f:
-            current_cfg = json.load(f)
-        if not current_cfg['benchmark']:
-            return func(*args, **kwargs)
-        else:
-            start_time = time.process_time()
-            end_time = 0
-            i = 0
-            while ((end_time - start_time) < 3):
-                if i == 0:
-                    result = func(*args, **kwargs)
-                else:
-                    trash = func(*args, **kwargs)
-                end_time = time.process_time()
-                i += 1
-            print(json.dumps([func.__name__, start_time, end_time,
-                              i]), flush = True)
-            return result
+        start_time = time.process_time()
+        end_time = 0
+        i = 0
+        while ((end_time - start_time) < 2):
+            result = func(*args, **kwargs)
+            #if i == 0:
+                #result = func(*args, **kwargs)
+            #else:
+            #    trash = func(*args, **kwargs)
+            #end_time = time.process_time()
+            #i += 1
+        print(json.dumps([func.__name__, start_time, end_time,
+                          i]), flush = True)
+        return result
     #end timer()
     return timer
 #end dec_timer()
@@ -97,7 +121,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-@dec_timer
+#@dec_timer
 def nonce(size = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -108,7 +132,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-@dec_timer
+#@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -154,7 +178,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-@dec_timer
+#@dec_timer
 def encrypt(plaintext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -165,7 +189,7 @@ def encrypt(plaintext, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-@dec_timer
+#@dec_timer
 def decrypt(ciphertext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -176,7 +200,7 @@ def decrypt(ciphertext, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-@dec_timer
+#@dec_timer
 def sign(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -187,7 +211,7 @@ def sign(data, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-@dec_timer
+#@dec_timer
 def verify(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -206,50 +230,50 @@ def verify(data, key):
 
 # Public/Private key access functions hack
 # setup code
-public_fn = 'public_keys.sac' #name for file storing public keys
-private_fn = 'private_keys.sac' #name for file storing private keys
+#public_fn = 'public_keys.sac' #name for file storing public keys
+#private_fn = 'private_keys.sac' #name for file storing private keys
 
 # These two blocks overwrite any existing public and private key files with
 # new files containing empty dictionaries. This ensures that the files are
 # always present when register or the access functions try to open them, and
 # that keys used by any previous protcol executions are eliminated.
-with open(public_fn, 'wb') as f:
-    pickle.dump(dict(), f)
-with open(private_fn, 'wb') as f:
-    pickle.dump(dict(), f)
+#with open(public_fn, 'wb') as f:
+#    pickle.dump(dict(), f)
+#with open(private_fn, 'wb') as f:
+#    pickle.dump(dict(), f)
 
 # Works exactly the same as my persistent configurations. Opens the file
 # corresponding to the type of the key, loads the dictionary holding the
 # keys into a local reference. Then adds the new key to the dictionary
 # using the process id of the owner of the key as the key. The modified
 # dictionary is then written to the key file.
-def register_key(type, id, key):
-    if type == 'public':
-        with open(public_fn, 'rb') as f:
-            public_keys = pickle.load(f)
-        public_keys[id] = key
-        with open(public_fn, 'wb') as f:
-            pickle.dump(public_keys, f)
-    elif type == 'private':
-        with open(private_fn, 'rb') as f:
-            private_keys = pickle.load(f)
-        private_keys[id] = key
-        with open(private_fn, 'wb') as f:
-            pickle.dump(private_keys, f)
+#def register_key(type, id, key):
+#    if type == 'public':
+#        with open(public_fn, 'rb') as f:
+#            public_keys = pickle.load(f)
+#        public_keys[id] = key
+#        with open(public_fn, 'wb') as f:
+#            pickle.dump(public_keys, f)
+#    elif type == 'private':
+#        with open(private_fn, 'rb') as f:
+#            private_keys = pickle.load(f)
+#        private_keys[id] = key
+#        with open(private_fn, 'wb') as f:
+#            pickle.dump(private_keys, f)
 #end register_key()
 
 # Reads the public key file and returns the key owned by id
-def pk(id):
-    with open(public_fn, 'rb') as f:
-        public_keys = pickle.load(f)
-    return public_keys[id]
+#def pk(id):
+#    with open(public_fn, 'rb') as f:
+#        public_keys = pickle.load(f)
+#    return public_keys[id]
 #end pk()
 
 # Reads the private key file and returns the key owned by id
-def sk(id):
-    with open(private_fn, 'rb') as f:
-        private_keys = pickle.load(f)
-    return private_keys[id]
+#def sk(id):
+#    with open(private_fn, 'rb') as f:
+#        private_keys = pickle.load(f)
+#    return private_keys[id]
 #end sk()
 
 # end Public/Private key access functions hack
