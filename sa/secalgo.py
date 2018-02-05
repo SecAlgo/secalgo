@@ -8,7 +8,7 @@ proto_loops = {
     'ds' : 400,
     'ds-pk' : 300,
     'ns-sk': 1000,
-    'ns-sk_fixed' : 800,
+    'ns-sk_fixed' : 1000,
     'ns-pk' : 300,
     'or' : 1000,
     'wl' : 500,
@@ -73,15 +73,24 @@ def configure(**configs):
 
 # This decorator is applied to the run function of process classes in protocols
 # we wish to time.
-def dec_proto_timer(func):
-    def proto_timer(*args, **kwargs):
+def dec_proto_run_timer(func):
+    def proto_run_timer(*args, **kwargs):
         start_time = time.process_time()
         for i in range(proto_loops[func.__module__]):
             func(*args, **kwargs)
-        print(json.dumps([func.__qualname__, start_time, time.process_time(), i]))
+        print(json.dumps([func.__qualname__, start_time, time.process_time(), (i + 1)]))
     #end proto_timer()
-    return proto_timer
+    return proto_run_timer
 #end dec_proto_timer()
+
+def dec_proto_await_timer(func):
+    def proto_await_timer(*args, **kwargs):
+        start_time = time.process_time()
+        func(*args, **kwargs)
+        print(json.dumps([func.__qualname__, start_time, time.process_time(), proto_loops[func.__module__]]))
+    #end proto_await_timer()
+    return proto_await_timer
+#end dec_proto_await_timer()
 
 def dec_timer(func):
     def timer(*args, **kwargs):

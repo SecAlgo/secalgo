@@ -61,7 +61,7 @@ class RoleS (process):
         at_fork()
         self.terminate = False
 
-    @dec_proto_timer
+    @dec_proto_await_timer
     def run():
         terminate = False
         await(terminate)
@@ -81,14 +81,15 @@ class RoleS (process):
             send(('msg4', i, encrypt((nA, kAB, B,
                                    encrypt((kAB, nB1, A), key = kBS)),
                                   key = kAS)), to = A)
-        terminate = True
+        if i == (proto_loops['ns-sk_fixed']):
+            terminate = True
 
 class RoleA (process):
     def setup(S, kAS, B):
         at_fork()
         self.i = 1
 
-    @dec_proto_timer
+    @dec_proto_run_timer
     def run():
         # Msg 1 of the corrected version of NS-SK is sent by the initiator to
         # the receiver containing just the process id of the initiator.
@@ -142,7 +143,7 @@ class RoleB (process):
         at_fork()
         self.terminate = False
 
-    @dec_proto_timer
+    @dec_proto_await_timer
     def run():
         terminate = False
         await(terminate)
@@ -194,7 +195,8 @@ class RoleB (process):
         await(some(received(('msg7', _i, enc_AB), from_ = _A),
                    has = ((nB2 - 1) == decrypt(enc_AB, key = kAB))))
         #output('B - Key Exchange Complete')
-        terminate = True
+        if i == (proto_loops['ns-sk_fixed']):
+            terminate = True
         
 def main():
     kAS = keygen('shared')
