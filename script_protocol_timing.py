@@ -1,6 +1,6 @@
 import sys, os, subprocess, time, json, argparse
 
-full_path = '/home/christopher/secalgo/experiments/timing/protocol/'
+full_path = '/home/christopher/secalgo/ProtocolImplementations/New/'
 result_path = '/home/christopher/secalgo/results/protocol/'
 output_path = '/home/christopher/secalgo/output/protocol/'
 m_buf_opt = '--message-buffer-size'
@@ -9,32 +9,18 @@ da_ext = '.da'
 results_ext = '_results.txt'
 error_ext = '_error.log'
 
-protocols = [
-             'ds',
-             'ds-pk',
-             'ns-sk',
-             'ns-pk',
-             'or',
-             'wl',
-             'ya',
-             'dhke-1',
-             #'eap_archie',
-             #'eke',
-             #'iso9798-3-4',
-             'sdh',
-             'tls1_2',
-             'kerberos5',
-             'test_proto'
-            ]
+protocols = ['ns-sk_fixed']
+
+#protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
 
 
-def time_exp02(p, iter_num, iter_label, loops):
+def time_exp02(p, iter_num, iter_label):
     print('Protocol Timing Experiment 01 for:', p, flush = True)
     if p in protocols:
         if p == 'dhke-1' or p == 'tls1_2':
-            cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext, loops]
+            cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext]
         else:
-            cmd = ['python3', '-m', 'da', full_path + p + da_ext, loops]
+            cmd = ['python3', '-m', 'da', full_path + p + da_ext]
         print('Running:', cmd, flush = True)
         if iter_num:
             the_range = range(iter_num)
@@ -123,11 +109,10 @@ if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
     if args.proto == 'all':
         for p in protocols:
-            time_exp02(p, args.iteration_num, args.iteration_label, args.loops)
+            time_exp02(p, args.iteration_num, args.iteration_label)
             parse_exp02(p, args.iter_num, args.iteration_label, 
                         args.output_file)
     else:
-        time_exp02(args.proto, args.iterations, args.iteration_label, 
-                   args.loops)
+        time_exp02(args.proto, args.iterations, args.iteration_label)
         parse_exp02(args.proto, args.iterations, args.iteration_label, 
                     args.output_file)
