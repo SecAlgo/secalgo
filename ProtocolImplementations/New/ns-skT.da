@@ -20,6 +20,7 @@ Protocol Diagram:
 """
 import sys
 from sa.secalgo import *
+#from sa.secalgo2 import* 
     
 class RoleS (process):
     def setup(kAS, kBS, loops):

@@ -35,11 +35,11 @@ class roleS (process):
         
     def receive(msg=('msg1', (A, B)), from_ = _A):
         pkB = [x for (p, x) in clientKeys if p == B].pop()
-        send(('msg2', sign((B, pkB), skS)), to = A)
+        send(('msg2', sign((B, pkB), key = skS)), to = A)
 
     def receive(msg=('msg4', (B, A)), from_ = _B):
         pkA = [x for (p, x) in clientKeys if p == A].pop()
-        send(('msg5', sign((A, pkA), skS)), to = B)
+        send(('msg5', sign((A, pkA), key = skS)), to = B)
 
 class roleA (process):
     def setup(skA, S, pkS, B):

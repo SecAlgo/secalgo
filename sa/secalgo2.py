@@ -120,25 +120,13 @@ def dec_proto_await_timer(func):
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
-        #end_time = 0
-        #i = 0
-        #while ((end_time - start_time) < 2):
-        #print('ARGS:', args)
-        #print('KWARGS:', kwargs)
-        if ((func.__name__ in keyed_methods and kwargs['key']['alg'] in PUBLIC_CIPHERS) or
-            (func.__name__ is 'keygen' and args[0] in PUBLIC_CIPHERS)):
-            loops = public_method_loops[func.__name__]
-        else:
-            loops = shared_method_loops[func.__name__]
-        for i in range(loops):
+        end_time = 0
+        i = 0
+        while (end_time - start_time) < 3:
             result = func(*args, **kwargs)
-            #if i == 0:
-                #result = func(*args, **kwargs)
-            #else:
-            #    trash = func(*args, **kwargs)
-            #end_time = time.process_time()
-            #i += 1
-        print(json.dumps([func.__name__, start_time, time.process_time(), (i + 1)]))
+            end_time = time.process_time()
+            i += 1
+        print(json.dumps([func.__name__, start_time, end_time, i]))
         return result
     #end timer()
     return timer

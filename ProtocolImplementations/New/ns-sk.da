@@ -18,7 +18,8 @@ Protocol Diagram:
   (4) B -> A : enc(nB, kAB)
   (5) A -> B : enc(nR - 1, kAB)
 """
-from sa.secalgo import *
+#from sa.secalgo import *
+from sa.secalgo2 import *
     
 class RoleS (process):
     def setup(kAS, kBS):
