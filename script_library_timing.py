@@ -1,6 +1,6 @@
 import sys, os, subprocess, time, json, argparse
 
-full_path = '/home/christopher/secalgo/experiments/timing/library/'
+full_path = '/home/christopher/secalgo/ProtocolImplementations/New/'
 result_path = '/home/christopher/secalgo/results/library/'
 output_path = '/home/christopher/secalgo/output/library/'
 m_buf_opt = '--message-buffer-size'
@@ -18,37 +18,26 @@ sec_algo_functions = (
                       'nonce'
                      )
 
-protocols = [
-             'ds',
-             'ds-pk',
-             'ns-sk',
-             'ns-pk',
-             'or',
-             'wl',
-             'ya',
-             'dhke-1',
-             #'eap_archie',
-             #'eke',
-             #'iso9798-3-4',
-             'sdh',
-             'tls1_2',
-             'kerberos5',
-             'test_proto'
-            ]
+protocols = ['ns-sk_fixedT', 'ns-skT', 'ns-pkT']
+
+#protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
 
 p_main_skip = {
-               'ds'        : 2,
-               'ds-pk'     : 3,
-               'ns-sk'     : 2,
-               'ns-pk'     : 3,
-               'or'        : 2,
-               'wl'        : 2,
-               'ya'        : 2,
-               'dhke-1'    : 7,
-               'sdh'       : 3,
-               'tls1_2'    : 4,
-               'kerberos5' : 4,
-               'test_proto': 0
+               'ds'           : 2,
+               'ds-pk'        : 3,
+               'ns-sk'        : 2,
+               'ns-skT'       : 2,
+               'ns-sk_fixed'  : 2,
+               'ns-sk_fixedT' : 2,
+               'ns-pk'        : 3,
+               'or'           : 2,
+               'wl'           : 2,
+               'ya'           : 2,
+               'dhke-1'       : 7,
+               'sdh'          : 3,
+               'tls1_2'       : 4,
+               'kerberos5'    : 4,
+               'test_proto'   : 0
               }
                  
 def time_exp01(p, iter_num, iter_label):
@@ -74,7 +63,7 @@ def time_exp01(p, iter_num, iter_label):
             #print(stdout, flush = True)
             f_txt.close()
             f_err.close()
-            
+        
             time.sleep(1)
             print('Completed Iteration', str(i + 1), flush = True)
         print('Finished', p, flush = True)
@@ -112,7 +101,8 @@ def parse_exp01(p, iter_num, iter_label, output_file):
                             print('SKIP:', data_line, flush = True)
                             skip_counter += 1
                         else:
-                            function_time = ((data_line[2] - data_line[1]) / data_line[3])
+                            function_time = (((data_line[2] - data_line[1]) / data_line[3])
+                                             * 1000)
                             print('function time:', data_line[0], '-', function_time,
                                   file = of, flush = True)
                             print(str(i+1) + ': ' + data_line[0] + ':', data_line[2],

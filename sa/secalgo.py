@@ -17,6 +17,14 @@ proto_loops = {
     'sdh' : 50,
     'kerberos5' : 300,
     'tls1_2' : 50}
+
+lib_loops = {
+    'keygen' : 20000,
+    'encrypt' : 20000,
+    'decrypt' : 20000,
+    'sign'    : 20000,
+    'verify'  : 20000,
+    'nonce'   : 20000}
 # End Constants for testing and measurements
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
@@ -78,7 +86,8 @@ def dec_proto_run_timer(func):
         start_time = time.process_time()
         for i in range(proto_loops[func.__module__]):
             func(*args, **kwargs)
-        print(json.dumps([func.__qualname__, start_time, time.process_time(), (i + 1)]))
+        print(json.dumps([func.__module__, func.__qualname__, start_time,
+                          time.process_time(), (i + 1)]))
     #end proto_timer()
     return proto_run_timer
 #end dec_proto_timer()
@@ -87,7 +96,8 @@ def dec_proto_await_timer(func):
     def proto_await_timer(*args, **kwargs):
         start_time = time.process_time()
         func(*args, **kwargs)
-        print(json.dumps([func.__qualname__, start_time, time.process_time(), proto_loops[func.__module__]]))
+        print(json.dumps([func.__module__, func.__qualname__, start_time,
+                          time.process_time(), proto_loops[func.__module__]]))
     #end proto_await_timer()
     return proto_await_timer
 #end dec_proto_await_timer()
@@ -95,9 +105,12 @@ def dec_proto_await_timer(func):
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
-        end_time = 0
-        i = 0
-        while ((end_time - start_time) < 2):
+        #end_time = 0
+        #i = 0
+        #while ((end_time - start_time) < 2):
+        print(*args)
+        print(**kwargs)
+        for i in range(lib_loops[func.__name__]):
             result = func(*args, **kwargs)
             #if i == 0:
                 #result = func(*args, **kwargs)
@@ -105,8 +118,7 @@ def dec_timer(func):
             #    trash = func(*args, **kwargs)
             #end_time = time.process_time()
             #i += 1
-        print(json.dumps([func.__name__, start_time, end_time,
-                          i]), flush = True)
+        print(json.dumps([func.__name__, start_time, time.process_time(), (i + 1)]))
         return result
     #end timer()
     return timer
@@ -130,7 +142,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-#@dec_timer
+@dec_timer
 def nonce(size = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -141,7 +153,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-#@dec_timer
+@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -187,7 +199,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-#@dec_timer
+@dec_timer
 def encrypt(plaintext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -198,7 +210,7 @@ def encrypt(plaintext, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-#@dec_timer
+@dec_timer
 def decrypt(ciphertext, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -209,7 +221,7 @@ def decrypt(ciphertext, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-#@dec_timer
+@dec_timer
 def sign(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -220,7 +232,7 @@ def sign(data, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-#@dec_timer
+@dec_timer
 def verify(data, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
