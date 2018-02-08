@@ -16,7 +16,12 @@ sec_algo_functions = ('keygen',
                       'verify',
                       'nonce')
 
-protocols = ['ns-sk_fixedT', 'ns-sk_fixedI', 'ns-skT', 'ns-pkT']
+protocols = ['ns-sk_fixedT',
+             'ns-skT',
+             'ns-pkT']
+# This protocol implementation needs to be run with the primitive timing
+# decorators turned off.
+#protocols = ['ns-sk_fixedI']
 
 #protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
 

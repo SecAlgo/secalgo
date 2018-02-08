@@ -54,10 +54,10 @@ Protocol Diagram:
 # the keyserver and the initiator will not have the new nonce, and so will be
 # rejected.
 import sys
-#from sa.secalgo import *
+from sa.secalgo import *
 #from sa.secalgo2 import *
 #from sa.secalgoB import *
-from sa.secalgo2B import *
+#from sa.secalgo2B import *
     
 class RoleS (process):
     def setup(kAS, kBS, loops):

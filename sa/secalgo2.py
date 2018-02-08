@@ -1,7 +1,7 @@
 import json, time, pickle
 import sa.sec_algo_pycrypto as SA_PyCrypto
-from Crypto.Random import atfork as raf
 #import sa.sec_algo_charm as SA_Charm
+from Crypto.Random import atfork as raf
 
 # Constants for testing and measurements
 KEYGEN = 0
