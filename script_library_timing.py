@@ -9,27 +9,26 @@ da_ext = '.da'
 results_ext = '_results.txt'
 error_ext = '_error.log'
 
-sec_algo_functions = (
-                      'keygen',
+sec_algo_functions = ('keygen',
                       'encrypt',
                       'decrypt',
                       'sign',
                       'verify',
-                      'nonce'
-                     )
+                      'nonce')
 
-protocols = ['ns-sk_fixedT', 'ns-skT', 'ns-pkT']
+protocols = ['ns-sk_fixedT', 'ns-sk_fixedI', 'ns-skT', 'ns-pkT']
 
 #protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
 
-p_main_skip = {
-               'ds'           : 2,
+p_main_skip = {'ds'           : 2,
                'ds-pk'        : 3,
                'ns-sk'        : 2,
                'ns-skT'       : 2,
                'ns-sk_fixed'  : 2,
                'ns-sk_fixedT' : 2,
+               'ns-sk_fixedI' : 0,
                'ns-pk'        : 3,
+               'ns-pkT'       : 3,
                'or'           : 2,
                'wl'           : 2,
                'ya'           : 2,
