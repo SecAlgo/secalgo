@@ -19,8 +19,8 @@ Protocol Diagram:
   (5) A -> B : enc(nR - 1, kAB)
 """
 import sys
-from sa.secalgo import *
-#from sa.secalgo2 import*
+#from sa.secalgo import *
+from sa.secalgo2 import*
 #from sa.secalgoB import*
 #from sa.secalgo2B import* 
     
