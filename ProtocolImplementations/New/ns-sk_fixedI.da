@@ -20,9 +20,9 @@ Protocol Diagram:
   (7) I -> R : enc(N2_R - 1, K_IR)
 """
 import time, sys, json
-from sa.secalgo import *
+#from sa.secalgo import *
 #from sa.secalgo2 import *
-#from sa.secalgoB import *
+from sa.secalgoB import *
 #from sa.secalgo2B import *
     
 class RoleS (process):
