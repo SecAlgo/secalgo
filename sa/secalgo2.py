@@ -150,7 +150,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-@dec_timer
+#@dec_timer
 def nonce(size = None):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -161,7 +161,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-@dec_timer
+#@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -207,7 +207,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-@dec_timer
+#@dec_timer
 def encrypt(plaintext, *, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -218,7 +218,7 @@ def encrypt(plaintext, *, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-@dec_timer
+#@dec_timer
 def decrypt(ciphertext, *, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -229,7 +229,7 @@ def decrypt(ciphertext, *, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-@dec_timer
+#@dec_timer
 def sign(data, *, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)
@@ -240,7 +240,7 @@ def sign(data, *, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-@dec_timer
+#@dec_timer
 def verify(data, *, key):
     with open(config_fn, 'r') as f:
         current_cfg = json.load(f)

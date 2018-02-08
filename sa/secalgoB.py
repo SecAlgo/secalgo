@@ -26,18 +26,18 @@ proto_loops = {'ds' : 400,
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 
-public_method_loops = {'keygen'  : 4,
-                       'encrypt' : 4000,
-                       'decrypt' : 300,
-                       'sign'    : 300,
-                       'verify'  : 4000}
+public_method_loops = {'keygen'  : 25,
+                       'encrypt' : 3400,
+                       'decrypt' : 1000,
+                       'sign'    : 1000,
+                       'verify'  : 4300}
 
-shared_method_loops = {'keygen'  : 10000,
-                       'encrypt' : 10000,
-                       'decrypt' : 15000,
+shared_method_loops = {'keygen'  : 60000,
+                       'encrypt' : 50000,
+                       'decrypt' : 200000,
                        'sign'    : 15000,
                        'verify'  : 15000,
-                       'nonce'   : 15000}
+                       'nonce'   : 60000}
 
 # End Constants for testing and measurements
 

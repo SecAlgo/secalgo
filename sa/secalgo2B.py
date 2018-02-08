@@ -134,7 +134,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-@dec_timer
+#@dec_timer
 def nonce(size = None):
     backend = backend_modules[configuration['backend']]
     if size == None:
@@ -143,7 +143,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-@dec_timer
+#@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -187,7 +187,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-@dec_timer
+#@dec_timer
 def encrypt(plaintext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -196,7 +196,7 @@ def encrypt(plaintext, *, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-@dec_timer
+#@dec_timer
 def decrypt(ciphertext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -205,7 +205,7 @@ def decrypt(ciphertext, *, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-@dec_timer
+#@dec_timer
 def sign(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -214,7 +214,7 @@ def sign(data, *, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-@dec_timer
+#@dec_timer
 def verify(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
