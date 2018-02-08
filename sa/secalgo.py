@@ -5,25 +5,34 @@ from Crypto.Random import atfork as raf
 
 
 # Constants for testing and measurements
-KEYGEN = 0
+KEYGEN  = 0
 ENCRYPT = 1
 DECRYPT = 2
-SIGN = 3
-VERIFY = 4
-NONCE = 4
+SIGN    = 3
+VERIFY  = 4
+NONCE   = 5
 
-proto_loops = {'ds' : 400,
-               'ds-pk' : 300,
-               'ns-sk': 1000,
+proto_loops = {'ds'          : 400,
+               'ds-pk'       : 300,
+               'ns-sk'       : 1000,
+               'ns-skA'      : 1000,
+               'ns-skB'      : 1000,
+               'ns-skC'      : 1000,
                'ns-sk_fixed' : 1000,
-               'ns-pk' : 300,
-               'or' : 1000,
-               'wl' : 500,
-               'ya' : 1000,
-               'dhke-1' : 100,
-               'sdh' : 50,
-               'kerberos5' : 300,
-               'tls1_2' : 50}
+               'ns-sk_fixedA' : 1000,
+               'ns-sk_fixedB' : 1000,
+               'ns-sk_fixedC' : 1000,
+               'ns-pk'       : 300,
+               'ns-pkA'       : 300,
+               'ns-pkB'       : 300,
+               'ns-pkC'       : 300,
+               'or'          : 1000,
+               'wl'          : 500,
+               'ya'          : 1000,
+               'dhke-1'      : 100,
+               'sdh'         : 50,
+               'kerberos5'   : 300,
+               'tls1_2'      : 50}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 

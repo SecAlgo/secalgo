@@ -1,4 +1,5 @@
 import sys, os, subprocess, time, json, argparse
+from sa.secalgo import proto_loops
 
 full_path = '/home/christopher/secalgo/ProtocolImplementations/New/'
 result_path = '/home/christopher/secalgo/results/protocol/'
@@ -9,7 +10,15 @@ da_ext = '.da'
 results_ext = '_results.txt'
 error_ext = '_error.log'
 
-protocols = ['ns-sk_fixed']
+protocols = ['ns-sk_fixedA',
+             'ns-sk_fixedB',
+             'ns-sk_fixedC',
+             'ns-skA',
+             'ns-skB',
+             'ns-skC',
+             'ns-pkA',
+             'ns-pkB',
+             'ns-pkC']
 
 #protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
 
@@ -17,10 +26,11 @@ protocols = ['ns-sk_fixed']
 def time_exp02(p, iter_num, iter_label):
     print('Protocol Timing Experiment 01 for:', p, flush = True)
     if p in protocols:
+        loops = proto_loops[p]
         if p == 'dhke-1' or p == 'tls1_2':
-            cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext]
+            cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext, str(loops)]
         else:
-            cmd = ['python3', '-m', 'da', full_path + p + da_ext]
+            cmd = ['python3', '-m', 'da', full_path + p + da_ext, str(loops)]
         print('Running:', cmd, flush = True)
         if iter_num:
             the_range = range(iter_num)
@@ -66,7 +76,8 @@ def parse_exp02(p, iter_num, iter_label, output_file):
                     data_line = json.loads(read_line)
                     print(data_line, file = of, flush = True)
                     print(data_line, flush = True)
-                    role_time = ((data_line[3] - data_line[2]) / data_line[4])
+                    # miliseconds
+                    role_time = (((data_line[3] - data_line[2]) / data_line[4]) * 1000)
                     print('role time:', data_line[0], ':', data_line[1], '-', role_time,
                           file = of, flush = True)
                     protocol_time += role_time

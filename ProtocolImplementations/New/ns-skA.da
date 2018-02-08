@@ -29,7 +29,7 @@ class RoleS (process):
         at_fork()
         self.terminate = False
 
-    #@dec_proto_await_timer
+    @dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -38,15 +38,14 @@ class RoleS (process):
         kAB = keygen('shared')
         send(('msg2', i, encrypt((nA, kAB, B, encrypt((kAB, A), key = kBS)),
                                  key = kAS)), to = A)
-        if i == loops:
-            terminate = True
+        terminate = True
 
 class RoleA (process):
     def setup(S, kAS, B, loops):
         at_fork()
         self.i = 1
 
-    #@dec_proto_run_timer
+    @dec_proto_run_timer
     def run():
         nA = nonce()
         send(('msg1', i, (self, B, nA)), to = S)
@@ -65,7 +64,7 @@ class RoleB (process):
         at_fork()
         self.terminate = False
 
-    #@dec_proto_await_timer
+    @dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -77,8 +76,7 @@ class RoleB (process):
             await(some(received(('msg5', _i, encAB), from_ = _A),
                        has = ((nB - 1) == decrypt(encAB, key = kAB))))
             output('B - Key Exchange Complete')
-        if i == loops:
-            terminate = True
+        terminate = True
 
 def main():
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1

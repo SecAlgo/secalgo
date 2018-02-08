@@ -9,8 +9,7 @@ da_ext = '.da'
 results_ext = '_results.txt'
 error_ext = '_error.log'
 
-protocols = [
-             'ds',
+protocols = ['ds',
              'ds-pk',
              'ns-sk',
              'ns-sk_fixed',
@@ -22,9 +21,7 @@ protocols = [
              'sdh',
              'tls1_2',
              'kerberos5',
-             'test_proto'
-            ]
-
+             'test_proto']
 
 def time_exp02(p, iter_num, iter_label, loops):
     print('Protocol Timing Experiment 01 for:', p, flush = True)
@@ -78,11 +75,12 @@ def parse_exp02(p, iter_num, iter_label, output_file):
                     data_line = json.loads(read_line)
                     print(data_line, file = of, flush = True)
                     print(data_line, flush = True)
-                    role_time = ((data_line[3] - data_line[2]) / data_line[4])
+                    # miliseconds
+                    role_time = (((data_line[3] - data_line[2]) / data_line[4]) * 1000)
                     print('role time:', data_line[0], ':', data_line[1], '-', role_time,
                           file = of, flush = True)
                     protocol_time += role_time
-            protocol_time = protocol_time * 1000 # miliseconds
+            protocol_time = protocol_time
             iter_result = [(i + 1), p, protocol_time]
             iter_result_list.append(iter_result)
             print(json.dumps(iter_result), file = of, flush = True)
