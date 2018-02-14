@@ -24,8 +24,8 @@ did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
 import time, sys, json
-from sa.secalgo import *
-#from sa.secalgoB import *
+#from sa.secalgo import *
+from sa.secalgoB import *
 
 class roleS (process):
     def setup(skS, clientKeys, loops):

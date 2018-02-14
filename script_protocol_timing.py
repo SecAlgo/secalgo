@@ -120,8 +120,8 @@ if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
     if args.proto == 'all':
         for p in protocols:
-            time_exp02(p, args.iteration_num, args.iteration_label)
-            parse_exp02(p, args.iter_num, args.iteration_label, 
+            time_exp02(p, args.iterations, args.iteration_label)
+            parse_exp02(p, args.iterations, args.iteration_label, 
                         args.output_file)
     else:
         time_exp02(args.proto, args.iterations, args.iteration_label)

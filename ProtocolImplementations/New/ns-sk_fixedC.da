@@ -53,8 +53,10 @@ Protocol Diagram:
 # Attempts to replay a version of this message from earlier interactions with
 # the keyserver and the initiator will not have the new nonce, and so will be
 # rejected.
+
 import time, sys, json
-from sa.secalgo import *
+#from sa.secalgo import *
+from sa.secalgoB import *
     
 class RoleS (process):
     def setup(kAS, kBS, loops):
