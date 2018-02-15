@@ -16,39 +16,36 @@ sec_algo_functions = ('keygen',
                       'verify',
                       'nonce')
 
-#protocols = ['ns-sk_fixedT',
-#             'ns-skT',
-#             'ns-pkT']
+protocols = ['dsL',
+             'ds-pkL',
+             'ns-skL',
+             'ns-sk_fixedL',
+             'ns-pkL',
+             'orL',
+             'wlL',
+             'yaL',
+             'dhke-1L',
+             'sdhL',
+             'tls1_2L',
+             'kerberos5L']
 
-# This protocol implementation needs to be run with the primitive timing
-# decorators turned off.
-protocols = ['ns-sk_fixedI']
-
-#protocols = ['ds', 'ds-pk', 'ns-sk', 'ns-pk', 'or', 'wl', 'ya', 'dhke-1', 'eap_archie', 'eke', 'iso9798-3-4', 'sdh', 'tls1_2', 'kerberos5', 'test_proto']
-
-p_main_skip = {'ds'           : 2,
-               'ds-pk'        : 3,
-               'ns-sk'        : 2,
-               'ns-skT'       : 2,
-               'ns-sk_fixed'  : 2,
-               'ns-sk_fixedT' : 2,
-               'ns-sk_fixedI' : 0,
-               'ns-pk'        : 3,
-               'ns-pkT'       : 3,
-               'or'           : 2,
-               'wl'           : 2,
-               'ya'           : 2,
-               'dhke-1'       : 7,
-               'sdh'          : 3,
-               'tls1_2'       : 4,
-               'kerberos5'    : 4,
-               'test_proto'   : 0
-              }
+p_main_skip = {'dsL'           : 2,
+               'ds-pkL'        : 3,
+               'ns-skL'        : 2,
+               'ns-sk_fixedL'  : 2,
+               'ns-pkL'        : 3,
+               'orL'           : 2,
+               'wlL'           : 2,
+               'yaL'           : 2,
+               'dhke-1L'       : 7,
+               'sdhL'          : 3,
+               'tls1_2L'       : 4,
+               'kerberos5L'    : 4}
                  
 def time_exp01(p, iter_num, iter_label):
     print('Library Timing Experiment 01 for:', p, flush = True)
     if p in protocols:
-        if p == 'dhke-1' or p == 'tls1_2':
+        if p == 'dhke-1L' or p == 'ds-pkL' or p == 'sdhL' or p == 'tls1_2L':
             cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext]
         else:
             cmd = ['python3', '-m', 'da', full_path + p + da_ext]
