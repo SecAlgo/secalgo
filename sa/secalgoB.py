@@ -11,27 +11,18 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
-proto_loops = {'ds' : 400,
-               'ds-pk' : 300,
-               'ns-sk': 1000,
-               'ns-skA' : 1000,
-               'ns-skB' : 1000,
-               'ns-skC' : 1000,
-               'ns-sk_fixed' : 1000,
-               'ns-sk_fixedA' : 1000,
-               'ns-sk_fixedB' : 1000,
-               'ns-sk_fixedC' : 1000,
-               'ns-pk' : 300,
+proto_loops = {'dsA' : 600,
+               'ds-pkA' : 400,
+               'ns-skA' : 1500,
+               'ns-sk_fixedA' : 1500,
                'ns-pkA' : 300,
-               'ns-pkB' : 300,
-               'ns-pkC' : 300,
-               'or' : 1000,
-               'wl' : 500,
-               'ya' : 1000,
-               'dhke-1' : 100,
-               'sdh' : 50,
-               'kerberos5' : 300,
-               'tls1_2' : 50}
+               'orA' : 2000,
+               'wlA' : 1500,
+               'yaA' : 1500,
+               'dhke-1A' : 100,
+               'sdhA' : 50,
+               'kerberos5A' : 2000,
+               'tls1_2A' : 300}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 

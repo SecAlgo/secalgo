@@ -54,7 +54,7 @@ Protocol Diagram:
 # the keyserver and the initiator will not have the new nonce, and so will be
 # rejected.
 import time, json, sys
-from sa.secalgo import *
+from sa.secalgoB import *
     
 class RoleS (process):
     def setup(kIS, kRS, loops, test_size):

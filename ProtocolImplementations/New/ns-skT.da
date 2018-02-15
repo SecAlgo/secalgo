@@ -19,17 +19,15 @@ Protocol Diagram:
   (5) A -> B : enc(nR - 1, kAB)
 """
 import sys
-from sa.secalgo import *
-#from sa.secalgo2 import*
-#from sa.secalgoB import*
-#from sa.secalgo2B import* 
+#from sa.secalgo import *
+from sa.secalgoB import*
     
 class RoleS (process):
     def setup(kAS, kBS, loops):
         at_fork()
         self.terminate = False
 
-    @dec_proto_await_timer
+    @dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -38,8 +36,7 @@ class RoleS (process):
         kAB = keygen('shared')
         send(('msg2', i, encrypt((nA, kAB, B, encrypt((kAB, A), key = kBS)),
                                  key = kAS)), to = A)
-        if i == loops:
-            terminate = True
+        terminate = True
 
 class RoleA (process):
     def setup(S, kAS, B, loops):
@@ -65,7 +62,7 @@ class RoleB (process):
         at_fork()
         self.terminate = False
 
-    @dec_proto_await_timer
+    @dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -77,8 +74,7 @@ class RoleB (process):
             await(some(received(('msg5', _i, encAB), from_ = _A),
                        has = ((nB - 1) == decrypt(encAB, key = kAB))))
             output('B - Key Exchange Complete')
-        if i == loops:
-            terminate = True
+        terminate = True
 
 def main():
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1
