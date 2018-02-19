@@ -23,12 +23,10 @@ C   = Client
 AS  = Authentication Server
 TGS = Ticket-Granting Server
 S  = Application Server
-
 """
-
 import sys, time, random
-from sa.secalgo import *
-
+#from sa.secalgo import *
+from sa.secalgoB import *
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_TKT_DURATION = 3600 #one hour

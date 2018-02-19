@@ -14,7 +14,11 @@ sec_algo_functions = ('keygen',
                       'decrypt',
                       'sign',
                       'verify',
-                      'nonce')
+                      'nonce',
+                      'BitGen',
+                      'key_derivation',
+                      'local_pow',
+                      'tls_prf_sha256')
 
 protocols = ['dsL',
              'ds-pkL',

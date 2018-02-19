@@ -20,7 +20,7 @@ Protocol Diagram:
   (7) I -> R : enc(N2_R - 1, K_IR)
 """
 import time, sys, json
-from sa.secalgo import *
+from sa.secalgoB import *
     
 class RoleS (process):
     def setup(K_IS, K_RS, loops, testsize):

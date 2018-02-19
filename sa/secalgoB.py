@@ -108,7 +108,7 @@ def dec_proto_run_timer(func):
         for i in range(proto_loops[func.__module__]):
             func(*args, **kwargs)
         print(json.dumps([func.__module__, func.__qualname__, start_time,
-                          time.process_time(), (i + 1)]))
+                          time.process_time(), (i + 1)]), flush = True)
     #end proto_timer()
     return proto_run_timer
 #end dec_proto_timer()
@@ -118,7 +118,7 @@ def dec_proto_await_timer(func):
         start_time = time.process_time()
         func(*args, **kwargs)
         print(json.dumps([func.__module__, func.__qualname__, start_time,
-                          time.process_time(), proto_loops[func.__module__]]))
+                          time.process_time(), proto_loops[func.__module__]]), flush = True)
     #end proto_await_timer()
     return proto_await_timer
 #end dec_proto_await_timer()
@@ -127,13 +127,13 @@ def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
         if ((func.__name__ in keyed_methods and kwargs['key']['alg'] in PUBLIC_CIPHERS) or
-            (func.__name__ is 'keygen' and args[0] in PUBLIC_CIPHERS)):
+            (func.__name__ is 'keygen' and (args[0] in PUBLIC_CIPHERS or args[0] == 'dh'))):
             loops = public_method_loops[func.__name__]
         else:
             loops = shared_method_loops[func.__name__]
         for i in range(loops):
             result = func(*args, **kwargs)
-        print(json.dumps([func.__name__, start_time, time.process_time(), (i + 1)]))
+        print(json.dumps([func.__name__, start_time, time.process_time(), (i + 1)]), flush = True)
         return result
     #end timer()
     return timer
@@ -144,7 +144,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-@dec_timer
+#@dec_timer
 def nonce(size = None):
     backend = backend_modules[configuration['backend']]
     if size == None:
@@ -153,7 +153,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-@dec_timer
+#@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -197,7 +197,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-@dec_timer
+#@dec_timer
 def encrypt(plaintext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -206,7 +206,7 @@ def encrypt(plaintext, *, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-@dec_timer
+#@dec_timer
 def decrypt(ciphertext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -215,7 +215,7 @@ def decrypt(ciphertext, *, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-@dec_timer
+#@dec_timer
 def sign(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -224,7 +224,7 @@ def sign(data, *, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-@dec_timer
+#@dec_timer
 def verify(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
