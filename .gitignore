@@ -7,3 +7,4 @@ ProtocolImplementations/**/*.py
 build/
 results/
 output/
+rawData/

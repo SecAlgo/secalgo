@@ -1,5 +1,3 @@
-
-
 import sys
 import random
 import pickle
@@ -22,6 +20,9 @@ from Crypto import Random
 from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
+
+usePickleTimer = {'pickle' : False, 'pickle_loop' : False}
+pickle_loops = 2000000
 
 PAD_MODES = {'ECB', 'CBC'}
 IV_MODES = {'CBC', 'CFB'}
@@ -49,6 +50,37 @@ BLOCK_MODES = {'AES' : {'ECB' : AES.MODE_ECB,
                              'CBC' : Blowfish.MODE_CBC,
                              'CFB' : Blowfish.MODE_CFB,
                              'CTR' : Blowfish.MODE_CTR}}
+
+def timedPickleDumps(pt, f):
+    if usePickleTimer['pickle_loop']:
+        start_time = time.process_time()
+        for i in range(pickle_loops):
+            serial_pt = pickle.dumps(pt)
+        print(json.dumps(['pickle.dumps', f, start_time,
+                          time.process_time(), pickle_loops]), flush = True)
+    else:
+        start_time = time.process_time()
+        serial_pt = pickle.dumps(pt)
+        print(json.dumps(['pickle.dumps', f, start_time,
+                          time.process_time()]), flush = True)
+    return serial_pt
+#end def timedPickleDumps()
+
+def timedPickleLoads(serial_pt, f):
+    if usePickleTimer['pickle_loop']:
+        start_time = time.process_time()
+        for i in range(pickle_loops):
+            pt = pickle.loads(serial_pt)
+        print(json.dumps(['pickle.loads', f, start_time,
+                          time.process_time(), pickle_loops]), flush = True)
+    else:
+        start_time = time.process_time()
+        pt = pickle.loads(serial_pt)
+        print(json.dumps(['pickle.loads', f, start_time,
+                          time.process_time()]), flush = True)
+    return pt
+#end def timedPickleloads()
+
 def nonce(size):
     return getrandbits(size)
 #end nonce
@@ -160,7 +192,10 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
 #end gen_dh_key()
 
 def sym_encrypt(plaintext, key):
-    serial_pt = pickle.dumps(plaintext)
+    if usePickleTimer['pickle']:
+        serial_pt = timedPickleDumps(plaintext, 'sym_encrypt')
+    else:
+        serial_pt = pickle.dumps(plaintext)
     alg = key['alg']
     mode = key['mode']
     k = key['key']
@@ -203,9 +238,12 @@ def sym_encrypt(plaintext, key):
 #end sym_encrypt()
 
 def asym_encrypt(plaintext, key):
+    if usePickleTimer['pickle']:
+        serial_pt = timedPickleDumps(plaintext, 'asym_encrypt1')
+    else:
+        serial_pt = pickle.dumps(plaintext)
     alg = key['alg']
     k = key['key']
-    serial_pt = pickle.dumps(plaintext)
     if alg == 'RSA':
         pubk = RSA.importKey(k)
         oaep_cipher = PKCS1_OAEP.new(pubk)
@@ -215,7 +253,10 @@ def asym_encrypt(plaintext, key):
             #print('**********: Using Hybrid Encryption!')
             shared_key = keygen_shared(256, 'AES', 'CBC')
             data_ct = sym_encrypt(serial_pt, shared_key)
-            serial_key = pickle.dumps(shared_key)
+            if usePickleTimer['pickle']:
+                serial_key = timedPickleDumps(shared_key, 'asym_encrypt2')
+            else:
+                serial_key = pickle.dumps(shared_key)
             key_ct = oaep_cipher.encrypt(serial_key)
             ciphertext = key_ct + data_ct
         return ciphertext
@@ -256,7 +297,11 @@ def sym_decrypt(ciphertext, key):
     serial_pt = decrypter.decrypt(ciphertext[preamble_length:])
     if mode in PAD_MODES:
         serial_pt = pkcs7_unpad(serial_pt)
-    return pickle.loads(serial_pt)
+    if usePickleTimer['pickle']:
+        pt = timedPickleLoads(serial_pt, 'sym_decrypt')
+    else:
+        pt = pickle.loads(serial_pt)
+    return pt
 #end sym_decrypt()
 
 def asym_decrypt(ciphertext, key):
@@ -270,11 +315,17 @@ def asym_decrypt(ciphertext, key):
         oaep_cipher = PKCS1_OAEP.new(privk)
         if len(ciphertext) > (size // 8): #Hybrid Encryption Used!
             serial_key = oaep_cipher.decrypt(ciphertext[:256])
-            session_key = pickle.loads(serial_key)
+            if usePickleTimer['pickle']:
+                session_key = timedPickleLoads(serial_key, 'asym_decrypt2')
+            else:
+                session_key = pickle.loads(serial_key)
             serial_pt = sym_decrypt(ciphertext[256:], key = session_key)
         else:
             serial_pt = oaep_cipher.decrypt(ciphertext)
-        plaintext = pickle.loads(serial_pt)
+        if usePickleTimer['pickle']:
+            plaintext = timedPickleLoads(serial_pt, 'asym_decrypt1')
+        else:
+            plaintext = pickle.loads(serial_pt)
         return plaintext
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -295,7 +346,10 @@ def get_hash_alg(hash_name):
 #end def get_hash()
         
 def mac_sign(data, key):
-    serial_data = pickle.dumps(data)
+    if usePickleTimer['pickle']:
+        serial_data = timedPickleDumps(data, 'mac_sign1')
+    else:
+        serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
@@ -303,14 +357,20 @@ def mac_sign(data, key):
         h = HMAC.new(k, serial_data, hash_alg)
         sig = h.digest()
         result = (serial_data, sig)
-        s_result = pickle.dumps(result)
+        if usePickleTimer['pickle']:
+            s_result = timedPickleDumps(result, 'mac_sign2')
+        else:
+            s_result = pickle.dumps(result)
         return s_result
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end mac_sign()    
         
 def pubkey_sign(data, key):
-    serial_data = pickle.dumps(data)
+    if usePickleTimer['pickle']:
+        serial_data = timedPickleDumps(data, 'pubkey_sign1')
+    else:
+        serial_data = pickle.dumps(data)
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
@@ -320,7 +380,10 @@ def pubkey_sign(data, key):
         signer = PKCS1_v1_5.new(privk)
         sig = signer.sign(h)
         result = (serial_data, sig)
-        s_result = pickle.dumps(result)
+        if usePickleTimer['pickle']:
+            s_result = timedPickleDumps(result, 'pubkey_sign2')
+        else:
+            s_result = pickle.dumps(result)
         return s_result
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
@@ -331,10 +394,17 @@ def mac_verify(data, key):
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
     if alg == 'HMAC':
-        serial_data, sig = pickle.loads(data)
+        if usePickleTimer['pickle']:
+            serial_data, sig = timedPickleLoads(data, 'mac_verify1')
+        else:
+            serial_data, sig = pickle.loads(data)
         verdict = (sig == HMAC.new(k, serial_data, hash_alg).digest())
         if verdict:
-            return pickle.loads(serial_data)
+            if usePickleTimer['pickle']:
+                result = timedPickleLoads(serial_data, 'mac_verify2')
+            else:
+                result = pickle.loads(serial_data)
+            return result
         else:
             return none
     else:
@@ -346,8 +416,13 @@ def mac_verify1(data, signed_data, key):
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
     if alg == 'HMAC':
-        serial_data, sig = pickle.loads(signed_data)
-        verdict = (sig == HMAC.new(k, pickle.dumps(data), hash_alg).digest())
+        if usePickleTimer['pickle']:
+            serial_data, sig = timedPickleLoads(signed_data, 'mac_verify1')
+            check_data = timedPickleDumps(data, 'mac_verify2')
+        else:
+            serial_data, sig = pickle.loads(signed_data)
+            check_data = pickle.dumps(data)
+        verdict = (sig == HMAC.new(k, check_data, hash_alg).digest())
         return verdict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -355,7 +430,10 @@ def mac_verify1(data, signed_data, key):
     
 #returns None when verfication fails
 def pubkey_verify(data, key):
-    unp_data = pickle.loads(data)
+    if usePickleTimer['pickle']:
+        unp_data = timedPickleLoads(data, 'pubkey_verify1')
+    else:
+        unp_data = pickle.loads(data)
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])
@@ -366,7 +444,11 @@ def pubkey_verify(data, key):
         verifier = PKCS1_v1_5.new(pubk)
         verdict = verifier.verify(h, sig)
         if verdict:
-            return pickle.loads(unp_data[0])
+            if usePickleTimer['pickle']:
+                result = timedPickleLoads(unp_data[0], 'pubkey_verify2')
+            else:
+                result = pickle.loads(unp_data[0])
+            return result
         else:
             return None
     else:
@@ -375,7 +457,10 @@ def pubkey_verify(data, key):
 
 def pubkey_verify1(data, signed_data, key):
     #print('$$$$$$$$$$: verify1', flush = True)
-    unp_data = pickle.loads(signed_data)
+    if usePickleTimer['pickle']:
+        unp_data = timedPickleLoads(signed_data, 'pubkey_verify1')
+    else:
+        unp_data = pickle.loads(signed_data)
     alg = key['alg']
     k = key['key']
     hash_alg = get_hash_alg(key['hash'])

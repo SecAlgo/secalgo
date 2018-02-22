@@ -1,4 +1,4 @@
-import json, time, pickle
+import json, time, pickle, sys
 import sa.sec_algo_pycrypto as SA_PyCrypto
 #import sa.sec_algo_charm as SA_Charm
 from Crypto.Random import atfork as raf
@@ -11,9 +11,14 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
+useTimers = {'library' : False, 'protocol' : False}
+
 proto_loops = {'dsA' : 600,
                'ds-pkA' : 400,
+               'ns-skT' : 2000,
                'ns-skA' : 1500,
+               'ns-sk_fixedT' : 1500,
+               'pc_ns-sk_fixedT' : 1500,
                'ns-sk_fixedA' : 1500,
                'ns-pkA' : 300,
                'orA' : 2000,
@@ -103,6 +108,7 @@ def configure(**configs):
 # This decorator is applied to the run function of process classes in protocols
 # we wish to time.
 def dec_proto_run_timer(func):
+    global useTimers
     def proto_run_timer(*args, **kwargs):
         start_time = time.process_time()
         for i in range(proto_loops[func.__module__]):
@@ -110,33 +116,48 @@ def dec_proto_run_timer(func):
         print(json.dumps([func.__module__, func.__qualname__, start_time,
                           time.process_time(), (i + 1)]), flush = True)
     #end proto_timer()
-    return proto_run_timer
+    if not useTimers['protocol']:
+        return func
+    else:
+        return proto_run_timer
 #end dec_proto_timer()
 
 def dec_proto_await_timer(func):
     def proto_await_timer(*args, **kwargs):
         start_time = time.process_time()
         func(*args, **kwargs)
-        print(json.dumps([func.__module__, func.__qualname__, start_time,
-                          time.process_time(), proto_loops[func.__module__]]), flush = True)
+        print(json.dumps([func.__module__, func.__qualname__,
+                          start_time, time.process_time(),
+                          proto_loops[func.__module__]]), flush = True)
     #end proto_await_timer()
-    return proto_await_timer
+    global useTimers
+    if not useTimers['protocol']:
+        return func
+    else:
+        return proto_await_timer
 #end dec_proto_await_timer()
 
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
-        if ((func.__name__ in keyed_methods and kwargs['key']['alg'] in PUBLIC_CIPHERS) or
-            (func.__name__ is 'keygen' and (args[0] in PUBLIC_CIPHERS or args[0] == 'dh'))):
+        if ((func.__name__ in keyed_methods and
+             kwargs['key']['alg'] in PUBLIC_CIPHERS)
+            or (func.__name__ is 'keygen' and
+                (args[0] in PUBLIC_CIPHERS or args[0] == 'dh'))):
             loops = public_method_loops[func.__name__]
         else:
             loops = shared_method_loops[func.__name__]
-        for i in range(loops):
-            result = func(*args, **kwargs)
-        print(json.dumps([func.__name__, start_time, time.process_time(), (i + 1)]), flush = True)
+            for i in range(loops):
+                result = func(*args, **kwargs)
+            print(json.dumps([func.__name__, start_time,
+                              time.process_time(), (i + 1)]), flush = True)
         return result
     #end timer()
-    return timer
+    global useTimers
+    if not useTimers['library']:
+        return func
+    else:
+        return timer
 #end dec_timer()
 
 def at_fork():
@@ -144,7 +165,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-#@dec_timer
+@dec_timer
 def nonce(size = None):
     backend = backend_modules[configuration['backend']]
     if size == None:
@@ -153,7 +174,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-#@dec_timer
+@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -197,7 +218,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-#@dec_timer
+@dec_timer
 def encrypt(plaintext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -206,7 +227,7 @@ def encrypt(plaintext, *, key):
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-#@dec_timer
+@dec_timer
 def decrypt(ciphertext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -215,7 +236,7 @@ def decrypt(ciphertext, *, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-#@dec_timer
+@dec_timer
 def sign(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -224,7 +245,7 @@ def sign(data, *, key):
         return backend.mac_sign(data, key)
 #end sign()
 
-#@dec_timer
+@dec_timer
 def verify(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
