@@ -1,0 +1,69 @@
+'''
+Signed Diffie-Hellman Key Exchange Protocol
+    with Authentication via Public Key Signatures
+Written by Christopher Kane
+
+Source:
+Ran Canetti and Hugo Krawczyk, "Analysis of Key-Exchange Protocls and their use
+for Building Secure Channels", Proceedings of Eurocrypt 2001, LNCS v. 2045.
+
+Using the extended version: http://eprint.iacr.org/2001/040.ps, p. 22.
+
+Protocol Diagram:
+  (1) A -> B : A, s, g^x
+  (2) B -> A : B, s, g^y, sign((B, s, g^y, g^x, A), skSigB)
+  (3) A -> B : A, s, sign((A, s, g^x, g^y, B), skSigA)
+
+Both parties are in possession of Diffie-Hellman mod_p group information, a
+prime, 'p', and a generator, 'g'. In addition, each participant possesses a
+public and private key for a signature scheme (we will use RSA), denoted
+skSigX, for participant, 'X'. Each participant possesses the public key of
+the others for this signature scheme. 's' is a session identifier (I will use
+a nonce). 
+'''
+from sa.secalgo import *
+configure(verify_returns = 'bool')
+
+
+class RoleA(process):
+    def setup(skSigA, pkSigA, B, pkSigB, p, g):
+        at_fork()
+
+    def run():
+        s = nonce(128)
+        dh_x, dh_X, _, _ = keygen('dh', dh_p = p, dh_g = g)
+        send(('msg1', self, s, dh_X), to = B)
+        await(some(received(('msg2', _B, _s, dh_Y, m), from_ = _B)))
+        if verify(((B, s, dh_Y, dh_X, self), m), key = pkSigB) != None:
+            send(('msg3', self, s, sign((self, s, dh_X, dh_Y, B), key = skSigA)), to = B)
+            kAB = pow(dh_Y, dh_x, p)
+            dh_x = None
+            output('A - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
+
+class RoleB(process):
+    def setup(skSigB, pkSigB, pkSigA, p, g):
+        at_fork()
+        
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', A, s, dh_X), from_ = _A):
+        dh_y, dh_Y, _, _ = keygen('dh', dh_p = p, dh_g = g)
+        send(('msg2', self, s, dh_Y, sign((self, s, dh_Y, dh_X, A), key = skSigB)), to = A)
+        kAB = pow(dh_X, dh_y, p)
+        dh_y = None
+        await(some(received(('msg3', _A, _s, m), from_ = _A)))
+        if verify(((A, s, dh_X, dh_Y, self), m), key = pkSigA) != None:
+            output('B - Authenticated Exchange of Key Material Complete')
+            output('Session Key:', (kAB, s))
+
+def main():
+    skSigA, pkSigA = keygen('public')
+    skSigB, pkSigB = keygen('public')
+    _, _, dh_g, dh_p = keygen('dh', dh_group = 17)
+    B = new(RoleB, (skSigB, pkSigB, pkSigA, dh_p, dh_g))
+    A = new(RoleA, (skSigA, pkSigA, B, pkSigB, dh_p, dh_g))
+    start(B)
+    start(A)
+    

@@ -1,0 +1,175 @@
+import sys
+import random
+from charm.core.engine.util import objectToBytes, bytesToObject
+from charm.core.math.pairing import hashPair as extractor
+from charm.toolbox.symcrypto import SymmetricCryptoAbstraction
+from charm.toolbox.pairinggroup import PairingGroup, GT
+from charm.toolbox.conversion import Conversion
+from charm.toolbox.securerandom import OpenSSLRand
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+
+
+#Misc Global Methods
+#null_group = Null_Group()
+
+def needed():
+    if random.random() < 0.10:
+        return True
+    else:
+        return False
+
+#End Misc Global Methods
+
+"""
+This is the key-generation server. The initiator of the Needham-Schroeder 
+protocol ask thes the key-gen server to create a session key that will be
+used to communicate with the recipient of the NS protocol. Two copies of
+that key are encrypted, one for the initiator and one for the recipeient
+and then packaged together and returned to the initiator.
+
+The initiator is responsible for passing the recipients encrypted session key
+to them.
+
+All possible participants in the NS protocol share a key with the key-gen 
+server, which is used to encrypt session key packages for that specific client.
+
+1. The server-client keys are generated and distributed in main as part of the
+setup for each kind of process.
+
+2. All the key-gen server behavior is defined in its receive handler.
+"""
+class kg_server (process):
+    def setup(keys: dict()):
+        pass
+        
+    def run():
+        output('key server started')
+        await(False)
+
+    def receive(msg=('get_key', p, cid, nonce), from_ = client):
+        group_object = PairingGroup('SS512')
+        shared_key = group_object.random(GT)
+        crypter_a = SymmetricCryptoAbstraction(extractor(bytesToObject(self.keys[client], group_object)))
+        crypter_b = SymmetricCryptoAbstraction(extractor(bytesToObject(self.keys[p], group_object)))
+        package_b = objectToBytes([shared_key, serialize_endpoint(client)], group_object)
+        c_package_b = crypter_b.encrypt(package_b)
+        package_a = objectToBytes([nonce, shared_key, serialize_endpoint(p), c_package_b], group_object)
+        c_package_a = crypter_a.encrypt(package_a)
+        send(('re_get_key', cid, c_package_a), to = client)
+
+"""
+Protocol steps -
+1. A process, I, initiating the NS protocol first chooses a recipient process,
+   R. 
+
+2. I sends a request to the key-gen server for a session key it can use to 
+   securely communicate with R. (get-key)
+
+3. The key-gen server responds by generating a new key, and then sending back
+   two encrypted copies of that key, one encrypted for I and the other 
+   encrypted for R. (re_get_key)
+
+4. I extracts its copy of the key from the package sent by the key-gen server.
+
+5. I forwards the copy of the key encrypted for R to R. (ns-key)
+
+6. R extracts its copy of the session key and uses it to encrypt a nonce and
+   send it to I. (ns-reply)
+
+7. I decrypts the nonce, modifies it (subtracting 1 is a common option), 
+   re-encrypts it, and then sends it back to R.
+
+8. R decrypts the modified nonce, and checks the value against the nonce it
+   generated.
+
+At the end of this procedure both I and R possess a shared session key and have
+proven to each other that each is in possession of that key.
+
+Implementation Features -
+
+I added a message passing sequence at the end.
+
+All of the NS initator's behavior is defined in the ns() method (and the 
+get_key() method called from within the ns() method.
+
+All of the NS recipients behavior is defined in a receive handler (This could 
+be split up among several receive handlers).
+
+The number of processes that can take part in the NS protocol can be determined
+through a command line argument. The default number is 10.
+"""
+class P (process):
+    def setup(s, server_key, kg_p):
+        self.counter = 0
+        self.server_key = bytesToObject(self.server_key, PairingGroup('SS512'))
+
+    def run():
+        output('started')
+        if needed():
+            b = random.choice(tuple(s))
+            s = ns(b)
+            output(s)
+            await(False)
+        else:
+            await(False)
+
+    #This is still the bad implementation of gen_cid(); I will fix it soon.
+    def gen_cid():
+        self.counter += 1
+        return (self.id, self.counter)
+
+    def get_key_package(p):
+        cid = self.gen_cid()
+        nonce = Conversion.OS2IP(OpenSSLRand().getRandomBits(128))
+        send(('get_key', p, cid, nonce), to = self.kg_p)
+        await(some(received(('re_get_key', _cid, c_package_a))))
+        server_crypter = SymmetricCryptoAbstraction(extractor(self.server_key))
+        key_package = server_crypter.decrypt(c_package_a)
+        key_package = bytesToObject(key_package, PairingGroup('SS512'))
+        if nonce == key_package[0] and p == deserialize_endpoint(key_package[2]):
+            return key_package
+        else:
+            output('ERROR: Received wrong key package!')
+            return None
+
+    def ns(b):
+        output('NS initiated from', self.id, 'to', b)
+        package_a = get_key_package(b)
+        key_ab, package_b = package_a[1], package_a[3]
+        cid = self.gen_cid()
+        send(('ns-key', cid, package_b), to = b)
+        await(some(received(('ns-reply', _cid, c_nonce_ba), from_ = b)))
+        crypter_ab = SymmetricCryptoAbstraction(extractor(key_ab))
+        nonce_ba = bytesToObject(crypter_ab.decrypt(c_nonce_ba), PairingGroup('SS512'))
+        send(('ns-reply2', cid, crypter_ab.encrypt(objectToBytes(nonce_ba - 1, PairingGroup('SS512')))), to = b)
+        await(some(received(('msg', _cid, m), from_ = b)))
+        return crypter_ab.decrypt(m)
+
+    def receive(msg=('ns-key', cid, c_package_b), from_ = b):
+        server_crypter = SymmetricCryptoAbstraction(extractor(self.server_key))
+        s_package_b = server_crypter.decrypt(c_package_b)
+        key_ab, initiator = bytesToObject(s_package_b, PairingGroup('SS512'))
+        nonce_ba = Conversion.OS2IP(OpenSSLRand().getRandomBits(128))
+        crypter_ab = SymmetricCryptoAbstraction(extractor(key_ab))
+        if deserialize_endpoint(initiator) == b:
+            send(('ns-reply', cid, crypter_ab.encrypt(objectToBytes(nonce_ba, PairingGroup('SS512')))), to = b)
+        await(some(received(('ns-reply2', _cid, c_nonce_mod), from_ = b)))
+        if bytesToObject(crypter_ab.decrypt(c_nonce_mod), PairingGroup('SS512')) == (nonce_ba - 1):
+            s = 'secret'
+            send(('msg', cid, crypter_ab.encrypt(s)), to = b)
+        else:
+            output('ERROR: Key package not for sender!')
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    ps = new(P, num = n)
+    kg_p = new(kg_server)
+    new_keys = dict()
+    group_object = PairingGroup('SS512')
+    for p in ps:
+        new_key = objectToBytes(group_object.random(GT), group_object)
+        new_keys[p] = new_key
+        setup(p, ((ps - {p}), new_key, kg_p))
+    setup(kg_p, (new_keys, ))
+    start(kg_p)
+    start(ps)

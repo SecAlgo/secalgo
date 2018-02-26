@@ -1,0 +1,51 @@
+"""
+Simplified Denning-Sacco Key Exchange Protocol
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981. p. 533-536.
+
+Immediate Source:
+Bruno Blanchett, "Security Protocol Verification: Symbolic and Computational 
+Models", ETAPS Invited Talk, 2012. 
+
+This simplified version removes the keyserver used to distribute the public keys
+for A and B.
+
+Protocol Diagram:
+  (1) A -> B: enc(sign(k, skA), pkB)
+  (2) B -> A: enc(s, k)
+"""
+from sa.secalgo import *
+
+class RoleA (process):
+    def setup(skA, B, pkB):
+        at_fork()
+
+    def run():
+        k = keygen('shared')
+        send(('msg01', encrypt(sign(k, skA), pkB)), to = B)
+        await(some(received(('msg02', m), from_ = _B)))
+        s = decrypt(m, k)
+        output('DECRYPTED MESSAGE:', s)
+
+class RoleB (process):
+    def setup(skB, pkA):
+        at_fork()
+        self.s = 'secret'
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg01', m), from_ = A):
+        k = verify(decrypt(m, skB), pkA)
+        send(('msg02', encrypt(s, k)), to = A)
+
+def main():
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    B = new(RoleB, (skB, pkA))
+    A = new(RoleA, (skA, B, pkB))
+    start(A)
+    start(B)

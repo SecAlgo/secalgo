@@ -1,0 +1,75 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
+Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
+pp. 993-999.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/nssk.html
+
+Protocol Diagram:
+  (1) A -> S : (A, B, nI)
+  (2) S -> A : enc((nI, kAB, B, enc((kAB, A), kBS)), kAS)
+  (3) A -> B : enc((kAB, A), kBS)
+  (4) B -> A : enc(nB, kAB)
+  (5) A -> B : enc(nR - 1, kAB)
+"""
+#from sa.secalgo import *
+from sa.secalgo2 import *
+    
+class RoleS (process):
+    def setup(kAS, kBS):
+        at_fork()
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', (A, B, nA)), from_ = A):
+        kAB = keygen('shared')
+        send(('msg2', encrypt((nA, kAB, B, encrypt((kAB, A), key = kBS)),
+                              key = kAS)), to = A)
+
+class RoleA (process):
+    def setup(S, kAS, B):
+        at_fork()
+
+    def run():
+        nA = nonce()
+        send(('msg1', (self, B, nA)), to = S)
+        await(some(received(('msg2', encAS), from_ = _S),
+                   has = some((_nA, kAB, _B, encBS)
+                              in [decrypt(encAS, key = kAS)])))
+        send(('msg3', encBS), to = B)
+        await(some(received(('msg4', encBA), from_ = _B)))
+        nR = decrypt(encBA, key = kAB)
+        send(('msg5', encrypt((nR - 1), key = kAB)), to = B)
+        output('A - Key Exchange Complete')
+
+class RoleB (process):
+    def setup(S, kBS):
+        at_fork()
+    
+    def run():
+        await(False)
+
+    def receive(msg=('msg3', encBS), from_ = A):
+        if some((kAB, _A) in [decrypt(encBS, key = kBS)]):
+            nB = nonce()
+            send(('msg4', encrypt(nB, key = kAB)), to = A)
+            await(some(received(('msg5', encAB), from_ = _A),
+                       has = ((nB - 1) == decrypt(encAB, key = kAB))))
+            output('B - Key Exchange Complete')
+
+def main():
+    kAS = keygen('shared')
+    kBS = keygen('shared')
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
+    start(S)
+    start(B)
+    start(A)

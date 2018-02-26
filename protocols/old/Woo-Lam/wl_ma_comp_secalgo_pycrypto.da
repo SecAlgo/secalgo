@@ -1,0 +1,149 @@
+import sys
+import random
+import json
+from Crypto import Random
+from Crypto.Random import random as securerandom
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+from sa.sec_algo_pycrypto import gen_sym_key
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
+
+#Misc Global Methods
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+#end needed()
+    
+#End Misc Global Methods
+
+#Key Generation Server
+class KG_Server(process):
+    def setup(keys: dict()):
+        pass
+    #end setup()
+    
+    def run():
+        output('Key Server Started...')
+        await(False)
+    #end run()
+
+    def receive(msg=('get-key', cid, cs_package_I, cs_package_R), from_ = recipient):
+        s_package_R = decrypt(cs_package_R, self.keys[recipient]).decode()
+        package_R = json.loads(s_package_R)
+        (client_I, client_R, nonce_I, nonce_R) = package_R
+        #if deserialize_endpoint(client_I) == recipient:
+        s_package_I = decrypt(cs_package_I, self.keys[deserialize_endpoint(client_I)]).decode()
+        package_I = json.loads(s_package_I)
+        #if (package_[0]I == client_I and package_I[1] == client_R and 
+        #    package_I[2] == nonce_I and package[3] == nonce_R):
+        key_IR = gen_sym_key()
+        key_package_I = [client_R, nonce_I, nonce_R, 
+                         int.from_bytes(key_IR, byteorder = 'little')]
+        s_key_package_I = json.dumps(key_package_I)
+        cs_key_package_I = encrypt(s_key_package_I, self.keys[deserialize_endpoint(client_I)])
+        key_package_R = [client_I, nonce_I, nonce_R, 
+                         int.from_bytes(key_IR, byteorder = 'little')]
+        s_key_package_R = json.dumps(key_package_R)
+        cs_key_package_R = encrypt(s_key_package_R, self.keys[deserialize_endpoint(client_R)])
+        send(('re-get-key', cid, cs_key_package_I, cs_key_package_R), to = recipient)
+    #end receive(msg=('get-key'))
+#end class KG_Server()
+
+class WL(process):
+    def setup(s, server_key, kg_p):
+        self.counter = 0
+    #end setup()
+
+    def run():
+        output('Started...')
+        if needed():
+            b = random.choice(tuple(s))
+            s = wl(b)
+            output(s)
+            await(False)
+        else:
+            await(False)
+    #end run()
+
+    def gen_cid():
+        self.counter += 1
+        return (serialize_endpoint(self.id), self.counter)
+    #end gen_cid()
+
+    def wl(b):
+        output('WL initiated from', self.id, 'to', b)
+        key_IR = None
+        nonce_I = securerandom.getrandbits(128)
+        cid = gen_cid()
+        send(('msg1', cid, self.id, nonce_I), to = b)
+        await(some(received(('msg2', _cid, recipient, nonce_R), from_ = b)))
+        package_I = [serialize_endpoint(self.id), serialize_endpoint(recipient),
+                     nonce_I, nonce_R]
+        s_package_I = json.dumps(package_I)
+        cs_package_I = encrypt(s_package_I, self.server_key)
+        send(('msg3', cid, cs_package_I), to = b)
+        await(some(received(('msg6', _cid, cs_key_package_I, cs_nonce_package_I), from_ = b)))
+        s_key_package_I = decrypt(cs_key_package_I, server_key).decode()
+        key_package_I = json.loads(s_key_package_I)
+        #if deserialize_endpoint(key_package_I[0] == recipient:
+        if key_package_I[1] == nonce_I and key_package_I[2] == nonce_R:
+            key_IR = key_package_I[3].to_bytes(32, byteorder = 'little')
+            s_nonce_package_I = decrypt(cs_nonce_package_I, key_IR).decode()
+            nonce_package_I = json.loads(s_nonce_package_I)
+            if nonce_package_I[0] == nonce_I and nonce_package_I[1] == nonce_R:
+                output('Initator: Authenticated Key Distribution with', b)
+                send(('msg7', cid, encrypt(json.dumps(nonce_R), key_IR)),to = b)
+                await(some(received(('msg', _cid, m), from_ = b)))
+                return decrypt(m, key_IR).decode()
+            else:
+                output('Error: Iniatator: Authentication Failed!')
+        else:
+            output('Error: Initiator: Failed to Recover Session Key!')
+    #end wl()
+
+    def receive(msg=('msg1', cid, client_I, nonce_I), from_ = initiator):
+        key_IR = None
+        nonce_R = securerandom.getrandbits(128)
+        send(('msg2', cid, self.id, nonce_R), to = initiator)
+        await(some(received(('msg3', _cid, cs_package_I), from_ = initiator)))
+        package_R = [serialize_endpoint(initiator), serialize_endpoint(self.id), nonce_I, nonce_R]
+        s_package_R = json.dumps(package_R)
+        cs_package_R = encrypt(s_package_R, self.server_key)
+        send(('get-key', cid, cs_package_I, cs_package_R), to = kg_p)
+        await(some(received(('re-get-key', _cid, cs_key_package_I, cs_key_package_R), from_ = kg_p)))
+        s_key_package_R = decrypt(cs_key_package_R, server_key).decode()
+        key_package_R = json.loads(s_key_package_R)
+        #if deserialize_endpoint(key_package_R[0]) == initiator:
+        if key_package_R[1] == nonce_I and key_package_R[2] == nonce_R:
+            key_IR = key_package_R[3].to_bytes(32, byteorder = 'little')
+            nonce_package_I = [nonce_I, nonce_R]
+            s_nonce_package_I = json.dumps(nonce_package_I)
+            cs_nonce_package_I = encrypt(s_nonce_package_I, key_IR)
+            send(('msg6', cid, cs_key_package_I, cs_nonce_package_I), to = initiator)
+            await(some(received(('msg7', _cid, cs_nonce_R), from_ = initiator)))
+            if json.loads(decrypt(cs_nonce_R, key_IR).decode()) == nonce_R:
+                output('Recipient: Authenticated Key Distribution with', initiator)
+                output('Protocol Instance Complete!')
+                m = 'secret'
+                send(('msg', cid, encrypt(m, key_IR)), to = initiator)
+            else:
+                output('Error: Recipient: Authentication Failed!')
+        else:
+            output('Error: Recipient: Failed to Recover Session Key', initiator, '!')
+    #end receive(msg='msg1'))
+#end class WL()
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    ps = new(WL, num = n)
+    kg_p = new(KG_Server)
+    new_keys = dict()
+    for p in ps:
+        new_key = gen_sym_key()
+        new_keys[p] = new_key
+        setup(p, (ps - {p}, new_key, kg_p))
+    setup(kg_p, (new_keys, ))
+    start(kg_p)
+    start(ps)

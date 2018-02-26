@@ -11,7 +11,7 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
-useTimers = {'library' : False, 'protocol' : False}
+useTimers = {'library' : False, 'protocol' : True}
 
 proto_loops = {'dsA' : 600,
                'ds-pkA' : 400,
@@ -27,7 +27,8 @@ proto_loops = {'dsA' : 600,
                'dhke-1A' : 100,
                'sdhA' : 50,
                'kerberos5A' : 2000,
-               'tls1_2A' : 300}
+               'tls1_2A' : 300,
+               '__main__' : 5000}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 

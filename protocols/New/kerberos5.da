@@ -1,0 +1,491 @@
+"""
+Kerberos Authentication Protocol v5 in DistAlgo
+Written by Christopher Kane
+
+Source:
+C. Neuman, T. Yu, S. Hartman, K. Raeburn. "RFC 4120: The Kerberos Network
+Authentication Service (v5)". July, 2005.
+
+Protocol Diagram:
+  (1) C   -> AuthServer  : KRB_AS_REQ
+  (2) AuthServer  -> C   : KRB_AS_REP
+  (3) C   -> TktGrantServer : KRB_TGS_REQ
+  (4) TktGrantServer -> C   : KRB_TGS_REP
+  (5) C   -> AppServer   : KRB_AP_REQ
+  (6) AppServer   -> C   : KRB_AP_REP (only if mutual authentication used)
+
+This diagram assumes the most straightforward instance of the authentication
+protocol. It ignores the possibity of renewable tickets, postdated tickets,
+forwardable or proxy tickets. It also ignores requests for pre-authentication,
+or user-to-user authentication. 
+
+C   = Client
+AS  = Authentication Server
+TGS = Ticket-Granting Server
+S  = Application Server
+
+"""
+
+import sys, time, random
+from sa.secalgo import *
+
+
+DEFAULT_TGT_DURATION = 36000 #ten hours
+DEFAULT_TKT_DURATION = 3600 #one hour
+DEFAULT_SKEW = 300 #five minutes
+KRB_AP_REQ_TYPE = 14 #msg-type value for krb_ap_req messages
+
+#authentication server
+class Role_AuthServer(process):
+    #give citations to specification
+    def setup(clients, servers, TGS, client_keys, server_keys, key_TGS):
+        self.supported_etypes = {17, 18} #cite and give name for constant
+        self.max_tgt_duration = DEFAULT_TGT_DURATION
+        self.skew = DEFAULT_SKEW
+        self.per_client_lifetimes = dict()
+        for c in clients:
+            per_client_lifetimes[c] = DEFAULT_TGT_DURATION
+        self.per_server_lifetimes = dict()
+        for s in servers:
+            per_server_lifetimes[s] = DEFAULT_TGT_DURATION
+
+    def run():
+        await(False)
+
+    def receive(msg=('krb_as_req', pvno, msg_type, padata,
+                     req_body), from_ = C):
+        #unpack req_body
+        (kdc_options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
+         addresses, enc_authorization_data, additional_tickets) = req_body
+
+        #check for repeated request
+
+        #check for client and server
+        if cname not in clients:
+            #send KRB_ERR_C_PRINCIPAL_UNKOWN msg
+            return
+
+        if sname not in servers:
+            #Specification does not describe an error msg
+            return
+
+        #check for pre-authentication
+        
+        #check etype list (session key must be usable by both the
+        #client and the TGS
+        #assumption AS and TGS support same etypes
+        #comprehension for choosing etype
+        chosen_etype = None
+        for et in etype:
+            if et in supported_etypes and chosen_etype == None:
+                chosen_etype = et
+        if chosen_etype == None:
+            #Send KDC_ERR_ETYPE_NOSUPP
+            return
+
+        #Generate a key matching for the chosen encryption algorithm
+        key_C_TGS = keygen('shared')
+
+        #check for postdate or may_postdate option
+
+        #set starttime
+        if krb_from == None or (krb_from < (time.time() + skew)):
+            tgt_start = time.time()
+        else:
+            #if postdate set, check that starttime is acceptable, copy
+            #to ticket, and set invalid flag
+            #else send KDC_ERR_CANNOT_POSTDATE
+            return
+        
+        #set endtime (including special max value)
+        tgt_end = min(till,
+                      tgt_start + per_client_lifetimes[cname],
+                      tgt_start + per_server_lifetimes[sname],
+                      tgt_start + max_tgt_duration)
+        #if tgt_end < min_time, send error
+        #if till > tgt_end and Renewable-OK set, then set renewable
+        #flag in TGT and set renew-till field
+        
+        #Build TGT
+        #First build encrypted part
+        #(flags, key, crealm, cname, transited, authtime,
+        # starttime, endtime, renew-till, caddr, authorization-data)
+        tgt_enc_part = (dict(), key_C_TGS, 'TEST', cname, [], tgt_start,
+                        tgt_start, tgt_end, None, [], [])
+        
+        #Next build ticket
+        #(tkt-vno, realm, sname, enc-part)
+        new_tgt = [5, 'TEST', sname, encrypt(tgt_enc_part, key = key_TGS)]
+        
+        #Build KRB-AS-REP
+        #First build encrypted part
+        #(key, last-req, nonce, key-expiration*, flags, authtime,
+        # starttime*, endtime, renew-till*, srealm, sname, caddr*)
+        as_rep_enc_part = [key_C_TGS, (0, 0), nonce, 0, dict(), tgt_start,
+                           tgt_start, tgt_end, 0, 'TEST', sname, []]
+        
+        #Now send reply
+        #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
+        output('AS - Sent TGT to client,', cname)
+        send(('krb_as_rep', 5, 11, [], 'TEST', cname, new_tgt,
+              encrypt(as_rep_enc_part, client_keys[cname])), to = C)
+            
+class Role_TGS(process):
+    def setup(servers, AS, key_AS_TGS, server_keys):
+        self.supported_etypes = {17, 18}
+        self.skew = DEFAULT_SKEW
+        self.max_tkt_duration = DEFAULT_TKT_DURATION
+        self.per_server_lifetimes = dict()
+        for s in server_keys:
+            per_server_lifetimes[s] = DEFAULT_TKT_DURATION
+
+    def run():
+        await(False)
+
+    def receive(msg=('krb_tgs_req', 5, 12, padata, req_body), from_ = C):
+        #First task is to retrieve and decrypt the ticket contained in the
+        #authentication header (krb_ap_req) inside the padata field.
+        #Need to figure out which key to use to decrypt ticket.
+        #We are assuming a normal TGS exchange, and so the TGS will use the key
+        #it shares with the AS to decrypt the ticket.
+        #We are assuming that the only entry in the padata sequence is the
+        #authentication header, KRB_AP_REQ.
+
+        #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
+        _, msg_type, ap_options, tgt, authenticator = padata[0]
+
+        #Check msg-type (should be 14) krb_ap_req
+        if msg_type != 14:
+            #send KRB_ERROR msg
+            return #replace with function to report error
+
+        #Unpack TGT, and then decrypt it.
+        #TICKET = [tkt-vno, realm, sname, enc-part]
+        #ENC-PART = [flags, key, crealm, cname, transited, authtime,
+        #            starttime, endtime, renew-till, caddr, authorization-data]
+        (_, realm, sname, tgt_enc_part) = tgt
+        (tgt_flags, key_C_TGS, tgt_crealm, tgt_cname, tgt_transited,
+         tgt_authtime, tgt_starttime, tgt_endtime, tgt_renew_till,
+         tgt_caddr, tgt_authorization_data) = decrypt(tgt_enc_part, key_AS_TGS)
+
+        #Now, use session key in TGT to decrypt authenticator
+        #authenticator = [authenticator-vno, crealm, cname, cksum*, cusec,
+        #                 ctime, subkey*, seq-number*, authorization-data*]
+        (_, au_crealm, au_cname, cksum, cusec, ctime, subkey,
+         seq_number, authorization_data) = decrypt(authenticator, key_C_TGS)
+        if tgt_cname != au_cname or tgt_crealm != au_crealm:
+            #generate KRB_AP_ERR_BADMATCH msg
+            return
+
+        #check host addresses in caddr, if any
+
+        #check that authenticator is fresh
+        local_time = time.time()
+        if abs(local_time - ctime) > skew:
+            #send KRB_AP_ERR_SKEW msg
+            return
+        
+        #check for replayed requests
+        #need to build a replay cache based on received requests
+        #it may be possible to use send to self decryption to use the received
+        #set as the replay cache
+        #check for sequence number (optional)
+        #check for sub-session key (optional)
+
+        #check validity of ticket timestamp
+        if tgt_starttime > local_time + skew:
+            #send KRB_AP_ERR_TKT_NYV
+            return
+
+        if local_time - tgt_endtime > skew:
+            #send KRB_AP_ERR_TKT_EXPIRED msg
+            return
+
+        #TGS has now authenticated identity of client
+        output('TGS - Authenticated client:', au_cname)
+
+        #Now that the client's identity has been authenticated, its request for
+        #credentials for an application server can now be processes.
+        #unpack req_body
+        (kdc_options, cname, realm, sname, krb_from, till, rtime, nonce, etype,
+         addresses, enc_authorization_data, additional_tickets) = req_body
+        
+        #check for repeated request
+        #check for server
+        if sname not in server_keys:
+            #send KRB_ERR msg
+            return
+        
+        #check etype list (session key must be usable by both the
+        #client and the application server
+        #assumption TGS and application servers support same etypes
+        chosen_etype = None
+        for et in etype:
+            if et in supported_etypes and chosen_etype == None:
+                chosen_etype = et
+        if chosen_etype == None:
+            #send KRB_ERR msg
+            return
+        
+        #generate shared session key for client and application server
+        key_C_S = keygen('shared')
+
+        #check for preauthentication required
+        #check for preauthentication requested
+        #check postdate option is not set
+        #set starttime
+        if krb_from == None or (krb_from < (local_time + skew)):
+            ticket_start = local_time
+            
+        #end if krb_from == None or startime < as time
+        #if postdate set, check that starttime is acceptable, copy
+        #to ticket, and set invalid flag
+        #set endtime (including special max value)
+        ticket_end = min(till,
+                         tgt_endtime,
+                         tgt_starttime + per_server_lifetimes[sname],
+                         tgt_starttime + max_tkt_duration)
+        #if tgt_end < min_time, send error
+        #if till > tgt_end and Renewable-OK set, then set renewable
+        #flag in Ticket and set renew-till field
+
+        #Build Ticket
+        #First build encrypted part
+        #(flags, key, crealm, cname, transited, authtime,
+        # starttime, endtime, renew-till, caddr, authorization-data)
+        ticket_enc_part = [dict(), key_C_S, tgt_crealm, tgt_cname,
+                           tgt_transited, tgt_authtime, ticket_start,
+                           ticket_end, 0, tgt_caddr, []]
+
+        #Next build ticket
+        #(tkt-vno, realm, sname, enc-part)
+        new_ticket = [5, 'TEST', sname,
+                   encrypt(ticket_enc_part, server_keys[sname])]
+            
+        #Build KRB-TGS-REP
+        #First build encrypted part
+        #(key, last-req, nonce, key-expiration*, flags, authtime,
+        # starttime*, endtime, renew-till*, srealm, sname, caddr*)
+        tgs_rep_enc_part = [key_C_S, (0, 0), nonce, 0, dict(),
+                               tgt_authtime, ticket_start, ticket_end, 0,
+                               'TEST', sname, tgt_caddr]
+            
+        #Now send reply
+        #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
+        output('TGS - Sent Ticket for server', sname, 'to client,', C) 
+        send(('krb_tgs_rep', 5, 13, [], 'TEST', tgt_cname, new_ticket,
+              encrypt(tgs_rep_enc_part, key_C_TGS)), to = C)        
+        
+class Role_AppServer(process):
+    def setup(AS, TGS, key_S_AS, key_S_TGS):
+        self.S = self
+        self.skew = DEFAULT_SKEW
+
+    def run():
+        await(False)
+
+    #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
+    def receive(msg=('krb_ap_req', 5, 14, ap-options, ticket, authenticator),
+                from_ = C):
+        #message type check accomplished through pattern matach (but this may
+        #not be correct, since a wrong msg-type should generate an error msg.
+        #First, check msg-type = 14 (KRB_AP_REQ)
+        #Second, check key version in the ticket to make sure server still uses
+        #that key.
+        #Third, check USE-SESSION-KEY flag in ap-options.
+        #Fourth, use srealm field in ticket to determine which key to use.
+
+        #Fifth, use the secret key shared by TGS and Server to decrypt ticket
+        #Unpack ticket = [tkt-vno, realm, sname, enc-part]
+        tkt_vno, realm , sname, tkt_enc_part = ticket
+
+        #Decrypt and unpack enc-part
+        #enc-part = [flags, key, crealm, cname, transited, authtime,
+        #            starttime*, endtime, renew-till*, caddr*,
+        #            authorization-data*]
+        (tkt_flags, key_C_S, tkt_crealm, tkt_cname, tkt_transited,
+         tkt_authtime, tkt_starttime, tkt_endtime, tkt_renew_till, tkt_caddr,
+         tkt_authorization_data) = decrypt(tkt_enc_part, key_S_TGS)
+
+        #Sixth, use the session key from the decrypted ticket to decrypt the
+        #authenticator
+        #Decrypt and unpack authenticator
+        #authenticator = [authenticator-vno, crealm, cname, cksum*, cusec,
+        #                 ctime, subkey*, seq-number*, authorization-data*]
+        (_, au_crealm, au_cname, au_cksum,au_cusec,
+         au_ctime, au_subkey, au_seq_number,
+         au_authorization_data) = decrypt(authenticator, key_C_S)
+
+        #check that client name and realm from ticket match those in the
+        #authenticator
+        if au_crealm != tkt_crealm or au_cname != tkt_cname:
+            #send KRB_AP_ERR_BADMATCH
+            return
+
+        #check addresses listed in tkt_caddr (if any)
+
+        #check that authenticator is fresh
+        local_time = time.time()
+        if abs(local_time - au_ctime) > skew:
+            #send KRB_AP_ERR_SKEW
+            return
+
+        #check for replay of authenticators
+        #save sequence number for later use (if present)
+        #save sub-session key for later use (if present)
+
+        #check that the ticket has a valid timestamp, which means its starttime
+        #is earlier, and its endtime is later, than the current time (with
+        #allowance for the configured skew time)
+        if tkt_starttime > local_time + skew:
+            #send KRB_AP_ERR_TKT_NYV
+            return
+        
+        if local_time - tkt_endtime > skew:
+            #send KRB_AP_ERR_TKT_EXPIRED msg
+            return
+
+        #S has now authenticated identity of client
+        output('Server:', S, '- Authenticated client:', au_cname)
+        
+class Role_C(process):
+    def setup(realm, servers, AS, TGS, key_C_AS):
+        self.C = self
+
+    def run():
+        #select an application server to access
+        S = random.choice(tuple(servers))
+        #generate nonce
+        nonce_C_AS = nonce()        
+        #send KRB_AS_REQ msg to acquire TGT from AS
+        #AS-REQ-BODY = [kdc-options, cname*, realm, sname*, from*, till, rtime*,
+        #            nonce, etype, addresses*, enc-authorization-data*,
+        #            additional-tickets*]
+        #etype 18 = aes256
+        #etype 17 = aes128
+        as_req_body = [dict(), C, 'TEST', S, 0, time.time() + (5 * 3600), 0,
+                       nonce_C_AS, [18, 17], [], [], []]
+        output('Client - Sent request to AS for credentials for server,', S)
+        send(('krb_as_req', 5, 10, [], as_req_body), to = AS)
+
+        #await KRB_AS_REP containing TGT and session key
+        #check of the crealm and cname fields done through pattern match in the
+        #await statement
+        #This await condition is not correct; need to figure out the correct
+        #behavior, and then compose the right await condition
+        await(some(received(('krb_as_rep', 5, 11, padata, 'TEST', _C, tgt,
+                             enc_part), from_= AS)))
+
+        #decrypt the enc-part of the response
+        (key_C_TGS, last_req, as_nonce, key_expiration, flags, authtime,
+         starttime, endtime, renew_till, srealm, sname,
+         caddr) = decrypt(enc_part, key_C_AS)
+
+        #check that the returned nonce matches the one sent
+        if as_nonce == nonce_C_AS:
+            #check returned sname and srealm match those requested
+            if sname == S and srealm == 'TEST':
+                #check host address field (caddr), if used
+                #MAY check the last-req and key_expiration fields to recommend
+                #client change password
+                output('Client - Acquired TGT from AS')
+                #output(decrypt(enc_part, key_C_AS))
+        else:
+            key_C_TGS = None
+            tgt = None
+
+        if tgt != None:
+            #begin exchange with TGS for application server ticket
+            #we are currently assuming that the application server is within
+            #the same realm as the client and the Key Distribution Center
+            #send KRB_TGS_REQ message to acquire ticket for application server
+
+            #First, prepare authentication header, KRB_AP_REQ
+            #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
+            #authenticator = [authenticator-vno, crealm, cname, cksum*, cusec,
+            #                 ctime, subkey*, seq-number*, authorization-data*]
+            authenticator = [5, realm, C, None, 0, time.time(), None, None, []]
+            tgs_krb_ap_req = [5, 14, dict(), tgt,
+                              encrypt(authenticator, key_C_TGS)]
+
+            #Second, prepare TGS_REQ_BODY
+            #TGS_REQ_BODY = [kdc-options, cname*, realm, sname*, from*, till,
+            #                rtime, nonce, etype, addresses,
+            #                enc-authorization-data, additional-tickets]
+            nonce_C_TGS = nonce()
+            tgs_req_body = [dict(), None, 'TEST', S, 0,
+                            time.time() + (5 * 3600), 0, nonce_C_TGS, [18, 17],
+                            [], [], []]
+
+            #Third, send KRB_TGS_REQ
+            #KRB_TGS_REQ = [pvno, msg-type, padata, req-body]
+            output('Client - Sent TGT and request to TGS for credentials',
+                   'for server,', S)
+            send(('krb_tgs_req',5, 12, [tgs_krb_ap_req], tgs_req_body),
+                 to = TGS)
+
+            #await KRB_TGS_REP containing ticket and session key for server
+            #KRB_TGS_REP = (pvno, msg-type, padata*, crealm, cname, ticket,
+            #               enc-part)
+            await(some(received(('krb_tgs_rep', 5, 13, tgs_padata, 'TEST', _C,
+                                 ticket, tgs_enc_part), from_ = TGS)))
+            
+            #decrypt the enc-part of the response
+            (key_C_S, tgs_last_req, tgs_nonce, tgs_key_expiration, tgs_flags,
+             tgs_authtime, tgs_starttime, tgs_endtime, tgs_renew_till,
+             tgs_srealm, tgs_sname,
+             tgs_caddr) = decrypt(tgs_enc_part, key_C_TGS)
+
+            #check that the returned nonce matches the one sent
+            if tgs_nonce == nonce_C_TGS:
+                #check returned sname and srealm match those requested
+                if tgs_sname == S and tgs_srealm == 'TEST':
+                    #check host address field (caddr), if used
+                    #MAY check the last-req and key_expiration fields to
+                    #recommend client change password
+                    output('Client - Acquired Ticket from TGS')
+                    #output(decrypt(tgs_enc_part, key_C_TGS))
+            else:
+                key_C_S = None
+                ticket = None
+
+        if key_C_S != None:
+            #send authentication request (KRB_AP_REQ) to application server
+            #First, build Authenticator
+            #Authenticator = [authenticator-vno, crealm, cname, cksum*, cusec,
+            #                 ctime, subkey*, seq-number*, authorization-data*]
+            ap_authenticator = [5, realm, C, None, None, time.time(), None,
+                                None, []]
+            #Next, build and send the KRB_AP_REQ
+            #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
+            send(('krb_ap_req', 5, 14, dict(), ticket,
+                  encrypt(ap_authenticator, key_C_S)), to = S)
+            output('Client - Sent authentication request to server,', S)
+        
+def main():
+    num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    C = new(Role_C, num = num_clients)
+    S = new(Role_AppServer, num = num_servers)
+    TGS = new(Role_TGS)
+    AS = new(Role_AuthServer)
+    client_keys = dict()
+    for client in C:
+        key_C_AS = keygen('shared')
+        setup(client, ('TEST', S, AS, TGS, key_C_AS))
+        client_keys[client] = key_C_AS
+    as_server_keys = dict()
+    tgs_server_keys = dict()
+    for server in S:
+        key_S_AS = keygen('shared')
+        as_server_keys[server] = key_S_AS
+        key_S_TGS = keygen('shared')
+        tgs_server_keys[server] = key_S_TGS
+        setup(server, (AS, TGS, key_S_AS, key_S_TGS))
+    key_AS_TGS = keygen('shared')
+    setup(AS, (C, S, TGS, client_keys, as_server_keys, key_AS_TGS))
+    setup(TGS, (S, AS, key_AS_TGS, tgs_server_keys))
+    start(AS)
+    start(TGS)
+    start(S)
+    start(C)
