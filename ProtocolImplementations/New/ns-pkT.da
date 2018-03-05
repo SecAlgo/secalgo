@@ -25,16 +25,14 @@ did fix for (6):
 """
 import sys
 #from sa.secalgo import *
-#from sa.secalgo2 import *
 from sa.secalgoB import *
-#from sa.secalgo2B import *
 
 class roleS (process):
     def setup(skS, clientKeys, loops):
         at_fork()
         self.terminate = False
 
-    #@dec_proto_run_timer
+    @dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -46,15 +44,14 @@ class roleS (process):
     def receive(msg=('msg4', i, (B, A)), from_ = _B):
         pkA = [x for (p, x) in clientKeys if p == A].pop()
         send(('msg5', i, sign((A, pkA), key = skS)), to = B)
-        if i == loops:
-            terminate = True
+        terminate = True
 
 class roleA (process):
     def setup(skA, S, pkS, B, loops):
         at_fork()
         self.i = 1
 
-    #@dec_proto_run_timer
+    @dec_proto_run_timer
     def run():
         send(('msg1', i, (self, B)), to = S)
         await(some(received(('msg2', _i, sigS), from_ = _S),
@@ -72,9 +69,9 @@ class roleB (process):
         at_fork()
         self.terminate = False
 
-    #@dec_proto_await_timer
+    @dec_proto_run_timer
     def run():
-        teminate = False
+        terminate = False
         await(terminate)
 
     def receive(msg=('msg3', i, encAB), from_ = A):
@@ -87,8 +84,7 @@ class roleB (process):
         await(some(received(('msg7', _i, encAB2), from_ = _A),
                    has = (decrypt(encAB2, key = skB) == nB)))
         output('B authenticated A')
-        if i == loops:
-            terminate = True
+        terminate = True
 
 def main():
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1

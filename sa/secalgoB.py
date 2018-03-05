@@ -11,24 +11,26 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
+#useTimers = {'library' : False, 'protocol' : False}
 useTimers = {'library' : False, 'protocol' : True}
+#useTimers = {'library' : True, 'protocol' : False}
 
-proto_loops = {'dsA' : 600,
-               'ds-pkA' : 400,
+proto_loops = {'dsT' : 600,
+               'ds-pkT' : 400,
                'ns-skT' : 2000,
-               'ns-skA' : 1500,
+               'ns-skT' : 1500,
                'ns-sk_fixedT' : 1500,
                'pc_ns-sk_fixedT' : 1500,
-               'ns-sk_fixedA' : 1500,
-               'ns-pkA' : 300,
-               'orA' : 2000,
-               'wlA' : 1500,
-               'yaA' : 1500,
-               'dhke-1A' : 100,
-               'sdhA' : 50,
-               'kerberos5A' : 2000,
-               'tls1_2A' : 300,
-               '__main__' : 5000}
+               'ns-sk_fixedT' : 1500,
+               'ns-pkT' : 300,
+               'orT' : 2000,
+               'wlT' : 2000,
+               'yaT' : 2000,
+               'dhke-1T' : 100,
+               'sdhT' : 50,
+               'kerberos5T' : 3000,
+               'tls1_2T' : 300,
+               '__main__' : 6000}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 
@@ -148,10 +150,10 @@ def dec_timer(func):
             loops = public_method_loops[func.__name__]
         else:
             loops = shared_method_loops[func.__name__]
-            for i in range(loops):
-                result = func(*args, **kwargs)
-            print(json.dumps([func.__name__, start_time,
-                              time.process_time(), (i + 1)]), flush = True)
+        for i in range(loops):
+            result = func(*args, **kwargs)
+        print(json.dumps([func.__name__, start_time,
+                          time.process_time(), (i + 1)]), flush = True)
         return result
     #end timer()
     global useTimers

@@ -25,7 +25,7 @@ PORT_KS = 1977
 MODE = AES.MODE_CBC
 
 LIBRARY_TIMER = True
-TUNING = True
+TUNING = False
 PICKLE_TIMER = False
 PICKLE_LOOPS = 1000000
 RESULTS = []
@@ -362,7 +362,7 @@ class NS_KS(multiprocessing.Process):
         self.terminate = True
 
 def main():
-    global RESULTS
+    #global RESULTS
     key_AS = keygen()
     key_BS = keygen()
     ns_ks = NS_KS(HOST_KS, PORT_KS, key_AS, key_BS)
@@ -374,8 +374,8 @@ def main():
     ns_ks.join()
     ns_b.join()
     ns_a.join()
-    for item in RESULTS:
-        print(json.dumps(item), flush = True)
+    #for item in RESULTS:
+    #    print(json.dumps(item), flush = True)
 
 if __name__ == "__main__":
     main()

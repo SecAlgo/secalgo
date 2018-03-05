@@ -1,6 +1,6 @@
 
 import random, string, pickle
-from sa.secalgo import keygen, encrypt, decrypt, sign, verify
+from sa.secalgoB import keygen, encrypt, decrypt, sign, verify
 
 def random_string(length = 1000):
     chars = string.printable

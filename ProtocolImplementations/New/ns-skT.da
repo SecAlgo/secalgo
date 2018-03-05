@@ -20,10 +20,10 @@ Protocol Diagram:
 """
 import sys
 #from sa.secalgo import *
-from sa.secalgoB import * 
+from sa.secalgoB import*
     
 class RoleS (process):
-    def setup(kAS, kBS, loops):
+    def setup(kAS, kBS):
         at_fork()
         self.terminate = False
 
@@ -39,7 +39,7 @@ class RoleS (process):
         terminate = True
 
 class RoleA (process):
-    def setup(S, kAS, B, loops):
+    def setup(S, kAS, B):
         at_fork()
         self.i = 1
 
@@ -58,7 +58,7 @@ class RoleA (process):
         i += 1
 
 class RoleB (process):
-    def setup(S, kBS, loops):
+    def setup(S, kBS):
         at_fork()
         self.terminate = False
 
@@ -77,12 +77,11 @@ class RoleB (process):
         terminate = True
 
 def main():
-    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     kAS = keygen('shared')
     kBS = keygen('shared')
-    S = new(RoleS, (kAS, kBS, loops))
-    B = new(RoleB, (S, kBS, loops))
-    A = new(RoleA, (S, kAS, B, loops))
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
     start(S)
     start(B)
     start(A)

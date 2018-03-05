@@ -47,7 +47,6 @@ class NS_Client(multiprocessing.Process):
         self.socket_a.close()
     # end run()
 
-    @dec_proto_run_timer
     def ns_client(self):
         #print('NS_Client: Initating NS-SK protocol.')
         # Send M1: A -> B : A
@@ -124,7 +123,7 @@ class NS_Client(multiprocessing.Process):
         self.socket_a.sendto(b'm7' + IV_AB + cipher_AB.encrypt(
             Padder().pkcs7_pad(
                 pickle.dumps(nonce_ab), AES.block_size)),recv_address)
-        #print('NS_Client: Key exchange complete')
+        print('NS_Client: Key exchange complete')
     # end def ns_initiate()
 # end class NS_Client
 
@@ -146,7 +145,6 @@ class NS_Recv(multiprocessing.Process):
         self.socket_b.close()
     # end def run()
 
-    @dec_proto_run_timer
     def ns_responder(self):
         self.terminate = False
         #print('Starting NS_Recv')
@@ -222,7 +220,7 @@ class NS_Recv(multiprocessing.Process):
                   ' nonce returned by initiating client does not match.')
             return
         #print('M7:', m7)
-        #print('NS_Responder: Key exchange complete')
+        print('NS_Responder: Key exchange complete')
         self.terminate = True
     # end def ns_responder_handle()
 # end class NS_Recv
@@ -246,7 +244,6 @@ class NS_KS(multiprocessing.Process):
         self.socket_ks.close()
     # end def run()
 
-    @dec_proto_run_timer
     def ns_keyserver(self):
         self.terminate = False
         while not self.terminate:

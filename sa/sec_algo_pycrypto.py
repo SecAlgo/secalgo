@@ -22,6 +22,7 @@ from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
 usePickleTimer = {'pickle' : False, 'pickle_loop' : False}
+#usePickleTimer = {'pickle' : True, 'pickle_loop' : True}
 pickle_loops = 2000000
 
 PAD_MODES = {'ECB', 'CBC'}

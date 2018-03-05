@@ -270,7 +270,7 @@ class NS_KS(socketserver.ThreadingUDPServer):
     #end finish()
 
 def main():
-    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
     key_AS = Random.new().read(AES_KEY_SIZE)
     key_BS = Random.new().read(AES_KEY_SIZE)
     ns_ks = NS_KS(HOST_KS, PORT_KS, key_AS, key_BS, loops)

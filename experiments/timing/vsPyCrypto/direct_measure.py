@@ -1,5 +1,3 @@
-
-
 import sys, time, resource, json, pickle
 
 TEST_DATA = None
@@ -492,7 +490,7 @@ def collect_raw(op, start, end, loops):
 
     data = {'Op' : op, 'start' : ptime_start, 'end' : ptime_end, 'loops' : loops}
     
-    print('OP:', op)
+    print('Op:', op)
     print('Loops:', loops)
     print('WC Total:', end_wc, '-', start_wc, '=', wtime_total)
     print('WC Avg:', wtime_avg)
@@ -502,15 +500,26 @@ def collect_raw(op, start, end, loops):
     return data
 
 def compute_results(rd):
+    print('RawD:', rd)
     for op in rd:
         per_round_avgs = []
         for round_data in rd[op]:
             # miliseconds
+            print('RndD:', round_data)
             avg = (((round_data['end'] - round_data['start'])
                    / round_data['loops']) * 1000)
-            per_round_avgs.append(avg)
+            per_round_avgs.append(avg) 
+        print('PRA:', per_round_avgs)
         total_avg = sum(per_round_avgs) / len(per_round_avgs)
         results[op[3:]][op] = total_avg
+
+def compute_results2(rd, op, of):
+    for round_data in rd[op]:
+        #miliseconds
+        avg = (((round_data['end'] - round_data['start'])
+                   / round_data['loops']) * 1000)
+        with open(of, "a") as f:
+            f.write(str(avg) + '\n')
 
 def compute_multiplier(rslt):
     for op, avgs in rslt.items():
@@ -520,6 +529,8 @@ def compute_multiplier(rslt):
 def run_tests(rounds):
     for i in range(rounds):
         print('********** Starting Tests **********')
+
+        """
         print('\n***** SA_sym_keygen *****')
         raw_data['SA_sym_keygen'].append(time_SA_sym_keygen(60000))
         
@@ -531,13 +542,13 @@ def run_tests(rounds):
         
         print('\n***** PyCrypto_sym_encrypt *****')
         raw_data['PC_sym_encrypt'].append(time_PyCrypto_sym_encrypt(40000))
-        
+
         print('\n***** SA_sym_decrypt *****')
         raw_data['SA_sym_decrypt'].append(time_SA_sym_decrypt(200000))
-        
+
         print('\n***** PyCrypto_sym_decrypt *****')
         raw_data['PC_sym_decrypt'].append(time_PyCrypto_sym_decrypt(200000))
-        
+
         print('\n***** SA_mac_sign *****')
         raw_data['SA_mac_sign'].append(time_SA_mac_sign(200000))
         
@@ -549,51 +560,55 @@ def run_tests(rounds):
         
         print('\n***** PyCrypto_mac_verify *****')
         raw_data['PC_mac_verify'].append(time_PyCrypto_mac_verify(200000))
-        
+
         print('\n***** SA_pub_keygen *****')
         raw_data['SA_pub_keygen'].append(time_SA_pub_keygen(25))
-        
+
         print('\n***** PyCrypto_pub_keygen *****')
         raw_data['PC_pub_keygen'].append(time_PyCrypto_pub_keygen(25))
-        
+
         print('\n***** SA_pub_encrypt *****')
         raw_data['SA_pub_encrypt'].append(time_SA_pub_encrypt(3000))
-        
+
         print('\n***** PyCrypto_pub_encrypt *****')
         raw_data['PC_pub_encrypt'].append(time_PyCrypto_pub_encrypt(3000))
         
         print('\n***** SA_pub_decrypt *****')
         raw_data['SA_pub_decrypt'].append(time_SA_pub_decrypt(1000))
+        """
         
         print('\n***** PyCrypto_pub_decrypt *****')
         raw_data['PC_pub_decrypt'].append(time_PyCrypto_pub_decrypt(1000))
-        
+
+        """
         print('\n***** SA_pub_sign *****')
         raw_data['SA_pub_sign'].append(time_SA_pub_sign(1000))
-        
+
         print('\n***** PyCrypto_pub_sign *****')
         raw_data['PC_pub_sign'].append(time_PyCrypto_pub_sign(1000))
-        
+
         print('\n***** SA_pub_verify *****')
         raw_data['SA_pub_verify'].append(time_SA_pub_verify(4000))
-        
+
         print('\n***** PyCrypto_pub_verify *****')
         raw_data['PC_pub_verify'].append(time_PyCrypto_pub_verify(4000))
-
+        """
+        
         print('\n********** Round ' + str(i) + ' Complete **********\n')
 
     print('\n********** Tests Complete **********\n')
 
 if __name__ == "__main__":
-    rounds = int(sys.argv[1]) if len(sys.argv) > 1 else 5
+    output_file = sys.argv[1] if len(sys.argv) > 1 else 'out.txt'
+    rounds = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     run_tests(rounds)
-    compute_results(raw_data)
-    compute_multiplier(results)
+    compute_results2(raw_data, 'PC_pub_decrypt', output_file)
+    #compute_multiplier(results)
     #print(json.dumps(raw_data))
     #print(json.dumps(results))
 
-    print('Average execution times per primitive operation over {} rounds:'.format(rounds))
-    for op in results:
-        print('{} --'.format(op))
-        for be_op, val in results[op].items():
-            print('\t{}: {}'.format(be_op, val))
+    #print('Average execution times per primitive operation over {} rounds:'.format(rounds))
+    #for op in results:
+    #    print('{} --'.format(op))
+    #    for be_op, val in results[op].items():
+    #        print('\t{}: {}'.format(be_op, val))
