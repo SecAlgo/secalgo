@@ -110,7 +110,7 @@ class NS_Client(multiprocessing.Process):
         self.socket_a.sendto(b'm7' + IV_AB + cipher_AB.encrypt(
             Padder().pkcs7_pad(pickle.dumps(nonce_ab), AES.block_size)), recv_address)
 
-        # print('NS_Client: Finished NS-SK protocol')
+        print('NS_Client: Finished NS-SK protocol')
     # end def ns_initiate()
 # end class NS_Client
 
@@ -196,7 +196,7 @@ class NS_Recv(multiprocessing.Process):
         # print('M7:', m7)
         #if counter + 1 == self.loops:
         #    print(json.dumps(['ns-sk', 'RoleB', self.start_time, time.process_time(), self.loops]))
-        #print('NS_Recv_Handler: Protocol Success: Key exchange complete.')
+        print('NS_Recv_Handler: Protocol Success: Key exchange complete.')
         recv_socket.close()
     # end ns_recv()
 # end class NS_Recv

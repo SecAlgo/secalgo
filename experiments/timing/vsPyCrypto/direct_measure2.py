@@ -121,8 +121,8 @@ def time_PyCrypto_sym_encrypt(loops):
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
-        #serial_data = TEST_DATA
+        #serial_data = pickle.dumps(TEST_DATA)
+        serial_data = TEST_DATA
         serial_data = pad(serial_data)
         IV = Random.new().read(AES.block_size)
         cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, IV)
@@ -162,7 +162,7 @@ def time_PyCrypto_sym_decrypt(loops):
         cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, iv)
         serial_pt = cipher.decrypt(TEST_SYM_CT[16:])
         serial_pt = unpad(serial_pt)
-        result = pickle.loads(serial_pt)
+        #result = pickle.loads(serial_pt)
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -194,8 +194,8 @@ def time_PyCrypto_mac_sign(loops):
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
-        #serial_data = TEST_DATA
+        #serial_data = pickle.dumps(TEST_DATA)
+        serial_data = TEST_DATA
         h = HMAC.new(TEST_MAC_KEY['key'], serial_data, SHA256)
         sig = h.digest()
         result = (serial_data, sig)
@@ -234,8 +234,8 @@ def time_PyCrypto_mac_verify(loops):
         data, sig = TEST_MAC
         verdict = (sig == HMAC.new(TEST_MAC_KEY['key'], data, SHA256).digest())
         if verdict:
-            result = pickle.loads(data)
-            #result = data
+            #result = pickle.loads(data)
+            result = data
         else:
             result = None
         assert result != None
@@ -312,8 +312,8 @@ def time_PyCrypto_pub_encrypt(loops):
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
-        #serial_data = TEST_DATA
+        #serial_data = pickle.dumps(TEST_DATA)
+        serial_data = TEST_DATA
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
         cipher = PKCS1_OAEP.new(pubk)
         try:
@@ -323,14 +323,6 @@ def time_PyCrypto_pub_encrypt(loops):
             iv = Random.new().read(AES.block_size)
             sym_cipher = AES.new(shared_key, AES.MODE_CBC, iv)
             data_ct = iv + sym_cipher.encrypt(pad(serial_data))
-            # unlike some other interior pickles, this one really is
-            # necessary for SecAlgo and unnecessary for PyCrypto, because
-            # a SecAlgo key is a dictionary and must be serialized before
-            # it can be encrypted, but the PyCrypto shared key is just
-            # bytes, and so can be directly submitted to the encrypt method
-            # without any serialization
-            #serial_key = pickle.dumps(shared_key) 
-            #key_ct = cipher.encrypt(serial_key)
             key_ct = cipher.encrypt(shared_key)
             result = key_ct + data_ct
             
@@ -362,21 +354,6 @@ def time_SA_pub_decrypt(loops):
 #end def time_SA_pub_decrypt()
 
 def time_PyCrypto_pub_decrypt(loops):
-
-    # Need to extract key_dict from test ciphertext, and then replace it
-    # with just the key bytes to avoid an unnecessary pickle.load during
-    # timed decrypt operation.
-    #pvk = RSA.importKey(TEST_PRIV_KEY['key'])
-    #pbk = RSA.importKey(TEST_PUB_KEY['key'])
-    #dc = PKCS1_OAEP.new(pvk)
-    #kct = TEST_PUB_CT[:256]
-    #skd = dc.decrypt(kct)
-    #kd = pickle.loads(skd)
-    #key = kd['key']
-    #ec = PKCS1_OAEP.new(pbk)
-    #ctkey = ec.encrypt(key)
-    #test_ct = ctkey + TEST_PUB_CT[256:]
-
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -387,16 +364,11 @@ def time_PyCrypto_pub_decrypt(loops):
             key_ct = TEST_PUB_CT[:256]
             data_ct = TEST_PUB_CT[256:]
             shared_key = cipher.decrypt(key_ct)
-            # Again the PyCrypto version genuinely does not need this
-            # interior pickle call, but the SA version does.
-            # Unfortunately, the test ciphertext data was encrypted
-            # using SA methods, and so the key object must be unpickled.
-            #shared_key = pickle.loads(serial_key)
             sym_cipher = AES.new(shared_key, AES.MODE_CBC, data_ct[:16])
             serial_result = unpad(sym_cipher.decrypt(data_ct[16:]))
         else:
             serial_result = cipher.decrypt(TEST_PUB_CT)
-        result = pickle.loads(serial_result)
+        #result = pickle.loads(serial_result)
         
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -428,8 +400,8 @@ def time_PyCrypto_pub_sign(loops):
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
-        #serial_data = TEST_DATA
+        #serial_data = pickle.dumps(TEST_DATA)
+        serial_data = TEST_DATA
         privk = RSA.importKey(TEST_PRIV_KEY['key'])
         h = SHA256.new(serial_data)
         signer = PKCS1_v1_5.new(privk)
@@ -473,8 +445,8 @@ def time_PyCrypto_pub_verify(loops):
         verifier = PKCS1_v1_5.new(pubk)
         verdict = verifier.verify(h, sig)
         if verdict:
-            result = pickle.loads(data)
-            #result = data
+            #result = pickle.loads(data)
+            result = data
         else:
             result = None
         assert result != None

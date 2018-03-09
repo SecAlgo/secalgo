@@ -9,8 +9,8 @@ def random_string(length = 1000):
 #end def random_string()
 
 def init():
-    test_data = random_string()
-    #test_data = Random.new().read(1000)
+    #test_data = random_string()
+    test_data = Random.new().read(1000)
     test_sym_key = keygen('shared')
     test_sym_ct = encrypt(test_data, key = test_sym_key)
     test_mac_key = keygen('mac')

@@ -10,14 +10,17 @@ py_ext = '.py'
 results_ext = '_results.txt'
 error_ext = '_error.log'
 
-protocols = ['ns_sk_fixed_python2T']
+protocols = ['ns_sk_fixed_pythonT',
+             'ns_sk_fixed_python2T',
+             'ns_sk_fixed_python2TT']
 
-proto_loops = {'ns_sk_fixed_python2T' : 6000}
+proto_loops = {'ns_sk_fixed_pythonT' : 6000,
+               'ns_sk_fixed_python2T' : 6000}
 
 def time_exp02(p, iter_num, iter_label):
     print('Protocol Timing Experiment for:', p, flush = True)
     if p in protocols:
-        loops = proto_loops[p]
+        #loops = proto_loops[p]
         cmd = ['python3', full_path + p + py_ext]
         print('Running:', cmd, flush = True)
         if iter_num:
