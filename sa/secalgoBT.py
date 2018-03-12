@@ -1,8 +1,7 @@
-import json, time, pickle
+import json, time, pickle, sys
 import sa.sec_algo_pycrypto as SA_PyCrypto
 #import sa.sec_algo_charm as SA_Charm
 from Crypto.Random import atfork as raf
-
 
 # Constants for testing and measurements
 KEYGEN = 0
@@ -12,58 +11,78 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
-proto_loops = {'ds' : 400,
-               'ds-pk' : 300,
-               'ns-sk': 1000,
-               'ns-sk_fixed' : 1000,
-               'ns-pk' : 300,
-               'or' : 1000,
-               'wl' : 500,
-               'ya' : 1000,
-               'dhke-1' : 100,
-               'sdh' : 50,
-               'kerberos5' : 300,
-               'tls1_2' : 50}
+useTimers = {'library' : False, 'protocol' : False}
+#useTimers = {'library' : False, 'protocol' : True}
+#useTimers = {'library' : True, 'protocol' : False}
+
+proto_loops = {'dsT' : 600,
+               'ds-pkT' : 400,
+               'ns-skT' : 2000,
+               'ns-skT' : 1500,
+               'ns-sk_fixedT' : 1500,
+               'pc_ns-sk_fixedT' : 1500,
+               'ns-sk_fixedT' : 1500,
+               'ns-pkT' : 300,
+               'orT' : 2000,
+               'wlT' : 2000,
+               'yaT' : 2000,
+               'dhke-1T' : 100,
+               'sdhT' : 50,
+               'kerberos5T' : 3000,
+               'tls1_2T' : 300,
+               '__main__' : 6000}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 
-public_method_loops = {'keygen'  : 4,
-                       'encrypt' : 4000,
-                       'decrypt' : 300,
-                       'sign'    : 300,
-                       'verify'  : 4000}
+public_method_loops = {'keygen'  : 25,
+                       'encrypt' : 3400,
+                       'decrypt' : 1000,
+                       'sign'    : 1000,
+                       'verify'  : 4300}
 
-shared_method_loops = {'keygen'  : 10000,
-                       'encrypt' : 10000,
-                       'decrypt' : 15000,
+shared_method_loops = {'keygen'  : 60000,
+                       'encrypt' : 50000,
+                       'decrypt' : 200000,
                        'sign'    : 15000,
                        'verify'  : 15000,
-                       'nonce'   : 15000}
+                       'nonce'   : 60000,
+                       'BitGen'  : 250,
+                       'key_derivation' : 250,
+                       'local_pow' : 40,
+                       'tls_prf_sha256' : 50000}
 
+SA_CHOICE_LOOPS = 10000000
 # End Constants for testing and measurements
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
+
 SYM_KEY_DEFAULT_SIZE_BITS = {'AES' : 256,
                              'DES' : 64,
                              'DES3' : 192,
                              'Blowfish' : 448}
+
 SYM_KEY_DEFAULT_SIZE_BYTES = {'AES' : 32,
                               'DES' : 8,
                               'DES3' : 24,
                               'Blowfish' : 56}                            
+
 MAC_KEY_DEFAULT_SIZE_BITS = 256
 MAC_KEY_DEFAULT_SIZE_BYTES = 32
 NONCE_DEFAULT_SIZE_BITS = 128
 DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
+
 PUBLIC_CIPHERS = {'RSA', 'DSA', 'public'}
 SYM_CIPHERS = {'AES', 'DES', 'DES3', 'Blowfish', 'shared'}
 MAC_ALGORITHMS = {'HMAC', 'mac'}
 HASH_FUNCTIONS = {'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'}
 
-
+# This dict is initialized with the default values for all configuration
+# options. Calls to the config function will change this dictionary, which
+# will change the configuration for all processes running in the current
+# session.
 configuration = {'sym_cipher'        : 'AES',
                  'block_mode'        : 'CBC',
                  'sym_key_size'      : SYM_KEY_DEFAULT_SIZE_BITS,
@@ -83,7 +102,6 @@ configuration = {'sym_cipher'        : 'AES',
 backend_modules = {'SA_PyCrypto' : SA_PyCrypto}#,
 #'SA_Charm' : SA_Charm}
 
-
 def configure(**configs):
     global configuration
     for k, v in configs.items():
@@ -94,39 +112,56 @@ def configure(**configs):
 # This decorator is applied to the run function of process classes in protocols
 # we wish to time.
 def dec_proto_run_timer(func):
+    global useTimers
     def proto_run_timer(*args, **kwargs):
         start_time = time.process_time()
         for i in range(proto_loops[func.__module__]):
             func(*args, **kwargs)
         print(json.dumps([func.__module__, func.__qualname__, start_time,
-                          time.process_time(), (i + 1)]))
+                          time.process_time(), (i + 1)]), flush = True)
     #end proto_timer()
-    return proto_run_timer
+    if not useTimers['protocol']:
+        return func
+    else:
+        return proto_run_timer
 #end dec_proto_timer()
 
 def dec_proto_await_timer(func):
     def proto_await_timer(*args, **kwargs):
         start_time = time.process_time()
         func(*args, **kwargs)
-        print(json.dumps([func.__module__, func.__qualname__, start_time,
-                          time.process_time(), proto_loops[func.__module__]]))
+        print(json.dumps([func.__module__, func.__qualname__,
+                          start_time, time.process_time(),
+                          proto_loops[func.__module__]]), flush = True)
     #end proto_await_timer()
-    return proto_await_timer
+    global useTimers
+    if not useTimers['protocol']:
+        return func
+    else:
+        return proto_await_timer
 #end dec_proto_await_timer()
 
 def dec_timer(func):
     def timer(*args, **kwargs):
         start_time = time.process_time()
-        end_time = 0
-        i = 0
-        while (end_time - start_time) < 3:
+        if ((func.__name__ in keyed_methods and
+             kwargs['key']['alg'] in PUBLIC_CIPHERS)
+            or (func.__name__ is 'keygen' and
+                (args[0] in PUBLIC_CIPHERS or args[0] == 'dh'))):
+            loops = public_method_loops[func.__name__]
+        else:
+            loops = shared_method_loops[func.__name__]
+        for i in range(loops):
             result = func(*args, **kwargs)
-            end_time = time.process_time()
-            i += 1
-        print(json.dumps([func.__name__, start_time, end_time, i]))
+        print(json.dumps([func.__name__, start_time,
+                          time.process_time(), (i + 1)]), flush = True)
         return result
     #end timer()
-    return timer
+    global useTimers
+    if not useTimers['library']:
+        return func
+    else:
+        return timer
 #end dec_timer()
 
 def at_fork():
@@ -134,7 +169,7 @@ def at_fork():
         raf()
 #end def atfork()
 
-#@dec_timer
+@dec_timer
 def nonce(size = None):
     backend = backend_modules[configuration['backend']]
     if size == None:
@@ -143,89 +178,126 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
-#@dec_timer
+@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
-    backend = backend_modules[configuration['backend']]
-    if key_type == 'random':
-        return backend.keygen_random(key_size)
-    elif key_type in MAC_ALGORITHMS:
-        if key_type == 'mac':
-            key_type = configuration['mac_alg']
-        if key_size == None:
-            key_size = (configuration['mac_key_size'] // 8)
-        if hash_alg == None:
-            hash_alg = configuration['hash_alg']
-        return backend.keygen_mac(key_size, key_type, hash_alg, key_mat)
-    elif key_type in SYM_CIPHERS:
-        if key_type == 'shared':
-            key_type = configuration['sym_cipher']
-        if key_size == None:
-            key_size = (configuration['sym_key_size'][key_type])
-        if block_mode == None:
-            block_mode = configuration['block_mode']
-        return backend.keygen_shared(key_size, key_type, block_mode, key_mat)
-    elif key_type in PUBLIC_CIPHERS:
-        if key_type == 'public':
-            key_type = configuration['pub_cipher']
-        if key_size == None:
-            key_size = configuration['pub_key_size']
-        if hash_alg == None:
-            hash_alg = configuration['hash_alg']
-        return backend.keygen_public(key_size, key_type, hash_alg)
-    elif key_type == 'diffie-hellman' or key_type == 'dh':
-        if key_size == None:
-            key_size = configuration['dh_exp_size']
-        if use_dh_group:
-            if dh_group == None:
-                dh_group = configuration['dh_grp']
-        else:
-            if dh_p == None and dh_mod_size == None:
-                dh_mod_size = configuration['dh_mod_size']
-        return backend.keygen_dh(key_size, use_dh_group, dh_group,
-                                 dh_mod_size, dh_p, dh_g)
+    start_time = time.process_time()
+    for i in range(SA_CHOICE_LOOPS):
+        backend = backend_modules[configuration['backend']]
+        if key_type == 'random':
+            endtime = time.process_time()
+            print('keygen', 'random', start_time, end_time, sa_choice_loops)
+            result = backend.keygen_random(key_size)
+        elif key_type in MAC_ALGORITHMS:
+            if key_type == 'mac':
+                key_type = configuration['mac_alg']
+            if key_size == None:
+                key_size = (configuration['mac_key_size'] // 8)
+            if hash_alg == None:
+                hash_alg = configuration['hash_alg']
+            endtime = time.process_time()
+            print('keygen', 'mac', start_time, end_time, sa_choice_loops)
+            result = backend.keygen_mac(key_size, key_type, hash_alg, key_mat)
+        elif key_type in SYM_CIPHERS:
+            if key_type == 'shared':
+                key_type = configuration['sym_cipher']
+            if key_size == None:
+                key_size = (configuration['sym_key_size'][key_type])
+            if block_mode == None:
+                block_mode = configuration['block_mode']
+            endtime = time.process_time()
+            print('keygen', 'shared_key', start_time, end_time, sa_choice_loops)        
+            result = backend.keygen_shared(key_size, key_type, block_mode, key_mat)
+        elif key_type in PUBLIC_CIPHERS:
+            if key_type == 'public':
+                key_type = configuration['pub_cipher']
+            if key_size == None:
+                key_size = configuration['pub_key_size']
+            if hash_alg == None:
+                hash_alg = configuration['hash_alg']
+            endtime = time.process_time()
+            print('keygen', 'public_key', start_time, end_time, sa_choice_loops)
+            result = backend.keygen_public(key_size, key_type, hash_alg)
+        elif key_type == 'diffie-hellman' or key_type == 'dh':
+            if key_size == None:
+                key_size = configuration['dh_exp_size']
+            if use_dh_group:
+                if dh_group == None:
+                    dh_group = configuration['dh_grp']
+            else:
+                if dh_p == None and dh_mod_size == None:
+                    dh_mod_size = configuration['dh_mod_size']
+            endtime = time.process_time()
+            print('keygen', 'dh', start_time, end_time, sa_choice_loops)
+            result = backend.keygen_dh(key_size, use_dh_group, dh_group,
+                                        dh_mod_size, dh_p, dh_g)
+    return result
 #end keygen()
 
-#@dec_timer
+@dec_timer
 def encrypt(plaintext, *, key):
+    start_time = time.process_time()
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
+        endtime = time.process_time()
+        print('encrypt', 'public_key', start_time, end_time, sa_choice_loops)
         return backend.asym_encrypt(plaintext, key)
     else:
+        endtime = time.process_time()
+        print('encrypt', 'shared_key', start_time, end_time, sa_choice_loops)
         return backend.sym_encrypt(plaintext, key)
 #end encrypt()
 
-#@dec_timer
+@dec_timer
 def decrypt(ciphertext, *, key):
+    start_time = time.process_time()
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
+        endtime = time.process_time()
+        print('decrypt', 'public_key', start_time, end_time, sa_choice_loops)
         return backend.asym_decrypt(ciphertext, key)
     else:
+        endtime = time.process_time()
+        print('decrypt', 'shared_key', start_time, end_time, sa_choice_loops)
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
-#@dec_timer
+@dec_timer
 def sign(data, *, key):
+    start_time = time.process_time()
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
+        endtime = time.process_time()
+        print('sign', 'public_key', start_time, end_time, sa_choice_loops)
         return backend.pubkey_sign(data, key)
     else:
+        endtime = time.process_time()
+        print('sign', 'shared_key', start_time, end_time, sa_choice_loops)
         return backend.mac_sign(data, key)
 #end sign()
 
-#@dec_timer
+@dec_timer
 def verify(data, *, key):
+    start_time = time.process_time()
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
         if configuration['verify_returns'] == 'data':
+            endtime = time.process_time()
+            print('verify', 'public_key', start_time, end_time, sa_choice_loops)
             return backend.pubkey_verify(data, key)
         if configuration['verify_returns'] == 'bool':
+            endtime = time.process_time()
+            print('verify', 'public_key', start_time, end_time, sa_choice_loops)
             return backend.pubkey_verify1(data[0], data[1], key)
     else:
         if configuration['verify_returns'] == 'data':
+            endtime = time.process_time()
+            print('verify', 'shared_key', start_time, end_time, sa_choice_loops)
             return backend.mac_verify(data, key)
         if configuration['verify_returns'] == 'bool':
+            endtime = time.process_time()
+            print('verify', 'shared_key', start_time, end_time, sa_choice_loops)
             return backend.mac_verify1(data[0], data[1], key)
 #end verify()
 
