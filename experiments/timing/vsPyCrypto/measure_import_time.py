@@ -455,7 +455,7 @@ def run_tests(rounds, op):
 
         elif op == 'SA_import':
             print('\n***** SA_import *****')
-            raw_data['SA_import'].append(time_SA_import(60000))
+            raw_data['SA_import'].append(time_SA_import(3000))
 
         elif op == 'PC_sym_keygen_import_once':
             print('\n***** PyCrypto_sym_keygen_import_once *****')

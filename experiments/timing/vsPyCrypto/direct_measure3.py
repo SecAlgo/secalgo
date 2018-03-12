@@ -118,16 +118,17 @@ def time_SA_sym_encrypt(loops):
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_encrypt(loops):
+    serial_data = pickle.dumps(TEST_DATA)
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
+        #serial_data = pickle.dumps(TEST_DATA)
         #serial_data = TEST_DATA
-        serial_data = pad(serial_data)
+        padded_data = pad(serial_data)
         IV = Random.new().read(AES.block_size)
         cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, IV)
-        result = IV + cipher.encrypt(serial_data)
+        result = IV + cipher.encrypt(padded_data)
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -161,12 +162,13 @@ def time_PyCrypto_sym_decrypt(loops):
     for i in range(loops):
         iv = TEST_SYM_CT[:16]
         cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, iv)
-        serial_pt = cipher.decrypt(TEST_SYM_CT[16:])
-        serial_pt = unpad(serial_pt)
-        result = pickle.loads(serial_pt)
+        padded_pt = cipher.decrypt(TEST_SYM_CT[16:])
+        serial_pt = unpad(padded_pt)
+        #result = pickle.loads(serial_pt)
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    result = pickle.loads(serial_pt)
     
     return collect_raw('PC_sym_decrypt',
                        (start_wc, start_cpu),
@@ -191,11 +193,12 @@ def time_SA_mac_sign(loops):
 #end def time_SA_mac_sign()
 
 def time_PyCrypto_mac_sign(loops):
+    serial_data = pickle.dumps(TEST_DATA)
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
+        #serial_data = pickle.dumps(TEST_DATA)
         #serial_data = TEST_DATA
         h = HMAC.new(TEST_MAC_KEY['key'], serial_data, SHA256)
         sig = h.digest()
@@ -235,14 +238,15 @@ def time_PyCrypto_mac_verify(loops):
         data, sig = TEST_MAC
         verdict = (sig == HMAC.new(TEST_MAC_KEY['key'], data, SHA256).digest())
         if verdict:
-            result = pickle.loads(data)
-            #result = data
+            #result = pickle.loads(data)
+            result = data
         else:
             result = None
         assert result != None
         
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
+    result = pickle.loads(data)
     
     return collect_raw('PC_mac_verify',
                        (start_wc, start_cpu),
@@ -309,11 +313,12 @@ def time_SA_pub_encrypt(loops):
 #end def time_SA_pub_encrypt()
 
 def time_PyCrypto_pub_encrypt(loops):
+    serial_data = pickle.dumps(TEST_DATA)
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
+        #serial_data = pickle.dumps(TEST_DATA)
         #serial_data = TEST_DATA
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
         cipher = PKCS1_OAEP.new(pubk)
@@ -369,11 +374,12 @@ def time_PyCrypto_pub_decrypt(loops):
             serial_result = unpad(sym_cipher.decrypt(data_ct[16:]))
         else:
             serial_result = cipher.decrypt(TEST_PUB_CT)
-        result = pickle.loads(serial_result)
+        #result = pickle.loads(serial_result)
         
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
-
+    result = pickle.loads(serial_result)
+    
     return collect_raw('PC_pub_decrypt',
                        (start_wc, start_cpu),
                        (end_wc, end_cpu),
@@ -397,11 +403,12 @@ def time_SA_pub_sign(loops):
 #end def time_SA_pub_sign()
 
 def time_PyCrypto_pub_sign(loops):
+    serial_data = pickle.dumps(TEST_DATA)
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        serial_data = pickle.dumps(TEST_DATA)
+        #serial_data = pickle.dumps(TEST_DATA)
         #serial_data = TEST_DATA
         privk = RSA.importKey(TEST_PRIV_KEY['key'])
         h = SHA256.new(serial_data)
@@ -446,15 +453,16 @@ def time_PyCrypto_pub_verify(loops):
         verifier = PKCS1_v1_5.new(pubk)
         verdict = verifier.verify(h, sig)
         if verdict:
-            result = pickle.loads(data)
-            #result = data
+            #result = pickle.loads(data)
+            result = data
         else:
             result = None
         assert result != None
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
-
+    result = pickle.loads(data)
+    
     return collect_raw('PC_pub_verify',
                        (start_wc, start_cpu ),
                        (end_wc, end_cpu),
