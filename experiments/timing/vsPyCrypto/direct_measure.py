@@ -159,11 +159,10 @@ def time_PyCrypto_sym_decrypt(loops):
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
     for i in range(loops):
-        iv = TEST_SYM_CT[:16]
-        cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, iv)
+        cipher = AES.new(TEST_SYM_KEY['key'], AES.MODE_CBC, TEST_SYM_CT[:16])
         serial_pt = cipher.decrypt(TEST_SYM_CT[16:])
         serial_pt = unpad(serial_pt)
-        result = pickle.loads(serial_pt)
+        result = pickle.loads(serial_pt[1:])
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -233,9 +232,8 @@ def time_PyCrypto_mac_verify(loops):
     
     for i in range(loops):
         data, sig = TEST_MAC
-        verdict = (sig == HMAC.new(TEST_MAC_KEY['key'], data, SHA256).digest())
-        if verdict:
-            result = pickle.loads(data)
+        if (sig == HMAC.new(TEST_MAC_KEY['key'], data, SHA256).digest()):
+            result = pickle.loads(data[1:])
             #result = data
         else:
             result = None
@@ -362,14 +360,12 @@ def time_PyCrypto_pub_decrypt(loops):
         privk = RSA.importKey(TEST_PRIV_KEY['key'])
         cipher = PKCS1_OAEP.new(privk)
         if len(TEST_PUB_CT) > (TEST_PRIV_KEY['size'] // 8):
-            key_ct = TEST_PUB_CT[:256]
-            data_ct = TEST_PUB_CT[256:]
-            shared_key = cipher.decrypt(key_ct)
-            sym_cipher = AES.new(shared_key, AES.MODE_CBC, data_ct[:16])
-            serial_result = unpad(sym_cipher.decrypt(data_ct[16:]))
+            shared_key = cipher.decrypt(TEST_PUB_CT[:256])
+            sym_cipher = AES.new(shared_key, AES.MODE_CBC, TEST_PUB_CT[256:272])
+            serial_result = unpad(sym_cipher.decrypt(TEST_PUB_CT[272:]))
         else:
             serial_result = cipher.decrypt(TEST_PUB_CT)
-        result = pickle.loads(serial_result)
+        result = pickle.loads(serial_result[1:])
         
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
@@ -441,13 +437,11 @@ def time_PyCrypto_pub_verify(loops):
     
     for i in range(loops):
         pubk = RSA.importKey(TEST_PUB_KEY['key'])
-        data, sig = TEST_PUB_SIG
-        h = SHA256.new(data)
+        h = SHA256.new(TEST_PUB_SIG[0])
         verifier = PKCS1_v1_5.new(pubk)
-        verdict = verifier.verify(h, sig)
-        if verdict:
-            result = pickle.loads(data)
-            #result = data
+        if verifier.verify(h, TEST_PUB_SIG[1]):
+            result = pickle.loads(TEST_PUB_SIG[0][1:])
+            #result = TEST_PUB_SIG[0][1:]
         else:
             result = None
         assert result != None
