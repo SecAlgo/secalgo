@@ -21,6 +21,15 @@ from Crypto.Random.random import getrandbits
 from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
 from Crypto.Util.number import getPrime, isPrime, size, getRandomNBitInteger
 
+#For ECDHE using pyca/cryptography.io
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+#End ECDHE imports
+
 PAD_MODES = {'ECB', 'CBC'}
 IV_MODES = {'CBC', 'CFB'}
 BLOCK_CIPHERS = {'AES' : AES,
@@ -84,7 +93,7 @@ def keygen_shared(key_size, alg, mode, key_mat = None):
     return key_dict
 #end keygen_shared()
 
-def keygen_public(key_size, alg, hash_alg):
+def keygen_public(key_size, alg, hash_alg, curve):
     if alg == 'RSA':
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
@@ -93,6 +102,26 @@ def keygen_public(key_size, alg, hash_alg):
                          'size': key_size, 'hash' : hash_alg, 'key' : priv_key}
         pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
                         'size': key_size, 'hash' : hash_alg, 'key' : pub_key}
+        return priv_key_dict, pub_key_dict
+    elif alg == 'ECC':
+        if curve == 'X25519':
+            key_pair = X25519PrivateKey.generate()
+            pub_key = key_pair.public_key().public_bytes()
+            priv_key_dict = {'alg' : 'ECC', 'curve' : 'X25519', 'type' : 'private',
+                             'hash' : hash_alg, 'key': key_pair}
+            pub_key_dict = {'alg' : 'ECC', 'curve' : 'X25519', 'type' : 'public',
+                            'hash' : hash_alg, 'key' : pub_key}
+        elif curve == 'P-256': #SECP256r1
+            key_pair = ec.generate_private_key(ec.SECP256R1(), default_backend())
+            priv_key = key_pair.private_bytes(encoding=serialization.Encoding.PEM,
+                                              format=serialization.PrivateFormat.PKCS8,
+                                              encryption_algorithm=serializtion.NoEncryption)
+            pub_key = key_pair.public_key().public_bytes(encoding=serialization.Encoding.PEM,
+                                                         format=serialization.PublicFormat.SubjectPublicKeyInfo)
+            priv_key_dict = {'alg' : 'ECC', 'curve' : 'P-256', 'type' : 'private',
+            'hash' : hash_alg, 'key': priv_key}
+            pub_key_dict = {'alg' : 'ECC', 'curve' : 'P-256', 'type' : 'public',
+                            'hash' : hash_alg, 'key' : pub_key}
         return priv_key_dict, pub_key_dict
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
@@ -154,7 +183,7 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     return (dh_x, dh_X, dh_g, dh_p)
 #end gen_dh_key()
 
-def sym_encrypt(plaintext, key):
+def sym_encrypt(plaintext, key, iv):
     if not isinstance(plaintext, bytes):
         serial_pt = b'\1' + pickle.dumps(plaintext)
     else:
@@ -174,7 +203,10 @@ def sym_encrypt(plaintext, key):
         serial_pt = pkcs7_pad(serial_pt)
     if mode in IV_MODES:
         #print("SYM_ENCRYPT: Generating an IV", flush = True)
-        preamble = Random.new().read(BLOCK_SIZES[alg])
+        if iv == None:
+            preamble = Random.new().read(BLOCK_SIZES[alg])
+        else:
+            preamble = iv
         encrypt_kwargs['IV'] = preamble
     elif mode == 'CTR':
         #print('SYM_ENCRYPT: Generating a Counter', flush = True)

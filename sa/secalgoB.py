@@ -23,7 +23,7 @@ DH_DEFAULT_MOD_SIZE_BITS = 2048
 DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 
-PUBLIC_CIPHERS = {'RSA', 'DSA', 'public'}
+PUBLIC_CIPHERS = {'RSA', 'DSA', 'ECC', 'public'}
 SYM_CIPHERS = {'AES', 'DES', 'DES3', 'Blowfish', 'shared'}
 MAC_ALGORITHMS = {'HMAC', 'mac'}
 HASH_FUNCTIONS = {'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'}
@@ -72,7 +72,7 @@ def nonce(size = None):
 #end nonce()
 
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
-           key_mat = None, use_dh_group = True,
+           key_mat = None, use_dh_group = True, curve = None,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
     backend = backend_modules[configuration['backend']]
     if key_type == 'random':
@@ -100,7 +100,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
             key_size = configuration['pub_key_size']
         if hash_alg == None:
             hash_alg = configuration['hash_alg']
-        return backend.keygen_public(key_size, key_type, hash_alg)
+        return backend.keygen_public(key_size, key_type, hash_alg, curve)
     elif key_type == 'diffie-hellman' or key_type == 'dh':
         if key_size == None:
             key_size = configuration['dh_exp_size']
@@ -114,12 +114,12 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
-def encrypt(plaintext, *, key):
+def encrypt(plaintext, *, key, iv = None):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
         return backend.asym_encrypt(plaintext, key)
     else:
-        return backend.sym_encrypt(plaintext, key)
+        return backend.sym_encrypt(plaintext, key, iv)
 #end encrypt()
 
 def decrypt(ciphertext, *, key):
