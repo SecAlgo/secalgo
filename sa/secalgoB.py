@@ -2,6 +2,7 @@ import json, time, pickle, sys
 import sa.sec_algo_pycrypto as SA_PyCrypto
 #import sa.sec_algo_charm as SA_Charm
 from Crypto.Random import atfork as raf
+from sa.timers import dec_timer
 
 KEY_PAIR_DEFAULT_SIZE_BITS = 2048
 KEY_PAIR_DEFAULT_SIZE_BYTES = 256
@@ -24,7 +25,7 @@ DH_DEFAULT_EXP_SIZE_BITS = 512
 DH_DEFAULT_MODP_GROUP = 14
 
 PUBLIC_CIPHERS = {'RSA', 'DSA', 'ECC', 'public'}
-SYM_CIPHERS = {'AES', 'DES', 'DES3', 'Blowfish', 'shared'}
+SYM_CIPHERS = {'AES', 'DES3', 'Blowfish', 'shared'}
 MAC_ALGORITHMS = {'HMAC', 'mac'}
 HASH_FUNCTIONS = {'SHA-224', 'SHA-256', 'SHA-384', 'SHA-512'}
 
@@ -58,11 +59,13 @@ def configure(**configs):
             configuration[k] = v
 #end configure()
 
+#@dec_timer
 def at_fork():
     if configuration['backend'] == 'SA_PyCrypto':
         raf()
 #end def atfork()
 
+#@dec_timer
 def nonce(size = None):
     backend = backend_modules[configuration['backend']]
     if size == None:
@@ -71,6 +74,7 @@ def nonce(size = None):
         return backend.nonce(size)
 #end nonce()
 
+#@dec_timer
 def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True, curve = None,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
@@ -114,6 +118,7 @@ def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
                                  dh_mod_size, dh_p, dh_g)
 #end keygen()
 
+#@dec_timer
 def encrypt(plaintext, *, key, iv = None):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -122,6 +127,7 @@ def encrypt(plaintext, *, key, iv = None):
         return backend.sym_encrypt(plaintext, key, iv)
 #end encrypt()
 
+#@dec_timer
 def decrypt(ciphertext, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -130,6 +136,7 @@ def decrypt(ciphertext, *, key):
         return backend.sym_decrypt(ciphertext, key)
 #end decrypt()
 
+#@dec_timer
 def sign(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:
@@ -138,6 +145,7 @@ def sign(data, *, key):
         return backend.mac_sign(data, key)
 #end sign()
 
+#@dec_timer
 def verify(data, *, key):
     backend = backend_modules[configuration['backend']]
     if key['alg'] in PUBLIC_CIPHERS:

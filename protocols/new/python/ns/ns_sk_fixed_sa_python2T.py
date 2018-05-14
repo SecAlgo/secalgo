@@ -8,59 +8,15 @@ import json
 import pickle
 import threading
 import multiprocessing
-from Crypto.Random.random import getrandbits #for nonces
-from Crypto import Random #for keys and IVs
-from Crypto.Cipher import AES #encryption primitive
-from padding import Padder #provides PKCS7 padding
+from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
 
-AES_KEY_SIZE = 32
-NONCE_SIZE = 128
 HOST_A = '127.0.0.1'
 HOST_B = '127.0.0.1'
 HOST_KS = '127.0.0.1'
 PORT_A = 1981
 PORT_B = 1970
 PORT_KS = 1977
-MODE = AES.MODE_CBC
-
-def myPickleDumps(data):
-    result = pickle.dumps(data)
-    return result
-#end def myPickleDumps()
-
-def myPickleLoads(data):
-    result = pickle.loads(data)
-    return result
-#end myPickleLoads()
-
-def encrypt(pt, key):
-    iv = Random.new().read(AES.block_size)
-    encrypter = AES.new(key, MODE, iv)
-    s_pt = pickle.dumps(pt)
-    ps_pt = Padder.pkcs7_pad(s_pt)
-    ct = encrypter.encrypt(Padder.pkcs7_pad(ps_pt))
-    return iv + ct
-#end def encrypt()
-
-def decrypt(ct, key):
-    iv = ct[:16]
-    decrypter = AES.new(key, MODE, iv)
-    ps_pt = decrypter.decrypt(ct[16:])
-    s_pt = Padder.pkcs7_unpad(ps_pt)
-    pt = myPickleLoads(s_pt)
-    return pt
-#end def decrypt()    
-
-def keygen():
-    key = Random.new().read(AES_KEY_SIZE)
-    return key
-#end def keygen()
-
-def nonce():
-    n = getrandbits(NONCE_SIZE)
-    return n
-#end def nonce()
 
 class NS_Client(multiprocessing.Process):
     def __init__(self, h, p, hks, pks, kas, hb, pb):
@@ -80,7 +36,7 @@ class NS_Client(multiprocessing.Process):
     # end def __init__()
     
     def run(self):
-        Random.atfork()
+        at_fork()
         self.ns_client()
         self.socket_a.close()
     # end run()
@@ -100,7 +56,7 @@ class NS_Client(multiprocessing.Process):
             return
         #print('M2:', m2_raw)
         
-        nonce_a = getrandbits(NONCE_SIZE)
+        nonce_a = nonce()
         # Send M3: A -> KS : A, B, N_A, {A, N1_B}_K_BS
         self.socket_a.sendto(b'm3' +
                              pickle.dumps([self.pid_a,self.pid_b,
@@ -115,12 +71,7 @@ class NS_Client(multiprocessing.Process):
             return
 
         m4_enc = m4_raw[2:]
-        cipher_AS = AES.new(self.key_AS, AES.MODE_CBC, m4_enc[:AES.block_size])
-
-        m4 = pickle.loads(
-            Padder().pkcs7_unpad(
-                cipher_AS.decrypt(
-                    m4_enc[AES.block_size:]), AES.block_size))
+        m4 = decrypt(m4_enc, key = self.key_AS)
         #print('M4:', m4)
 
         if m4[0] != nonce_a:
@@ -146,22 +97,13 @@ class NS_Client(multiprocessing.Process):
             return
         
         m6_enc = m6_raw[2:]
-        cipher_AB = AES.new(key_AB, AES.MODE_CBC, m6_enc[:AES.block_size])
-
-        m6 = pickle.loads(
-            Padder().pkcs7_unpad(
-                cipher_AB.decrypt(
-                    m6_enc[AES.block_size:]), AES.block_size))
-        #print('M6:', m4)
+        m6 = decrypt(m6_enc, key = key_AB)
+        #print('M6:', m6)
 
         # Send M7: A -> B : {(N2_B - 1)}_K_AB
         nonce_ab = m6 - 1
-        IV_AB = Random.new().read(AES.block_size)
-        cipher_AB = AES.new(key_AB, AES.MODE_CBC, IV_AB)
         
-        self.socket_a.sendto(b'm7' + IV_AB + cipher_AB.encrypt(
-            Padder().pkcs7_pad(
-                pickle.dumps(nonce_ab), AES.block_size)),recv_address)
+        self.socket_a.sendto(b'm7' + encrypt(nonce_ab, key = key_AB), recv_address)
         #print('NS_Client: Key exchange complete')
     # end def ns_initiate()
 # end class NS_Client
@@ -179,7 +121,7 @@ class NS_Recv(multiprocessing.Process):
     # end __init__()
 
     def run(self):
-        Random.atfork()
+        at_fork()
         self.ns_responder()
         self.socket_b.close()
     # end def run()
@@ -206,22 +148,18 @@ class NS_Recv(multiprocessing.Process):
         #print('M1:', m1_raw)
         
         # Send M2: B -> A : {A, N1_B}_K_BS
-        nonce_b1 = getrandbits(NONCE_SIZE)
-        IV_BS = Random.new().read(AES.block_size)
-        cipher_BS = AES.new(self.key_BS, AES.MODE_CBC, IV_BS)
-        self.socket_b.sendto(b'm2' + IV_BS + cipher_BS.encrypt(
-            Padder().pkcs7_pad(
-                pickle.dumps([pid_a, nonce_b1]),
-                AES.block_size)), client_address)
+        nonce_b1 = nonce()
+        self.socket_b.sendto(b'm2' + encrypt([pid_a, nonce_b1], key = self.key_BS), client_address)
 
         # Receive M5: A -> B : {K_AB, N1_B, A}_K_BS
         m5_raw = self.socket_b.recv(4096)
-        cipher_BS = AES.new(self.key_BS, AES.MODE_CBC,
-                            m5_raw[2:(AES.block_size + 2)])
-        m5 = pickle.loads(
-            Padder().pkcs7_unpad(
-                cipher_BS.decrypt(m5_raw[(AES.block_size + 2):]),
-                AES.block_size))
+        if m5_raw[:2] != b'm5':
+            print('NS_Recv: Protocol Failure: M5: Receiver does not' +
+                  ' recognize message:', m1_raw)
+            return
+
+        m5_enc = m5_raw[2:]
+        m5 = decrypt(m5_enc, key = self.key_BS) 
         if m5[1] != nonce_b1:
             print('NS_Recv: M5: Protocol Failure: Nonce returned by' +
                   ' keyserver does not match nonce sent by receiver;' +
@@ -236,12 +174,8 @@ class NS_Recv(multiprocessing.Process):
         #print('M5:', m5)        
 
         # send M6: B -> A : {N2_B}_K_AB
-        nonce_b2 = getrandbits(NONCE_SIZE)
-        IV_AB = Random.new().read(AES.block_size)
-        cipher_AB = AES.new(key_AB, AES.MODE_CBC, IV_AB)
-        self.socket_b.sendto(b'm6' + IV_AB + cipher_AB.encrypt(
-            Padder().pkcs7_pad(
-                pickle.dumps(nonce_b2), AES.block_size)), client_address)
+        nonce_b2 = nonce()
+        self.socket_b.sendto(b'm6' + encrypt(nonce_b2, key = key_AB), client_address)
 
         # Receive M7
         m7_raw = self.socket_b.recv(4096)
@@ -249,12 +183,8 @@ class NS_Recv(multiprocessing.Process):
             print('NS_Recv: Protocol Failure: M7: Receiver does not' +
                   ' recognize message:', m7_raw)
             return
-        cipher_AB = AES.new(key_AB, AES.MODE_CBC,
-                            m7_raw[2:(AES.block_size + 2)])
-        m7 = pickle.loads(
-            Padder().pkcs7_unpad(
-                cipher_AB.decrypt(m7_raw[(AES.block_size + 2):]),
-                AES.block_size))
+
+        m7 = decrypt(m7_raw[2:], key = key_AB)
         if m7 != (nonce_b2 - 1):
             print('NS_Recv_Handler: Protocol Failure: M7: Decremented' +
                   ' nonce returned by initiating client does not match.')
@@ -279,7 +209,7 @@ class NS_KS(multiprocessing.Process):
     #end def __init__()
 
     def run(self):
-        Random.atfork()
+        at_fork()
         self.ns_keyserver()
         self.socket_ks.close()
     # end def run()
@@ -287,10 +217,10 @@ class NS_KS(multiprocessing.Process):
     @dec_proto_run_timer
     def ns_keyserver(self):
         self.terminate = False
+        #print('Starting NS_KeyServer')
         while not self.terminate:
             m3_raw, client_address = self.socket_ks.recvfrom(4096)
             self.ns_keyserver_handle(m3_raw, client_address)
-        #print('Starting NS_KeyServer')
     #end def ns_keyserver()
 
     def ns_keyserver_handle(self, m3_raw, client_address):
@@ -302,38 +232,29 @@ class NS_KS(multiprocessing.Process):
             return
         m3 = pickle.loads(m3_raw[2:])
         #print('M3:', m3)
+        pid_a, N1_b = decrypt(m3[3], key = self.key_BS)
         # Decrypt package from receiver, check client process id
-        cipher_BS = AES.new(self.key_BS, AES.MODE_CBC, m3[3][:AES.block_size])
-        pid_a, N1_b = pickle.loads(
-            Padder().pkcs7_unpad(
-                cipher_BS.decrypt(m3[3][AES.block_size:]), AES.block_size))
         if m3[0] != pid_a:
             print('NS_KS_HANDLER: Protocol Failure: M3: Client process id' + 
                   ' provided by client does not match client process id' +
                   ' provided by receiver.')
             return
         # Generate fresh session key to distribute to client and receiver
-        session_key = Random.new().read(AES_KEY_SIZE)
+        session_key = keygen('shared')
 
         # Encrypt package for receiver, including nonce it sent
-        IV_BS = Random.new().read(AES.block_size)
-        cipher_BS = AES.new(self.key_BS, AES.MODE_CBC, IV_BS)
-        pkg_B = IV_BS + cipher_BS.encrypt(Padder().pkcs7_pad(
-            pickle.dumps([session_key, N1_b, pid_a]), AES.block_size))
+        pkg_B = encrypt([session_key, N1_b, pid_a], key = self.key_BS)
 
         # Encrypt message for client
-        IV_AS = Random.new().read(AES.block_size)
-        cipher_AS = AES.new(self.key_AS, AES.MODE_CBC, IV_AS)
-        pkg_A = IV_AS + cipher_AS.encrypt(Padder().pkcs7_pad(
-            pickle.dumps([m3[2], session_key, m3[1], pkg_B]), AES.block_size))
+        pkg_A = encrypt([m3[2], session_key, m3[1], pkg_B], key = self.key_AS)
         
         #Send M4: S -> A : {Na, B, K_AB, {K_AB, N1_b, A}_K_BS}_K_AS
         self.socket_ks.sendto(b'm4' + pkg_A, client_address)
         self.terminate = True
 
 def main():
-    key_AS = Random.new().read(AES_KEY_SIZE)
-    key_BS = Random.new().read(AES_KEY_SIZE)
+    key_AS = keygen('shared')
+    key_BS = keygen('shared')
     ns_ks = NS_KS(HOST_KS, PORT_KS, key_AS, key_BS)
     ns_b = NS_Recv(HOST_B, PORT_B, key_BS)
     ns_a = NS_Client(HOST_A, PORT_A, HOST_KS, PORT_KS, key_AS, HOST_B, PORT_B)

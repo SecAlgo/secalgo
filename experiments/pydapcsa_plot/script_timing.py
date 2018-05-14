@@ -8,8 +8,8 @@ import sa.sec_algo_pycrypto as SA_PyCrypto
 sa_path = '/home/christopher/secalgo/'
 signal_path = '/home/christopher/secalgo-org/examples/signal/'
 full_path = sa_path + 'ProtocolImplementations/New/'
-raw_path = sa_path + 'experiments/timing_20180218/rawData/'
-results_path = sa_path + 'experiments/timing_20180218/results/'
+raw_path = sa_path + 'experiments/pydapcsa_plot/rawData/'
+results_path = sa_path + 'experiments/pydapcsa_plot/results/'
 m_buf_opt = '--message-buffer-size'
 m_buf_size = '8192'
 da_ext = '.da'
@@ -31,9 +31,7 @@ protocols = ['dsT',
              'kerberos5T',
              'pc_ns-sk_fixedL',
              'pc_ns-sk_fixedT',
-             'x3dhT',
-             'doubleratchet_dist_testT',
-             'signal_dist_test']
+             'x3dhT']
 
 sec_algo_functions = ('keygen',
                       'encrypt',
@@ -48,15 +46,7 @@ sec_algo_functions = ('keygen',
                       'encode',
                       'decode',
                       'kdf',
-                      'dh',
-                      'ENCRYPT',
-                      'DECRYPT',
-                      'HEADER',
-                      'CONCAT',
-                      'GENERATE_DH',
-                      'DH',
-                      'KDF_RK',
-                      'KDF_CK')
+                      'dh')
 
 p_main_skip = {'dsT'             : 2,
                'ds-pkT'          : 3,
@@ -71,9 +61,7 @@ p_main_skip = {'dsT'             : 2,
                'tls1_2T'         : 4,
                'kerberos5T'      : 4,
                'pc_ns-sk_fixedL' : 0,
-               'x3dhT'           : 0,
-               'doubleratchet_dist_testT' : 0,
-               'signal_dist_testT' : 0}
+               'x3dhT'           : 0}
 
 
 def measure_proto_time(p, iter_num, iter_label):
@@ -82,7 +70,7 @@ def measure_proto_time(p, iter_num, iter_label):
         if p == 'dhke-1T' or p == 'ds-pkT' or p == 'sdhT' or p == 'tls1_2':
             cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size,
                    full_path + p + da_ext]
-        elif p == 'x3dhT' or p == 'doubleratchet_dist_testT' or p == 'signal_dist_testT':
+        elif p == 'x3dhT':
             cmd = ['python3', '-m', 'da', signal_path + p + da_ext]
         else:
             cmd = ['python3', '-m', 'da', full_path + p + da_ext]
@@ -132,8 +120,7 @@ def parse_proto_time(p, iter_num, iter_label, output_file):
                     data_line = json.loads(read_line)
                     #print(data_line, file = of, flush = True)
                     print(data_line, flush = True)
-                    # miliseconds
-                    role_time = (((data_line[3] - data_line[2]) / data_line[4]) * 1000)
+                    role_time = (data_line[3] - data_line[2])
                     #print('role time:', data_line[0], ':', data_line[1], '-', role_time,
                     #      file = of, flush = True)
                     role_times.append(((i+1), data_line[1], role_time))
@@ -162,7 +149,7 @@ def measure_lib_time(p, iter_num, iter_label):
     if p in protocols:
         if p == 'dhke-1T' or p == 'ds-pkT' or p == 'sdhT' or p == 'tls1_2T':
             cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size, full_path + p + da_ext]
-        elif p == 'x3dhT' or p == 'doubleratchet_dist_testT' or p == 'signal_dist_testT':
+        elif p == 'x3dhT':
             cmd = ['python3', '-m', 'da', signal_path + p + da_ext]
         else:
             cmd = ['python3', '-m', 'da', full_path + p + da_ext]

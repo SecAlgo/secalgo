@@ -21,7 +21,7 @@ Protocol Diagram:
 """
 
 import pickle, sys
-from sa.secalgoB import dec_proto_run_timer
+from sa.timers import dec_proto_run_timer
 from Crypto.Cipher import AES
 from Crypto import Random
 from Crypto.Random import random
@@ -36,6 +36,7 @@ class RoleS (process):
     def run():
         terminate = False
         await(terminate)
+        reset(received)
 
     def receive(msg=('msg3', i, (A, B, nA, encBS)), from_ = _A):
         cipher = AES.new(kBS, AES.MODE_CBC, encBS[:AES.block_size])
@@ -72,8 +73,9 @@ class RoleA (process):
             ivAB = Random.new().read(AES.block_size)
             cipherAB = AES.new(kABu, AES.MODE_CBC, ivAB)
             send(('msg7', i, ivAB + cipherAB.encrypt(pad(pickle.dumps((nB - 1))))), to = B)
-            output('A - Key Exchange Complete')
+            #output('A - Key Exchange Complete')
         self.i += 1
+        reset(received)
 
 class RoleB (process):
     def setup(S, kBS, loops):
@@ -84,6 +86,7 @@ class RoleB (process):
     def run():
         terminate = False
         await(terminate)
+        reset(received)
         
     def receive(msg=('msg1', i, A), from_ = A2):
         if A == A2:
@@ -104,7 +107,8 @@ class RoleB (process):
                 cipherAB = AES.new(kABu, AES.MODE_CBC, encAB[:AES.block_size])
                 if ((nB2 - 1) ==
                     pickle.loads(unpad(cipherAB.decrypt(encAB[AES.block_size:])))):
-                    output('B - Key Exchange Complete')
+                    pass
+                    #output('B - Key Exchange Complete')
         terminate = True
         
 def main():

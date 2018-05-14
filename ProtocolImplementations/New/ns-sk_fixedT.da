@@ -23,6 +23,7 @@ Protocol Diagram:
 import sys
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
     
 class RoleS (process):
     def setup(kAS, kBS):
@@ -33,6 +34,7 @@ class RoleS (process):
     def run():
         terminate = False
         await(terminate)
+        reset(received)
 
     def receive(msg=('msg3', i, (A, B, nA, encBS)), from_ = _A):
         if some((_A, nB1) in [decrypt(encBS, key = kBS)]):
@@ -41,7 +43,8 @@ class RoleS (process):
                                    encrypt((kAB, nB1, A), key = kBS)),
                                   key = kAS)), to = A)
         terminate = True
-
+        #print(str(i) + '.', end='', flush = True)
+        
 class RoleA (process):
     def setup(S, kAS, B):
         at_fork()
@@ -60,8 +63,10 @@ class RoleA (process):
         await(some(received(('msg6', _i, encBA), from_ = _B)))
         nB = decrypt(encBA, key = kAB)
         send(('msg7', i, encrypt((nB - 1), key = kAB)), to = B)
-        output('A - Key Exchange Complete')
+        #output('A - Key Exchange Complete')
+        #print(str(i) + ',', end='', flush = True)
         i += 1
+        reset(received)
 
 class RoleB (process):
     def setup(S, kBS):
@@ -72,6 +77,8 @@ class RoleB (process):
     def run():
         terminate = False
         await(terminate)
+        reset(received)
+
 
     def receive(msg=('msg1', i, A), from_ = _A):
         nB1 = nonce()
@@ -82,8 +89,9 @@ class RoleB (process):
         send(('msg6', i, encrypt(nB2, key = kAB)), to = A)
         await(some(received(('msg7', _i, enc_AB), from_ = _A),
                    has = ((nB2 - 1) == decrypt(enc_AB, key = kAB))))
-        output('B - Key Exchange Complete')
+        #output('B - Key Exchange Complete')
         terminate = True
+        #print(str(i) + ';', end='', flush = True)
         
 def main():
     kAS = keygen('shared')

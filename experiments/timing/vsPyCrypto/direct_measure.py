@@ -272,14 +272,6 @@ def time_PyCrypto_pub_keygen(loops):
         key_pair = RSA.generate(2048)
         priv_key = key_pair.exportKey()
         pub_key = key_pair.publickey().exportKey()
-        #priv_key_dict = {'alg' : 'RSA', 'type' : 'private',
-        #                 'size' : 2048, 'hash' : 'SHA-256',
-        #                 'key' : priv_key}
-        #pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
-        #                'size' : 2048, 'hash' : 'SHA-256',
-        #                'key' : pub_key}
-        #result = (priv_key_dict, pub_key_dict)
-        #result = (priv_key, pub_key)
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
