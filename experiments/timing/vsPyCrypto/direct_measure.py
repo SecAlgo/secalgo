@@ -485,11 +485,12 @@ def compute_results(rd):
         results[op[3:]][op] = total_avg
 
 def compute_results2(rd, op, of):
-    for round_data in rd[op]:
-        #miliseconds
-        avg = (((round_data['end'] - round_data['start'])
-                   / round_data['loops']) * 1000)
-        with open(of, "a") as f:
+    with open(of, "a") as f:
+        f.write('Results for ' + op + ' - ' + str(len(rd[op])) + ':\n')
+        for round_data in rd[op]:
+            #miliseconds
+            avg = (((round_data['end'] - round_data['start'])
+                    / round_data['loops']) * 1000)
             f.write(str(avg) + '\n')
 
 def compute_multiplier(rslt):
@@ -588,7 +589,7 @@ def run_tests(rounds, op):
 if __name__ == "__main__":
     op = sys.argv[1] if len(sys.argv) > 1 else 'all'
     output_file = sys.argv[2] if len(sys.argv) > 2 else 'out.txt'
-    rounds = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    rounds = int(sys.argv[3]) if len(sys.argv) > 3 else 500
     #print('TEST DATA:', type(TEST_DATA), ':', len(TEST_DATA))
     if op == 'all':
         for opitem in ops:

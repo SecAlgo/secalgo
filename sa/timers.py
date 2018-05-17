@@ -28,7 +28,7 @@ proto_loops = {'dsT'             : 600,
                'kerberos5T'      : 3000,
                'tls1_2T'         : 300,
                'x3dhT'           : 100,
-               '__main__'        : 2000}
+               '__main__'        : 30000}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 
