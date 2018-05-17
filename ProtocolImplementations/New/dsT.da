@@ -19,6 +19,7 @@ Protocol Diagram:
 """
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
 
 class RoleA (process):
     def setup(skA, B, pkB):
@@ -31,7 +32,7 @@ class RoleA (process):
         send(('msg01', i, encrypt(sign(k, key = skA), key = pkB)), to = B)
         await(some(received(('msg02', _i, m), from_ = _B)))
         s = decrypt(m, key = k)
-        output('DECRYPTED MESSAGE:', s)
+        #output('DECRYPTED MESSAGE:', s)
         i += 1
 
 class RoleB (process):

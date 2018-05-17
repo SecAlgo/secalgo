@@ -1,10 +1,4 @@
 import sys, os, subprocess, time, json, argparse
-#from sa import secalgoB.useTimers
-#from sa import secalgoB.proto_loops
-#from sa import sec_algo_pycrypto.usePickleTimer
-#from sa import sec_algo_pycrypto.pickle_loops
-import sa.secalgoB as SA
-import sa.sec_algo_pycrypto as SA_PyCrypto
 sa_path = '/home/christopher/secalgo/'
 signal_path = '/home/christopher/secalgo-org/examples/signal/'
 full_path = sa_path + 'ProtocolImplementations/New/'
@@ -77,8 +71,8 @@ p_main_skip = {'dsT'             : 2,
 
 
 def measure_proto_time(p, iter_num, iter_label):
-    print('Protocol Timing Experiment for:', p, flush = True)
     if p in protocols:
+        print('Protocol Timing Experiment for:', p, flush = True)
         if p == 'dhke-1T' or p == 'ds-pkT' or p == 'sdhT' or p == 'tls1_2':
             cmd = ['python3', '-m', 'da', m_buf_opt, m_buf_size,
                    full_path + p + da_ext]

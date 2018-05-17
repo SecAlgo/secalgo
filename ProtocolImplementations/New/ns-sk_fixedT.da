@@ -34,7 +34,7 @@ class RoleS (process):
     def run():
         terminate = False
         await(terminate)
-        reset(received)
+        #reset(received)
 
     def receive(msg=('msg3', i, (A, B, nA, encBS)), from_ = _A):
         if some((_A, nB1) in [decrypt(encBS, key = kBS)]):
@@ -64,9 +64,8 @@ class RoleA (process):
         nB = decrypt(encBA, key = kAB)
         send(('msg7', i, encrypt((nB - 1), key = kAB)), to = B)
         #output('A - Key Exchange Complete')
-        #print(str(i) + ',', end='', flush = True)
         i += 1
-        reset(received)
+        #reset(received)
 
 class RoleB (process):
     def setup(S, kBS):
@@ -77,7 +76,7 @@ class RoleB (process):
     def run():
         terminate = False
         await(terminate)
-        reset(received)
+        #reset(received)
 
 
     def receive(msg=('msg1', i, A), from_ = _A):
@@ -91,7 +90,6 @@ class RoleB (process):
                    has = ((nB2 - 1) == decrypt(enc_AB, key = kAB))))
         #output('B - Key Exchange Complete')
         terminate = True
-        #print(str(i) + ';', end='', flush = True)
         
 def main():
     kAS = keygen('shared')

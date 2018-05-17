@@ -26,6 +26,7 @@ did fix for (6):
 import sys
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
 
 class roleS (process):
     def setup(skS, clientKeys, loops):
@@ -61,7 +62,7 @@ class roleA (process):
         await(some(received(('msg6', _i, encBA), from_ = _B),
                    has = some((_nA, nB, _B) in [decrypt(encBA, key = skA)])))
         send(('msg7', i, encrypt(nB, key = pkB)), to = B)
-        output('A authenticated B')
+        #output('A authenticated B')
         i += 1
 
 class roleB (process):
@@ -83,7 +84,7 @@ class roleB (process):
         send(('msg6', i, encrypt((nA, nB, self), key = pkA)), to = A)
         await(some(received(('msg7', _i, encAB2), from_ = _A),
                    has = (decrypt(encAB2, key = skB) == nB)))
-        output('B authenticated A')
+        #output('B authenticated A')
         terminate = True
 
 def main():

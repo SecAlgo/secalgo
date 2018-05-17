@@ -24,6 +24,7 @@ a nonce).
 
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer, dec_timer
 configure(verify_returns = 'bool')
 
 class RoleA(process):
@@ -41,7 +42,7 @@ class RoleA(process):
             send(('msg3', i, self, s, sign((self, s, dh_X, dh_Y, B), key = skSigA)), to = B)
             kAB = local_pow(dh_Y, dh_x, p)
             dh_x = None
-            output('A - Authenticated Exchange of Key Material Complete')
+            #output('A - Authenticated Exchange of Key Material Complete')
             #output('Session Key:', (kAB, s))
         i += 1
 
@@ -63,8 +64,9 @@ class RoleB(process):
         dh_y = None
         await(some(received(('msg3', _i, _A, _s, m), from_ = _A)))
         if verify(((A, s, dh_X, dh_Y, self), m), key = pkSigA) != None:
-            output('B - Authenticated Exchange of Key Material Complete')
+            #output('B - Authenticated Exchange of Key Material Complete')
             #output('Session Key:', (kAB, s))
+            pass
         terminate = True
 
 def main():

@@ -23,6 +23,7 @@ protocol.
 import sys, time
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
 configure(verify_returns = 'bool')
 
 class roleA(process):
@@ -43,7 +44,7 @@ class roleA(process):
             send(('msg03', i, (A, pkA, tA, sigA), (B, pkB, tB, sigB),
                   encrypt(((kAB, tAB), sign((kAB, tAB), key = skA)), key = pkB)),
                  to = B)
-            output('Initiator: Key Exchange Complete')
+            #output('Initiator: Key Exchange Complete')
         else:
             output('Initiator: Could not verify certificates')
         i += 1
@@ -63,7 +64,8 @@ class roleB(process):
             verify(((B, pkB, tB), sigB), key = pkS) and B == self):
             (kAB, tAB), sigAB = decrypt(encKey, key = skB)
             if verify(((kAB, tAB), sigAB), key = pkA):
-                output('Recipient: Key Exchange Complete')
+                #output('Recipient: Key Exchange Complete')
+                pass
             else:
                 output('Recipient: Could not verify signature on shared key')
         else:
@@ -86,7 +88,7 @@ class roleS(process):
         tA = tB = time.time()
         send(('msg02', i, (A, pkA, tA, sign((A, pkA, tA), key = skS)),
             (B, pkB, tB, sign((B, pkB, tB), key = skS))), to = A)
-        output('Server: Certificates Sent')
+        #output('Server: Certificates Sent')
         terminate = True
 
 def main():

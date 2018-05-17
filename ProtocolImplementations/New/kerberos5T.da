@@ -29,6 +29,7 @@ S  = Application Server
 import sys, time, random
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
 
 DEFAULT_TGT_DURATION = 36000 #ten hours
 DEFAULT_TKT_DURATION = 3600 #one hour
@@ -129,7 +130,7 @@ class Role_AuthServer(process):
         
         #Now send reply
         #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
-        output('AS - Sent TGT to client,', cname)
+        #output('AS - Sent TGT to client,', cname)
         send(('krb_as_rep', i, 5, 11, [], 'TEST', cname, new_tgt,
               encrypt(as_rep_enc_part, key = client_keys[cname])), to = C)
         terminate = True
@@ -209,7 +210,7 @@ class Role_TGS(process):
             return
 
         #TGS has now authenticated identity of client
-        output('TGS - Authenticated client:', au_cname)
+        #output('TGS - Authenticated client:', au_cname)
 
         #Now that the client's identity has been authenticated, its request for
         #credentials for an application server can now be processes.
@@ -279,7 +280,7 @@ class Role_TGS(process):
             
         #Now send reply
         #(pvno, msg-type, padata*, crealm, cname, ticket, enc-part)
-        output('TGS - Sent Ticket for server', sname, 'to client,', C) 
+        #output('TGS - Sent Ticket for server', sname, 'to client,', C) 
         send(('krb_tgs_rep', i, 5, 13, [], 'TEST', tgt_cname, new_ticket,
               encrypt(tgs_rep_enc_part, key = key_C_TGS)), to = C)
         terminate = True
@@ -357,7 +358,7 @@ class Role_AppServer(process):
             return
 
         #S has now authenticated identity of client
-        output('Server:', S, '- Authenticated client:', au_cname)
+        #output('Server:', S, '- Authenticated client:', au_cname)
         terminate = True
         
 class Role_C(process):
@@ -379,7 +380,7 @@ class Role_C(process):
         #etype 17 = aes128
         as_req_body = [dict(), C, 'TEST', S, 0, time.time() + (5 * 3600), 0,
                        nonce_C_AS, [18, 17], [], [], []]
-        output('Client - Sent request to AS for credentials for server,', S)
+        #output('Client - Sent request to AS for credentials for server,', S)
         send(('krb_as_req', i, 5, 10, [], as_req_body), to = AS)
 
         #await KRB_AS_REP containing TGT and session key
@@ -402,8 +403,9 @@ class Role_C(process):
                 #check host address field (caddr), if used
                 #MAY check the last-req and key_expiration fields to recommend
                 #client change password
-                output('Client - Acquired TGT from AS')
+                #output('Client - Acquired TGT from AS')
                 #output(decrypt(enc_part, key_C_AS))
+                pass
         else:
             key_C_TGS = None
             tgt = None
@@ -433,8 +435,7 @@ class Role_C(process):
 
             #Third, send KRB_TGS_REQ
             #KRB_TGS_REQ = [pvno, msg-type, padata, req-body]
-            output('Client - Sent TGT and request to TGS for credentials',
-                   'for server,', S)
+            #output('Client - Sent TGT and request to TGS for credentials', 'for server,', S)
             send(('krb_tgs_req', i, 5, 12, [tgs_krb_ap_req], tgs_req_body),
                  to = TGS)
 
@@ -457,8 +458,9 @@ class Role_C(process):
                     #check host address field (caddr), if used
                     #MAY check the last-req and key_expiration fields to
                     #recommend client change password
-                    output('Client - Acquired Ticket from TGS')
+                    #output('Client - Acquired Ticket from TGS')
                     #output(decrypt(tgs_enc_part, key_C_TGS))
+                    pass
             else:
                 key_C_S = None
                 ticket = None
@@ -474,7 +476,7 @@ class Role_C(process):
             #KRB_AP_REQ = [pvno, msg-type, ap-options, ticket, authenticator]
             send(('krb_ap_req', i, 5, 14, dict(), ticket,
                   encrypt(ap_authenticator, key = key_C_S)), to = S)
-            output('Client - Sent authentication request to server,', S)
+            #output('Client - Sent authentication request to server,', S)
             i += 1
         
 def main():

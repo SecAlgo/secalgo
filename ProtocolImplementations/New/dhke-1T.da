@@ -16,6 +16,7 @@ identity. k is a randomly generated index for a hash function.
 """
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer, dec_timer
 import random
 from Crypto.Random.random import StrongRandom
 from Crypto.Hash import SHA256
@@ -37,7 +38,7 @@ class RoleA (process):
                 #Hash function whose index is k
                 kAB = key_derivation(dh_Y, dh_x, pkA[2])
                 send(('msg3', i, BitGen(kAB)), to = B)
-                output('A - Authenticated Exchange of Key Material Complete')
+                #output('A - Authenticated Exchange of Key Material Complete')
         i += 1
         
 class RoleB (process):
@@ -62,7 +63,8 @@ class RoleB (process):
                 kAB = key_derivation(dh_X, dh_y, pkA[2])
                 await(some(received(('msg3', _i, m2), from_ = A)))
                 if BitGen(kAB) == m2:
-                    output('B - Authenticated Exchange of Key Material Complete')
+                    pass
+                    #output('B - Authenticated Exchange of Key Material Complete')
         terminate = True
 
 def main():

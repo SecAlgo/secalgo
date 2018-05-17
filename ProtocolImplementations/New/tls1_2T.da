@@ -63,6 +63,7 @@ from Crypto.Hash import SHA256
 from Crypto.Hash import HMAC
 #from sa.secalgo import *
 from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer, dec_timer
 configure(verify_returns = 'bool')
 
 # Protocol version number for SSL/TLS
@@ -185,7 +186,8 @@ def _p_hash(secret, seed, output_length):
         result.extend(h.digest())
         i += 1
     return bytes(result[:output_length])
-    
+
+@dec_timer
 def tls_prf_sha256(secret, label, seed, output_length):
     return _p_hash(secret, label + seed, output_length)
 
@@ -363,7 +365,7 @@ class TLS_Peer(process):
                            version, comp_length, comp_fragment), cipher_mac),
                           key = current_read_state.mac_key):
                 #send message authentication error
-                output('MAC VERIFICATION ERROR')
+                #output('MAC VERIFICATION ERROR')
                 return
 
         # Fourth, apply the active decompression method
@@ -453,7 +455,7 @@ class TLS_Peer(process):
     
     def initiate_handshake(server):
         i1 = i
-        output('CLIENT - begin Handshake')
+        #output('CLIENT - begin Handshake')
         # handshake_id's are not a part of the protocol. I added them to make
         # writing correct awaits easier. These are the same sorts of session
         # id's we have used elsewhere--a tuple of a process id and a counter
@@ -544,7 +546,7 @@ class TLS_Peer(process):
                         verdict = False
             if not verdict:
                 #send alert
-                output('CLIENT - CERTIFICATE AUTHENTICATION FAILURE')
+                #output('CLIENT - CERTIFICATE AUTHENTICATION FAILURE')
                 return
             server_public_key = cert_list[0][1]
             
@@ -716,12 +718,12 @@ class TLS_Peer(process):
                                      VERIFY_DATA_LENGTH)
         if client_data != finish_data:
             #send alert
-            output('CLIENT - Handshake Failed')
+            #output('CLIENT - Handshake Failed')
             return
 
         # Handshake complete
         reset_security_parameters_and_state(self.ce)
-        output('CLIENT - Handshake complete')
+        #output('CLIENT - Handshake complete')
         
     # Receives Handshake type TLS messages, but the messages are still enclosed
     # within the Record layer structure
@@ -738,7 +740,7 @@ class TLS_Peer(process):
         # from here.
         if CLIENT_HELLO != handshake_msg[0]:
             return
-        output('SERVER - begin Handshake')
+        #output('SERVER - begin Handshake')
 
         # Will first set the connection end in the security parameters to
         # indicate that this peer is acting as the server
@@ -776,7 +778,8 @@ class TLS_Peer(process):
         # If the server wants to indicate that the session being established
         # will not be cached it can return an empty session_id.
         if session_id != None:
-            output('Client attempting abbreivated handshake.')
+            pass
+            #output('Client attempting abbreivated handshake.')
             # ...check cache for associated security parameters.
             # if resumption okay, make stores parameters the pending parameters
             # then skip to (change_cipher_spec and) Finished messages
@@ -939,7 +942,7 @@ class TLS_Peer(process):
                                          VERIFY_DATA_LENGTH)
             if server_data != finish_data:
                 # ...send alert
-                output('SERVER - Handshake failed')
+                #output('SERVER - Handshake failed')
                 return
             handshake_messages.append(handshake_cfin)
             shm += b'msg' + str(m_count).encode('ascii')
@@ -983,14 +986,14 @@ class TLS_Peer(process):
             send((i2, record_wrapper(TYPE_HANDSHAKE, handshake_sfin),
                   handshake_id, msg_counter), to = client)
             reset_security_parameters_and_state(self.ce)
-            output('SERVER - Handshake Complete')
+            #output('SERVER - Handshake Complete')
         terminate = True
 
     # This is the handler for ChangeCipherSpec messages.
     # ChangeCipherSpec = Struct{type}
     def receive(msg=(i3, (20, _PROTOCOL_VERSION_1_2, None, cipher_fragment),
                      handshake_id, msg_counter)):
-        output('CHANGE_CIPHER_SPEC!!!!!!!!!!!!!!!!!!!')
+        #output('CHANGE_CIPHER_SPEC!!!!!!!!!!!!!!!!!!!')
         current_rsp = pending_rsp
         current_read_state = pending_read_state
         pending_rsp = Security_Parameters(current_rsp.connection_end)

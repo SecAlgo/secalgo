@@ -10,8 +10,8 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
-#useTimers = {'library' : False, 'protocol' : False}
-useTimers = {'library' : False, 'protocol' : True}
+useTimers = {'library' : False, 'protocol' : False}
+#useTimers = {'library' : False, 'protocol' : True}
 #useTimers = {'library' : True, 'protocol' : False}
 
 proto_loops = {'dsT'             : 600,

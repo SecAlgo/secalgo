@@ -21,6 +21,7 @@ Protocol Diagram:
 import sys
 #from sa.secalgo import *
 from sa.secalgoB import*
+from sa.timers import dec_proto_run_timer
     
 class RoleS (process):
     def setup(kAS, kBS):
@@ -54,7 +55,7 @@ class RoleA (process):
         await(some(received(('msg4', _i, encBA), from_ = _B)))
         nR = decrypt(encBA, key = kAB)
         send(('msg5', i, encrypt((nR - 1), key = kAB)), to = B)
-        output('A - Key Exchange Complete')
+        #output('A - Key Exchange Complete')
         i += 1
 
 class RoleB (process):
@@ -73,7 +74,7 @@ class RoleB (process):
             send(('msg4', i, encrypt(nB, key = kAB)), to = A)
             await(some(received(('msg5', _i, encAB), from_ = _A),
                        has = ((nB - 1) == decrypt(encAB, key = kAB))))
-            output('B - Key Exchange Complete')
+            #output('B - Key Exchange Complete')
         terminate = True
 
 def main():
