@@ -17,17 +17,18 @@ identity. k is a randomly generated index for a hash function.
 #from sa.secalgo import *
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer, dec_timer
-import random
+import random, gc
 from Crypto.Random.random import StrongRandom
 from Crypto.Hash import SHA256
 configure(verify_returns = 'bool')
 
 class RoleA (process):
     def setup(skA, pkA, B, pkB, certA, pkSigT):
+        gc.disable()
         at_fork()
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         dh_x, dh_X, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
         send(('msg1', i, dh_X, sign((dh_X, B), key = skA), certA), to = B)
@@ -43,10 +44,11 @@ class RoleA (process):
         
 class RoleB (process):
     def setup(skB, pkB, pkA, certB, pkSigT):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -68,6 +70,7 @@ class RoleB (process):
         terminate = True
 
 def main():
+    gc.disable()
     skSigA, pkSigA = keygen('public')
     skSigB, pkSigB = keygen('public')
     skSigT, pkSigT = keygen('public')

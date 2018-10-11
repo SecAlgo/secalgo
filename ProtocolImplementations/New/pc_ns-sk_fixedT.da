@@ -25,8 +25,8 @@ from sa.timers import dec_proto_run_timer
 from Crypto.Cipher import AES
 from Crypto import Random
 from Crypto.Random import random
-from sa.Misc.Padding import pkcs7_pad as pad, pkcs7_unpad as unpad
-    
+from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
+
 class RoleS (process):
     def setup(kAS, kBS, loops, test_size):
         Random.atfork()
@@ -40,14 +40,14 @@ class RoleS (process):
 
     def receive(msg=('msg3', i, (A, B, nA, encBS)), from_ = _A):
         cipher = AES.new(kBS, AES.MODE_CBC, encBS[:AES.block_size])
-        if some((_A, nB1) in [pickle.loads(unpad(cipher.decrypt(encBS[AES.block_size:])))]):
+        if some((_A, nB1) in [pickle.loads(pkcs7_unpad(cipher.decrypt(encBS[AES.block_size:])))]):
             kAB = Random.new().read(test_size)
             ivB = Random.new().read(AES.block_size)
             cipherB = AES.new(kBS, AES.MODE_CBC, ivB)
             ivA = Random.new().read(AES.block_size)
             cipherA = AES.new(kAS, AES.MODE_CBC, ivA)
-            send(('msg4', i, ivA + cipherA.encrypt(pad(pickle.dumps((nA, kAB, B,
-                    ivB + cipherB.encrypt(pad(pickle.dumps((kAB, nB1, A))))))))), to = A)
+            send(('msg4', i, ivA + cipherA.encrypt(pkcs7_pad(pickle.dumps((nA, kAB, B,
+                    ivB + cipherB.encrypt(pkcs7_pad(pickle.dumps((kAB, nB1, A))))))))), to = A)
         terminate = True
 
 class RoleA (process):
@@ -64,15 +64,15 @@ class RoleA (process):
         await(some(received(('msg4', _i, encAS), from_ = _S)))
         cipherAS = AES.new(kAS, AES.MODE_CBC, encAS[:AES.block_size])
         if some((_nA, kAB, _B, encSB) in
-                [pickle.loads(unpad(cipherAS.decrypt(encAS[AES.block_size:])))]):
+                [pickle.loads(pkcs7_unpad(cipherAS.decrypt(encAS[AES.block_size:])))]):
             kABu = kAB[:32]
             send(('msg5', i, encSB), to = B)
             await(some(received(('msg6', _i, encBA), from_ = _B)))
             cipherBA = AES.new(kABu, AES.MODE_CBC, encBA[:AES.block_size])
-            nB = pickle.loads(unpad(cipherBA.decrypt(encBA[AES.block_size:])))
+            nB = pickle.loads(pkcs7_unpad(cipherBA.decrypt(encBA[AES.block_size:])))
             ivAB = Random.new().read(AES.block_size)
             cipherAB = AES.new(kABu, AES.MODE_CBC, ivAB)
-            send(('msg7', i, ivAB + cipherAB.encrypt(pad(pickle.dumps((nB - 1))))), to = B)
+            send(('msg7', i, ivAB + cipherAB.encrypt(pkcs7_pad(pickle.dumps((nB - 1))))), to = B)
             #output('A - Key Exchange Complete')
         self.i += 1
         reset(received)
@@ -93,20 +93,20 @@ class RoleB (process):
             nB1 = random.StrongRandom().getrandbits(128)
             ivBS = Random.new().read(AES.block_size)
             cipherBS = AES.new(kBS, AES.MODE_CBC, ivBS)
-            send(('msg2', i, ivBS + cipherBS.encrypt(pad(pickle.dumps((A, nB1))))), to = A)
+            send(('msg2', i, ivBS + cipherBS.encrypt(pkcs7_pad(pickle.dumps((A, nB1))))), to = A)
             await(some(received(('msg5', _i, encSB), from_ = _A)))
             cipherBS = AES.new(kBS, AES.MODE_CBC, encSB[:AES.block_size])
             if some((kAB, _nB1, _A) in
-                    [pickle.loads(unpad(cipherBS.decrypt(encSB[AES.block_size:])))]):
+                    [pickle.loads(pkcs7_unpad(cipherBS.decrypt(encSB[AES.block_size:])))]):
                 kABu = kAB[:32]
                 nB2 = random.StrongRandom().getrandbits(128)
                 ivBA = Random.new().read(AES.block_size)
                 cipherBA = AES.new(kABu, AES.MODE_CBC, ivBA)
-                send(('msg6', i, ivBA + cipherBA.encrypt(pad(pickle.dumps(nB2)))), to = A)
+                send(('msg6', i, ivBA + cipherBA.encrypt(pkcs7_pad(pickle.dumps(nB2)))), to = A)
                 await(some(received(('msg7', _i, encAB), from_ = _A)))
                 cipherAB = AES.new(kABu, AES.MODE_CBC, encAB[:AES.block_size])
                 if ((nB2 - 1) ==
-                    pickle.loads(unpad(cipherAB.decrypt(encAB[AES.block_size:])))):
+                    pickle.loads(pkcs7_unpad(cipherAB.decrypt(encAB[AES.block_size:])))):
                     pass
                     #output('B - Key Exchange Complete')
         terminate = True

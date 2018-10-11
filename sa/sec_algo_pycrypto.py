@@ -102,7 +102,8 @@ def keygen_public(key_size, alg, hash_alg, curve):
                          'size': key_size, 'hash' : hash_alg, 'key' : priv_key}
         pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
                         'size': key_size, 'hash' : hash_alg, 'key' : pub_key}
-        return priv_key_dict, pub_key_dict
+        #return priv_key_dict, pub_key_dict
+        return [priv_key_dict, pub_key_dict]
     elif alg == 'ECC':
         if curve == 'X25519':
             key_pair = X25519PrivateKey.generate()

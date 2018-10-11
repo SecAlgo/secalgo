@@ -20,7 +20,7 @@ they do not explain how this validation should be incorporated into the
 protocol.
 """
 
-import sys, time
+import sys, time, gc
 #from sa.secalgo import *
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
@@ -28,10 +28,11 @@ configure(verify_returns = 'bool')
 
 class roleA(process):
     def setup(B, S, skA, pkA, pkS):
+        gc.disable()
         at_fork()
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         send(('msg01', i, self, B), to = S)
         await(some(received(('msg02', _i, (A, _pkA, tA, sigA),
@@ -51,10 +52,11 @@ class roleA(process):
 
 class roleB(process):
     def setup(S, skB, pkB, pkS):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -74,10 +76,11 @@ class roleB(process):
 
 class roleS(process):
     def setup(skS, pkS, client_keys):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -92,6 +95,7 @@ class roleS(process):
         terminate = True
 
 def main():
+    gc.disable()
     skS, pkS = keygen('public')
     skA, pkA = keygen('public')
     skB, pkB = keygen('public')

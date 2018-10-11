@@ -59,7 +59,6 @@ def configure(**configs):
             configuration[k] = v
 #end configure()
 
-#@dec_timer
 def at_fork():
     if configuration['backend'] == 'SA_PyCrypto':
         raf()

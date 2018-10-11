@@ -23,16 +23,18 @@ a nonce).
 '''
 
 #from sa.secalgo import *
+import gc
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer, dec_timer
 configure(verify_returns = 'bool')
 
 class RoleA(process):
     def setup(skSigA, pkSigA, B, pkSigB, p, g):
+        gc.disable()
         at_fork()
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         s = nonce(128)
         dh_x, dh_X, _, _ = keygen('dh', dh_p = p, dh_g = g)
@@ -48,10 +50,11 @@ class RoleA(process):
 
 class RoleB(process):
     def setup(skSigB, pkSigB, pkSigA, p, g):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -70,6 +73,7 @@ class RoleB(process):
         terminate = True
 
 def main():
+    gc.disable()
     skSigA, pkSigA = keygen('public')
     skSigB, pkSigB = keygen('public')
     _, _, dh_g, dh_p = keygen('dh', dh_group = 17)

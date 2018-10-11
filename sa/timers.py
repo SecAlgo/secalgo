@@ -17,8 +17,8 @@ useTimers = {'library' : False, 'protocol' : False}
 proto_loops = {'dsT'             : 600,
                'ds-pkT'          : 400,
                'ns-skT'          : 2000,
-               'ns-sk_fixedT'    : 2000,
-               'pc_ns-sk_fixedT' : 2000,
+               'ns-sk_fixedT'    : 12000,
+               'pc_ns-sk_fixedT' : 12000,
                'ns-pkT'          : 300,
                'orT'             : 2000,
                'wlT'             : 2000,
@@ -28,7 +28,7 @@ proto_loops = {'dsT'             : 600,
                'kerberos5T'      : 3000,
                'tls1_2T'         : 300,
                'x3dhT'           : 100,
-               '__main__'        : 30000}
+               '__main__'        : 12000}
 
 keyed_methods = {'encrypt', 'decrypt', 'sign', 'verify'}
 
@@ -41,10 +41,10 @@ public_method_loops = {'keygen'  : 25,
 shared_method_loops = {'keygen'  : 60000,
                        'encrypt' : 50000,
                        'decrypt' : 200000,
-                       'sign'    : 15000,
-                       'verify'  : 15000,
+                       'sign'    : 15000, #200000,
+                       'verify'  : 15000, #200000,
                        'nonce'   : 60000,
-                       'BitGen'  : 250,
+                       'BitGen'  : 250, #250000,
                        'key_derivation' : 250,
                        'local_pow' : 40,
                        'tls_prf_sha256' : 50000}
@@ -90,14 +90,20 @@ def dec_proto_await_timer(func):
 
 def dec_timer(func):
     def timer(*args, **kwargs):
-        start_time = time.process_time()
         if ((func.__name__ in keyed_methods and
              kwargs['key']['alg'] in PUBLIC_CIPHERS)
             or (func.__name__ is 'keygen' and
                 (args[0] in PUBLIC_CIPHERS or args[0] == 'dh'))):
             loops = public_method_loops[func.__name__]
+#        elif func.__name__ is 'keygen' and args[0] == 'dh':
+#            loops = 400
+#        elif (func.__name__ is 'keygen' and
+#              (args[0] == 'shared' or args[0] == 'mac') and
+#              'key_mat' in kwargs):
+#            loops = 2000000
         else:
             loops = shared_method_loops[func.__name__]
+        start_time = time.process_time()
         for i in range(loops):
             result = func(*args, **kwargs)
         print(json.dumps([func.__name__, start_time,

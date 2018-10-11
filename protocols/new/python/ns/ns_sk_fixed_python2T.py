@@ -8,6 +8,7 @@ import json
 import pickle
 import threading
 import multiprocessing
+import gc
 from Crypto.Random.random import getrandbits #for nonces
 from Crypto import Random #for keys and IVs
 from Crypto.Cipher import AES #encryption primitive
@@ -64,6 +65,7 @@ def nonce():
 
 class NS_Client(multiprocessing.Process):
     def __init__(self, h, p, hks, pks, kas, hb, pb):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_a = h
         self.port_a = p
@@ -168,6 +170,7 @@ class NS_Client(multiprocessing.Process):
 
 class NS_Recv(multiprocessing.Process):
     def __init__(self, h, p, kbs):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_b = h
         self.port_b = p
@@ -267,6 +270,7 @@ class NS_Recv(multiprocessing.Process):
 
 class NS_KS(multiprocessing.Process):
     def __init__(self, h, p, kas, kbs):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_ks = h
         self.port_ks = p
@@ -332,6 +336,7 @@ class NS_KS(multiprocessing.Process):
         self.terminate = True
 
 def main():
+    gc.disable()
     key_AS = Random.new().read(AES_KEY_SIZE)
     key_BS = Random.new().read(AES_KEY_SIZE)
     ns_ks = NS_KS(HOST_KS, PORT_KS, key_AS, key_BS)

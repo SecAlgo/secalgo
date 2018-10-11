@@ -58,7 +58,7 @@
 # successfully. The TLS peers are now free to share protected application
 # data.
 
-import time, sys, pickle
+import time, sys, pickle, gc
 from Crypto.Hash import SHA256
 from Crypto.Hash import HMAC
 #from sa.secalgo import *
@@ -230,6 +230,7 @@ class TLS_Peer(process):
         self.pending_write_state = Connection_State()
     
     def setup(ce, peer, secret_key, public_key, certificate_list):
+        gc.disable()
         self.terminate = False
         self.i = 1
         self.max_hs_id = 0
@@ -999,7 +1000,7 @@ class TLS_Peer(process):
         pending_rsp = Security_Parameters(current_rsp.connection_end)
         pending_read_state = Connection_State()
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         if peer != None:
             initiate_handshake(peer)
@@ -1009,6 +1010,7 @@ class TLS_Peer(process):
             await(terminate)
         
 def main():
+    gc.disable()
     config(channel = 'reliable')
     tls_server = new(TLS_Peer)
     tls_client = new(TLS_Peer)

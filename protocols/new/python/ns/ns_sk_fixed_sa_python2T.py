@@ -8,6 +8,7 @@ import json
 import pickle
 import threading
 import multiprocessing
+import gc
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
 
@@ -20,6 +21,7 @@ PORT_KS = 1977
 
 class NS_Client(multiprocessing.Process):
     def __init__(self, h, p, hks, pks, kas, hb, pb):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_a = h
         self.port_a = p
@@ -110,6 +112,7 @@ class NS_Client(multiprocessing.Process):
 
 class NS_Recv(multiprocessing.Process):
     def __init__(self, h, p, kbs):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_b = h
         self.port_b = p
@@ -197,6 +200,7 @@ class NS_Recv(multiprocessing.Process):
 
 class NS_KS(multiprocessing.Process):
     def __init__(self, h, p, kas, kbs):
+        gc.disable()
         multiprocessing.Process.__init__(self)
         self.host_ks = h
         self.port_ks = p
@@ -253,6 +257,7 @@ class NS_KS(multiprocessing.Process):
         self.terminate = True
 
 def main():
+    gc.disable()
     key_AS = keygen('shared')
     key_BS = keygen('shared')
     ns_ks = NS_KS(HOST_KS, PORT_KS, key_AS, key_BS)

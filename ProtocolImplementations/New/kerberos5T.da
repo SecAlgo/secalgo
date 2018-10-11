@@ -26,7 +26,7 @@ S  = Application Server
 
 """
 
-import sys, time, random
+import sys, time, random, gc
 #from sa.secalgo import *
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
@@ -40,6 +40,7 @@ KRB_AP_REQ_TYPE = 14 #msg-type value for krb_ap_req messages
 class Role_AuthServer(process):
     #give citations to specification
     def setup(clients, servers, TGS, client_keys, server_keys, key_TGS):
+        gc.disable()
         self.terminate = False
         self.supported_etypes = {17, 18} #cite and give name for constant
         self.max_tgt_duration = DEFAULT_TGT_DURATION
@@ -51,7 +52,7 @@ class Role_AuthServer(process):
         for s in servers:
             per_server_lifetimes[s] = DEFAULT_TGT_DURATION
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -137,6 +138,7 @@ class Role_AuthServer(process):
             
 class Role_TGS(process):
     def setup(servers, AS, key_AS_TGS, server_keys):
+        gc.disable()
         self.terminate = False
         self.supported_etypes = {17, 18}
         self.skew = DEFAULT_SKEW
@@ -145,7 +147,7 @@ class Role_TGS(process):
         for s in server_keys:
             per_server_lifetimes[s] = DEFAULT_TKT_DURATION
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -287,11 +289,12 @@ class Role_TGS(process):
         
 class Role_AppServer(process):
     def setup(AS, TGS, key_S_AS, key_S_TGS):
+        gc.disable()
         self.terminate = False
         self.S = self
         self.skew = DEFAULT_SKEW
         
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -363,10 +366,11 @@ class Role_AppServer(process):
         
 class Role_C(process):
     def setup(realm, servers, AS, TGS, key_C_AS):
+        gc.disable()
         self.C = self
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         #select an application server to access
         S = random.choice(tuple(servers))
@@ -480,6 +484,7 @@ class Role_C(process):
             i += 1
         
 def main():
+    gc.disable()
     num_clients = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     num_servers = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     C = new(Role_C, num = num_clients)

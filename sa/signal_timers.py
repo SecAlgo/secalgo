@@ -8,9 +8,9 @@ SIGN = 3
 VERIFY = 4
 NONCE = 4
 
-useTimers = {'library' : False, 'protocol' : False}
+#useTimers = {'library' : False, 'protocol' : False}
 #useTimers = {'library' : False, 'protocol' : True}
-#useTimers = {'library' : True, 'protocol' : False}
+useTimers = {'library' : True, 'protocol' : False}
 
 proto_loops = {'x3dhT'                    : 1500,
                'doubleratchet_dist_testT' : 600,
@@ -83,7 +83,6 @@ def dec_proto_await_timer(func):
 
 def dec_timer(func):
     def timer(*args, **kwargs):
-        start_time = time.process_time()
         #if ((func.__name__ in keyed_methods and
         #     kwargs['key']['alg'] in PUBLIC_CIPHERS)
         #    or (func.__name__ is 'keygen' and
@@ -91,6 +90,7 @@ def dec_timer(func):
         #    loops = public_method_loops[func.__name__]
         #else:
         loops = shared_method_loops[func.__name__]
+        start_time = time.process_time()
         for i in range(loops):
             result = func(*args, **kwargs)
         print(json.dumps([func.__name__, start_time,

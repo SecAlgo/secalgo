@@ -1,4 +1,4 @@
-import sys, time, resource, json, pickle
+import sys, time, resource, json, pickle, gc
 import sa.secalgoB as SA
 from Crypto import Random
 from Crypto.Cipher import AES
@@ -82,6 +82,7 @@ def time_SA_sym_keygen(loops):
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_keygen(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -102,6 +103,7 @@ def time_PyCrypto_sym_keygen(loops):
 #end def time_PyCrypto_sym_keygen()    
 
 def time_SA_sym_encrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -118,6 +120,7 @@ def time_SA_sym_encrypt(loops):
 #end def time_SA_sym_encrypt()
 
 def time_PyCrypto_sym_encrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -139,6 +142,7 @@ def time_PyCrypto_sym_encrypt(loops):
 #end def time_PyCrypto_sym_encrypt()
 
 def time_SA_sym_decrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -155,6 +159,7 @@ def time_SA_sym_decrypt(loops):
 #end def time_SA_sym_decrypt()
 
 def time_PyCrypto_sym_decrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -174,6 +179,7 @@ def time_PyCrypto_sym_decrypt(loops):
 #end def time_PyCrypto_sym_decrypt()
 
 def time_SA_mac_sign(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -190,6 +196,7 @@ def time_SA_mac_sign(loops):
 #end def time_SA_mac_sign()
 
 def time_PyCrypto_mac_sign(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -210,6 +217,7 @@ def time_PyCrypto_mac_sign(loops):
 #end def time_PyCrypto_mac_sign()
 
 def time_SA_mac_verify(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -227,6 +235,7 @@ def time_SA_mac_verify(loops):
 #end def time_SA_mac_verify()
 
 def time_PyCrypto_mac_verify(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -249,6 +258,7 @@ def time_PyCrypto_mac_verify(loops):
 #end def time_PyCrypto_mac_verify()
 
 def time_SA_pub_keygen(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -265,6 +275,7 @@ def time_SA_pub_keygen(loops):
 #end def time_SA_pub_keygen()
 
 def time_PyCrypto_pub_keygen(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -290,6 +301,7 @@ def time_PyCrypto_pub_keygen(loops):
 #end def time_PyCrypto_pub_keygen()
 
 def time_SA_pub_encrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -306,6 +318,7 @@ def time_SA_pub_encrypt(loops):
 #end def time_SA_pub_encrypt()
 
 def time_PyCrypto_pub_encrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -334,6 +347,7 @@ def time_PyCrypto_pub_encrypt(loops):
 #end def time_PyCrypto_pub_encrypt()
 
 def time_SA_pub_decrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -352,6 +366,7 @@ def time_SA_pub_decrypt(loops):
 #end def time_SA_pub_decrypt()
 
 def time_PyCrypto_pub_decrypt(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -376,6 +391,7 @@ def time_PyCrypto_pub_decrypt(loops):
 #end def time_PyCrypto_pub_decrypt()
 
 def time_SA_pub_sign(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -392,6 +408,7 @@ def time_SA_pub_sign(loops):
 #end def time_SA_pub_sign()
 
 def time_PyCrypto_pub_sign(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
@@ -414,6 +431,7 @@ def time_PyCrypto_pub_sign(loops):
 #end def time_PyCrypto_pub_sign()
 
 def time_SA_pub_verify(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -423,7 +441,7 @@ def time_SA_pub_verify(loops):
 
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
-
+    
     return collect_raw('SA_pub_verify',
                        (start_wc, start_cpu),
                        (end_wc, end_cpu),
@@ -431,6 +449,7 @@ def time_SA_pub_verify(loops):
 #end def time_SA_pub_verify()
 
 def time_PyCrypto_pub_verify(loops):
+    gc.disable()
     start_wc = time.perf_counter()
     start_cpu = resource.getrusage(resource.RUSAGE_SELF)
     
@@ -448,6 +467,8 @@ def time_PyCrypto_pub_verify(loops):
     end_wc = time.perf_counter()
     end_cpu = resource.getrusage(resource.RUSAGE_SELF)
 
+    #gc.collect()
+    
     return collect_raw('PC_pub_verify',
                        (start_wc, start_cpu ),
                        (end_wc, end_cpu),
@@ -493,7 +514,7 @@ def compute_results(rd):
 
 def compute_results2(rd, op, of):
     with open(of, "a") as f:
-        #f.write('Results for ' + op + ' - ' + str(len(rd[op])) + ':\n')
+        f.write('Results for ' + op + ' - ' + str(len(rd[op])) + ':\n')
         for round_data in rd[op]:
             #miliseconds
             avg = (((round_data['end'] - round_data['start'])
@@ -594,9 +615,10 @@ def run_tests(rounds, op):
     print('\n********** Tests Complete **********\n')
 
 if __name__ == "__main__":
+    gc.disable()
     op = sys.argv[1] if len(sys.argv) > 1 else 'all'
     output_file = sys.argv[2] if len(sys.argv) > 2 else 'out.txt'
-    rounds = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    rounds = int(sys.argv[3]) if len(sys.argv) > 3 else 50
     #print('TEST DATA:', type(TEST_DATA), ':', len(TEST_DATA))
     if op == 'all':
         for opitem in ops:

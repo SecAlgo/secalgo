@@ -23,17 +23,18 @@ Protocol Diagram:
 did fix for (6):
   (6) B -> A : enc((Na, Nb, B), pkA)
 """
-import sys
+import sys, gc
 #from sa.secalgo import *
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
 
 class roleS (process):
     def setup(skS, clientKeys, loops):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -49,10 +50,11 @@ class roleS (process):
 
 class roleA (process):
     def setup(skA, S, pkS, B, loops):
+        gc.disable()
         at_fork()
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         send(('msg1', i, (self, B)), to = S)
         await(some(received(('msg2', _i, sigS), from_ = _S),
@@ -67,10 +69,11 @@ class roleA (process):
 
 class roleB (process):
     def setup(skB, S, pkS, loops):
+        gc.disable()
         at_fork()
         self.terminate = False
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -88,6 +91,7 @@ class roleB (process):
         terminate = True
 
 def main():
+    gc.disable()
     loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     skS, pkS = keygen('public')
     skA, pkA = keygen('public')

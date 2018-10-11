@@ -18,15 +18,17 @@ Protocol Diagram:
   (2) B -> A: enc(s, k)
 """
 #from sa.secalgo import *
+import gc
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
 
 class RoleA (process):
     def setup(skA, B, pkB):
+        gc.disable()
         at_fork()
         self.i = 1
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         k = keygen('shared')
         send(('msg01', i, encrypt(sign(k, key = skA), key = pkB)), to = B)
@@ -37,11 +39,12 @@ class RoleA (process):
 
 class RoleB (process):
     def setup(skB, pkA):
+        gc.disable()
         at_fork()
         self.terminate = False
         self.s = 'secret'
 
-    @dec_proto_run_timer
+    #@dec_proto_run_timer
     def run():
         terminate = False
         await(terminate)
@@ -52,6 +55,7 @@ class RoleB (process):
         terminate = True
 
 def main():
+    gc.disable()
     skA, pkA = keygen('public')
     skB, pkB = keygen('public')
     B = new(RoleB, (skB, pkA))
