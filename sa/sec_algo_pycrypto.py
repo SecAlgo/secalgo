@@ -30,32 +30,23 @@ from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 #End ECDHE imports
 
-PAD_MODES = {'ECB', 'CBC'}
-IV_MODES = {'CBC', 'CFB'}
-BLOCK_CIPHERS = {'AES' : AES,
-                 'DES' : DES,
-                 'DES3' : DES3,
-                 'Blowfish' : Blowfish}
-BLOCK_SIZES = {'AES' : AES.block_size,
-               'DES' : DES.block_size,
-               'DES3': DES3.block_size,
-               'Blowfish' : Blowfish.block_size}
-BLOCK_MODES = {'AES' : {'ECB' : AES.MODE_ECB,
-                        'CBC' : AES.MODE_CBC,
-                        'CFB' : AES.MODE_CFB,
-                        'CTR' : AES.MODE_CTR},
-               'DES' : {'ECB' : DES.MODE_ECB,
-                        'CBC' : DES.MODE_CBC,
-                        'CFB' : DES.MODE_CFB,
-                        'CTR' : DES.MODE_CTR},
-               'DES3' : {'ECB' : DES3.MODE_ECB,
-                         'CBC' : DES3.MODE_CBC,
-                         'CFB' : DES3.MODE_CFB,
-                         'CTR' : DES3.MODE_CTR},
-               'Blowfish' : {'ECB' : Blowfish.MODE_ECB,
-                             'CBC' : Blowfish.MODE_CBC,
-                             'CFB' : Blowfish.MODE_CFB,
-                             'CTR' : Blowfish.MODE_CTR}}
+PAD_MODES = {'cbc'}
+IV_MODES = {'cbc', 'cfb'}
+BLOCK_CIPHERS = {'aes' : AES,
+                 'des3' : DES3,
+                 'blowfish' : Blowfish}
+BLOCK_SIZES = {'aes' : AES.block_size,
+               'des3': DES3.block_size,
+               'blowfish' : Blowfish.block_size}
+BLOCK_MODES = {'aes' :      {'cbc' : AES.MODE_CBC,
+                             'cfb' : AES.MODE_CFB,
+                             'ctr' : AES.MODE_CTR},
+               'DES3' :     {'cbc' : DES3.MODE_CBC,
+                             'cfb' : DES3.MODE_CFB,
+                             'ctr' : DES3.MODE_CTR},
+               'Blowfish' : {'cbc' : Blowfish.MODE_CBC,
+                             'cfb' : Blowfish.MODE_CFB,
+                             'ctr' : Blowfish.MODE_CTR}}
 
 def nonce(size):
     return getrandbits(size)
@@ -94,13 +85,13 @@ def keygen_shared(key_size, alg, mode, key_mat = None):
 #end keygen_shared()
 
 def keygen_public(key_size, alg, hash_alg, curve):
-    if alg == 'RSA':
+    if alg == 'rsa':
         key_pair = RSA.generate(key_size)
         priv_key = key_pair.exportKey()
         pub_key = key_pair.publickey().exportKey()
-        priv_key_dict = {'alg' : 'RSA', 'type' : 'private',
+        priv_key_dict = {'alg' : 'rsa', 'type' : 'private',
                          'size': key_size, 'hash' : hash_alg, 'key' : priv_key}
-        pub_key_dict = {'alg' : 'RSA', 'type' : 'public',
+        pub_key_dict = {'alg' : 'rsa', 'type' : 'public',
                         'size': key_size, 'hash' : hash_alg, 'key' : pub_key}
         #return priv_key_dict, pub_key_dict
         return [priv_key_dict, pub_key_dict]
@@ -108,9 +99,9 @@ def keygen_public(key_size, alg, hash_alg, curve):
         if curve == 'X25519':
             key_pair = X25519PrivateKey.generate()
             pub_key = key_pair.public_key().public_bytes()
-            priv_key_dict = {'alg' : 'ECC', 'curve' : 'X25519', 'type' : 'private',
+            priv_key_dict = {'alg' : 'ecc', 'curve' : 'x25519', 'type' : 'private',
                              'hash' : hash_alg, 'key': key_pair}
-            pub_key_dict = {'alg' : 'ECC', 'curve' : 'X25519', 'type' : 'public',
+            pub_key_dict = {'alg' : 'ecc', 'curve' : 'x25519', 'type' : 'public',
                             'hash' : hash_alg, 'key' : pub_key}
         elif curve == 'P-256': #SECP256r1
             key_pair = ec.generate_private_key(ec.SECP256R1(), default_backend())
@@ -119,9 +110,9 @@ def keygen_public(key_size, alg, hash_alg, curve):
                                               encryption_algorithm=serializtion.NoEncryption)
             pub_key = key_pair.public_key().public_bytes(encoding=serialization.Encoding.PEM,
                                                          format=serialization.PublicFormat.SubjectPublicKeyInfo)
-            priv_key_dict = {'alg' : 'ECC', 'curve' : 'P-256', 'type' : 'private',
+            priv_key_dict = {'alg' : 'ecc', 'curve' : 'p256', 'type' : 'private',
             'hash' : hash_alg, 'key': priv_key}
-            pub_key_dict = {'alg' : 'ECC', 'curve' : 'P-256', 'type' : 'public',
+            pub_key_dict = {'alg' : 'ecc', 'curve' : 'p256', 'type' : 'public',
                             'hash' : hash_alg, 'key' : pub_key}
         return priv_key_dict, pub_key_dict
     else:
@@ -184,7 +175,7 @@ def keygen_dh(key_size, use_group, dh_group, dh_mod_size, dh_p, dh_g):
     return (dh_x, dh_X, dh_g, dh_p)
 #end gen_dh_key()
 
-def sym_encrypt(plaintext, key, iv):
+def shared_key_encrypt(plaintext, key, iv):
     if not isinstance(plaintext, bytes):
         serial_pt = b'\1' + pickle.dumps(plaintext)
     else:
@@ -209,34 +200,31 @@ def sym_encrypt(plaintext, key, iv):
         else:
             preamble = iv
         encrypt_kwargs['IV'] = preamble
-    elif mode == 'CTR':
+    elif mode == 'ctr':
         #print('SYM_ENCRYPT: Generating a Counter', flush = True)
         preamble = Random.new().read(BLOCK_SIZES[alg] // 2)
         ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = preamble)
         encrypt_kwargs['counter'] = ctr
-    if alg == 'AES':
+    if alg == 'aes':
         #print('SYM_ENCRYPT: USING AES')
         encrypter = AES.new(k, **encrypt_kwargs)
-    elif alg == 'DES':
-        #print('SYM_ENCRYPT: USING DES')
-        encrypter = DES.new(k, **encrypt_kwargs)
-    elif alg == 'DES3':
+    elif alg == 'des3':
         #print('SYM_ENCRYPT: USING DES3')
         encrypter = DES3.new(k, **encrypt_kwargs)
-    elif alg == 'Blowfish':
+    elif alg == 'blowfish':
         #print('SYM_ENCRYPT: USING Blowfish')
         encrypter = Blowfish.new(k, **encrypt_kwargs)        
     return preamble + encrypter.encrypt(serial_pt)
-#end sym_encrypt()
+#end shared_key_encrypt()
 
-def asym_encrypt(plaintext, key):
+def public_key_encrypt(plaintext, key):
     if not isinstance(plaintext, bytes):
         serial_pt = b'\1' + pickle.dumps(plaintext)
     else:
         serial_pt = b'\0' + plaintext
     alg = key['alg']
     k = key['key']
-    if alg == 'RSA':
+    if alg == 'rsa':
         pubk = RSA.importKey(k)
         oaep_cipher = PKCS1_OAEP.new(pubk)
         try:
@@ -252,9 +240,9 @@ def asym_encrypt(plaintext, key):
         return ciphertext
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
-#end asym_encrypt()
+#end public_key_encrypt()
 
-def sym_decrypt(ciphertext, key):
+def shared_key_decrypt(ciphertext, key):
     alg = key['alg']
     mode = key['mode']
     k = key['key']
@@ -263,21 +251,18 @@ def sym_decrypt(ciphertext, key):
         #print("SYM_DECRYPT: Generating an IV", flush = True)
         preamble_length = BLOCK_SIZES[alg]
         decrypt_kwargs['IV'] = ciphertext[0:preamble_length]
-    elif mode == 'CTR':
+    elif mode == 'ctr':
         #print('SYM_DECRYPT: Generating a Counter', flush = True)
         preamble_length = BLOCK_SIZES[alg] // 2
         ctr = Counter.new(((BLOCK_SIZES[alg]*8)//2), prefix = ciphertext[0:preamble_length])
         decrypt_kwargs['counter'] = ctr
-    if alg == 'AES':
+    if alg == 'aes':
         #print('SYM_DECRYPT: USING AES')
         decrypter = AES.new(k, **decrypt_kwargs)
-    elif alg == 'DES':
-        #print('SYM_DECRYPT: USING DES')
-        decrypter = DES.new(k, **decrypt_kwargs)
-    elif alg == 'DES3':
+    elif alg == 'des3':
         #print('SYM_DECRYPT: USING DES3')
         decrypter = DES3.new(k, **decrypt_kwargs)
-    elif alg == 'Blowfish':
+    elif alg == 'blowfish':
         #print('SYM_DECRYPT: USING Blowfish')
         decrypter = Blowfish.new(k, **decrypt_kwargs)
     serial_pt = decrypter.decrypt(ciphertext[preamble_length:])
@@ -288,13 +273,13 @@ def sym_decrypt(ciphertext, key):
     else:
         return serial_pt[1:]
     return pt
-#end sym_decrypt()
+#end shared_key_decrypt()
 
-def asym_decrypt(ciphertext, key):
+def public_key_decrypt(ciphertext, key):
     alg = key['alg']
     size = key['size']
     k = key['key']
-    if alg == 'RSA':
+    if alg == 'rsa':
         privk = RSA.importKey(k)
         oaep_cipher = PKCS1_OAEP.new(privk)
         if len(ciphertext) > (size // 8): #Hybrid Encryption Used!
@@ -309,116 +294,80 @@ def asym_decrypt(ciphertext, key):
             return serial_pt[1:]
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end asym_decrypt()
+#end public_key_decrypt()
 
-hash_modules = {'SHA-224' : SHA224,
-                'SHA-256' : SHA256,
-                'SHA-384' : SHA384,
-                'SHA-512' : SHA512}
+hash_modules = {'sha224' : SHA224,
+                'sha256' : SHA256,
+                'sha384' : SHA384,
+                'sha512' : SHA512}
 
-def mac_sign(data, key):
+def shared_key_sign(data, key):
     if not isinstance(data, bytes):
-        serial_data = b'\1' + pickle.dumps(data)
+        serial_data = pickle.dumps(data)
     else:
-        serial_data = b'\0' + data
+        serial_data = data
     alg = key['alg']
     k = key['key']
     hash_alg = hash_modules[key['hash']]
-    if alg == 'HMAC':
-        h = HMAC.new(k, serial_data, hash_alg)
+    if alg == 'hmac':
+        h = HMAC.new(k, digestmod = hash_alg)
+        h.update(serial_data)
         sig = h.digest()
-        return (serial_data, sig)
+        return sig
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end mac_sign()    
+#end shared_key_sign()    
         
-def pubkey_sign(data, key):
+def public_key_sign(data, key):
     if not isinstance(data, bytes):
-        serial_data = b'\1' + pickle.dumps(data)
+        serial_data = pickle.dumps(data)
     else:
-        serial_data = b'\0' + data
+        serial_data = data
     alg = key['alg']
     k = key['key']
     hash_alg = hash_modules[key['hash']]
-    if alg == 'RSA':
+    if alg == 'rsa':
         privk = RSA.importKey(k)
         h = hash_alg.new(serial_data)
         signer = PKCS1_v1_5.new(privk)
         sig = signer.sign(h)
-        return (serial_data, sig)
+        return sig
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True) 
-#end pubkey_sign()
+#end public_key_sign()
 
-def mac_verify(data, key):
+def shared_key_verify(data, sig, key):
+    if not isinstance(data, bytes):
+        serial_data = pickle.dumps(data)
+    else:
+        serial_data = data
     alg = key['alg']
     k = key['key']
     hash_alg = hash_modules[key['hash']]
-    if alg == 'HMAC':
-        serial_data, sig = data
-        if (sig == HMAC.new(k, serial_data, hash_alg).digest()):
-            if serial_data[0]:
-                return pickle.loads(serial_data[1:])
-            else:
-                return serial_data[1:]
-        else:
-            return None
+    if alg == 'hmac':
+        h = HMAC.new(k, digestmod = hash_alg)
+        h.update(serial_data)
+        return sig == h.digest()
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end mac_verify()
+#end shared_key_verify()
 
-def mac_verify1(data, signed_data, key):
-    alg = key['alg']
-    k = key['key']
-    hash_alg = hash_modules[key['hash']]
-    if alg == 'HMAC':
-        serial_data, sig = signed_data
-        if not isinstance(data, bytes):
-            check_data = b'\1' + pickle.dumps(data)
-        else:
-            check_data = b'\0' + data
-        return (sig == HMAC.new(k, check_data, hash_alg).digest())
+def public_key_verify(data, sig, key):
+    if not isinstance(data, bytes):
+        serial_data = pickle.dumps(data)
     else:
-        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end mac_verify1()
-    
-#returns None when verfication fails
-def pubkey_verify(data, key):    
+        serial_data = data
     alg = key['alg']
     k = key['key']
     hash_alg = hash_modules[key['hash']]
-    if alg == 'RSA':
+    if alg == 'rsa':
         pubk = RSA.importKey(k)
-        h = hash_alg.new(data[0])
-        verifier = PKCS1_v1_5.new(pubk)
-        if verifier.verify(h, data[1]):
-            if data[0][0]:
-                return pickle.loads(data[0][1:])
-            else:
-                return data[0][1:]
-        else:
-            return None
-    else:
-        print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end pubkey_verify()
-
-def pubkey_verify1(data, signed_data, key):
-    alg = key['alg']
-    k = key['key']
-    hash_alg = hash_modules[key['hash']]
-    if alg == 'RSA':
-        if not isinstance(data, bytes):
-            check_data = b'\1' + pickle.dumps(data)
-        else:
-            check_data = b'\0' + data
-        pubk = RSA.importKey(k)
-        h = hash_alg.new(check_data)
-        sig = signed_data[1]
+        h = hash_alg.new(serial_data)
         verifier = PKCS1_v1_5.new(pubk)
         return verifier.verify(h, sig)
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
-#end verify1()
+#end public_key_verify()
 
 modp_groups = {
     5 :

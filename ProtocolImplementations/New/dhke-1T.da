@@ -20,30 +20,38 @@ from sa.timers import dec_proto_run_timer, dec_timer
 import random, gc
 from Crypto.Random.random import StrongRandom
 from Crypto.Hash import SHA256
-configure(verify_returns = 'bool')
 
 class RoleA (process):
-    def setup(skA, pkA, B, pkB, certA, pkSigT):
+    def setup(skA, B, certA, pkSigT):
         gc.disable()
         at_fork()
         self.i = 1
 
     #@dec_proto_run_timer
     def run():
-        dh_x, dh_X, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
+        dh_x, dh_X, _, _ = keygen('dh', dh_p = certA[1][2], dh_g = certA[1][1])
         send(('msg1', i, dh_X, sign((dh_X, B), key = skA), certA), to = B)
+        print('$$$$$$$$$$: 1', flush = True)
         await(some(received(('msg2', _i, dh_Y, k, m, certB), from_ = B)))
-        if verify(((B, pkB), certB), key = pkSigT):
-            if verify(((dh_X, dh_Y, k, self), m), key = pkB[0]):
+        print('**********:', len(certB))
+        for e in certB:
+            print(e)
+        B, pkB, sigB = certB
+        if verify((B, pkB), sigB, key = pkSigT):
+            if verify((dh_X, dh_Y, k, self), m, key = certB[1][0]):
                 #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
                 #Hash function whose index is k
-                kAB = key_derivation(dh_Y, dh_x, pkA[2])
+                kAB = key_derivation(dh_Y, dh_x, certA[1][2])
                 send(('msg3', i, BitGen(kAB)), to = B)
-                #output('A - Authenticated Exchange of Key Material Complete')
+                output('A - Authenticated Exchange of Key Material Complete')
+            else:
+                print("Failed message verification!", flush = True)
+        else:
+            print("Failed certificate verification!", flush = True)
         i += 1
         
 class RoleB (process):
-    def setup(skB, pkB, pkA, certB, pkSigT):
+    def setup(skB, certB, pkSigT):
         gc.disable()
         at_fork()
         self.terminate = False
@@ -54,19 +62,20 @@ class RoleB (process):
         await(terminate)
 
     def receive(msg=('msg1', i, dh_X, m, certA), from_ = A):
-        dh_y, dh_Y, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
-        if verify(((A, pkA), certA), key = pkSigT):
-            if verify(((dh_X, self), m), key = pkA[0]):
+        dh_y, dh_Y, _, _ = keygen('dh', dh_p = certB[1][2], dh_g = certB[1][1])
+        if verify((certA[0], certA[1]), certA[2], key = pkSigT):
+            if verify((dh_X, self), m, key = certA[1][0]):
                 k = StrongRandom().randint(1, 100) #k supposed to be bitstring
                 send(('msg2', i, dh_Y, k, sign((dh_X, dh_Y, k, A), key = skB),
                       certB), to = A)
                 #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
                 #Hash function whose index is k
-                kAB = key_derivation(dh_X, dh_y, pkA[2])
+                kAB = key_derivation(dh_X, dh_y, certB[1][2])
+                print('$$$$$$$$$$: 2', flush = True)
                 await(some(received(('msg3', _i, m2), from_ = A)))
                 if BitGen(kAB) == m2:
-                    pass
-                    #output('B - Authenticated Exchange of Key Material Complete')
+                    #pass
+                    output('B - Authenticated Exchange of Key Material Complete')
         terminate = True
 
 def main():
@@ -82,10 +91,13 @@ def main():
     pkB = (pkSigB, dh_grpB[2], dh_grpB[3])
     B = new(RoleB)
     A = new(RoleA)
-    certA = sign((A, pkA), key = skSigT)
-    certB = sign((B, pkB), key = skSigT)
-    setup(B, (skB, pkB, pkA, certB, pkSigT))
-    setup(A, (skA, pkA, B, pkB, certA, pkSigT))
+    certA = (A, pkA, sign((A, pkA), key = skSigT))
+    certB = (B, pkB, sign((B, pkB), key = skSigT))
+    for e in certB:
+        print(e)
+    print(verify((B, pkB), certB[2], key = pkSigT))
+    setup(B, (skB, certB, pkSigT))
+    setup(A, (skA, B, certA, pkSigT))
     start(B)
     start(A)
 
