@@ -20,7 +20,7 @@ Protocol Diagram:
   (7) A -> B : enc(nB2 - 1, kAB)
 """
 
-import gc
+import sys, gc
 #from sa.secalgo import *
 from sa.secalgoB import *
 from sa.timers import dec_proto_run_timer
