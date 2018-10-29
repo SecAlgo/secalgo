@@ -1,0 +1,100 @@
+Results for PC_pub_verify - 1:
+0.70383525
+Results for PC_pub_verify - 1:
+0.7144415
+Results for PC_pub_verify - 1:
+0.6938052499999999
+Results for PC_pub_verify - 1:
+0.6982755
+Results for PC_pub_verify - 1:
+0.6940522499999999
+Results for PC_pub_verify - 1:
+0.6923385
+Results for PC_pub_verify - 1:
+0.6972495
+Results for PC_pub_verify - 1:
+0.6929555000000001
+Results for PC_pub_verify - 1:
+0.69316575
+Results for PC_pub_verify - 1:
+0.6930787500000001
+Results for PC_pub_verify - 1:
+0.69481225
+Results for PC_pub_verify - 1:
+0.69515525
+Results for PC_pub_verify - 1:
+0.69657125
+Results for PC_pub_verify - 1:
+0.6942195000000001
+Results for PC_pub_verify - 1:
+0.694428
+Results for PC_pub_verify - 1:
+0.715181
+Results for PC_pub_verify - 1:
+0.6941315
+Results for PC_pub_verify - 1:
+0.69200925
+Results for PC_pub_verify - 1:
+0.6944612499999999
+Results for PC_pub_verify - 1:
+0.6929825
+Results for PC_pub_verify - 1:
+0.69351475
+Results for PC_pub_verify - 1:
+0.69444925
+Results for PC_pub_verify - 1:
+0.6966965
+Results for PC_pub_verify - 1:
+0.6964327499999999
+Results for PC_pub_verify - 1:
+0.7070884999999999
+Results for PC_pub_verify - 1:
+0.69349025
+Results for PC_pub_verify - 1:
+0.6944
+Results for PC_pub_verify - 1:
+0.6943535
+Results for PC_pub_verify - 1:
+0.6963667499999999
+Results for PC_pub_verify - 1:
+0.7004555
+Results for PC_pub_verify - 1:
+0.6947129999999999
+Results for PC_pub_verify - 1:
+0.693925
+Results for PC_pub_verify - 1:
+0.7100125
+Results for PC_pub_verify - 1:
+0.6945359999999999
+Results for PC_pub_verify - 1:
+0.69376025
+Results for PC_pub_verify - 1:
+0.7865052499999999
+Results for PC_pub_verify - 1:
+0.69337475
+Results for PC_pub_verify - 1:
+0.69524925
+Results for PC_pub_verify - 1:
+0.69611625
+Results for PC_pub_verify - 1:
+0.714859
+Results for PC_pub_verify - 1:
+0.6929540000000001
+Results for PC_pub_verify - 1:
+0.72045475
+Results for PC_pub_verify - 1:
+0.6956485
+Results for PC_pub_verify - 1:
+0.69294025
+Results for PC_pub_verify - 1:
+0.6929262500000001
+Results for PC_pub_verify - 1:
+0.692977
+Results for PC_pub_verify - 1:
+0.6951764999999999
+Results for PC_pub_verify - 1:
+0.698987
+Results for PC_pub_verify - 1:
+0.6940265
+Results for PC_pub_verify - 1:
+0.692254

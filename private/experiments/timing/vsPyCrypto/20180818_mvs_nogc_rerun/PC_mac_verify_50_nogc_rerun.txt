@@ -1,0 +1,100 @@
+Results for PC_mac_verify - 1:
+0.016898555
+Results for PC_mac_verify - 1:
+0.017190080000000003
+Results for PC_mac_verify - 1:
+0.016996360000000002
+Results for PC_mac_verify - 1:
+0.017846505000000002
+Results for PC_mac_verify - 1:
+0.016768619999999998
+Results for PC_mac_verify - 1:
+0.016909854999999998
+Results for PC_mac_verify - 1:
+0.0171178
+Results for PC_mac_verify - 1:
+0.016837514999999997
+Results for PC_mac_verify - 1:
+0.017199574999999998
+Results for PC_mac_verify - 1:
+0.019465404999999998
+Results for PC_mac_verify - 1:
+0.018300209999999997
+Results for PC_mac_verify - 1:
+0.017657375000000003
+Results for PC_mac_verify - 1:
+0.017401655
+Results for PC_mac_verify - 1:
+0.01742416
+Results for PC_mac_verify - 1:
+0.017666269999999998
+Results for PC_mac_verify - 1:
+0.016988655000000002
+Results for PC_mac_verify - 1:
+0.016707434999999996
+Results for PC_mac_verify - 1:
+0.01718202
+Results for PC_mac_verify - 1:
+0.017556415
+Results for PC_mac_verify - 1:
+0.017009555
+Results for PC_mac_verify - 1:
+0.017005939999999997
+Results for PC_mac_verify - 1:
+0.016918594999999998
+Results for PC_mac_verify - 1:
+0.017554925000000002
+Results for PC_mac_verify - 1:
+0.01862228
+Results for PC_mac_verify - 1:
+0.016992875
+Results for PC_mac_verify - 1:
+0.0170925
+Results for PC_mac_verify - 1:
+0.017043485
+Results for PC_mac_verify - 1:
+0.01850366
+Results for PC_mac_verify - 1:
+0.018337845000000002
+Results for PC_mac_verify - 1:
+0.016927715
+Results for PC_mac_verify - 1:
+0.016871104999999997
+Results for PC_mac_verify - 1:
+0.017453990000000003
+Results for PC_mac_verify - 1:
+0.016884379999999997
+Results for PC_mac_verify - 1:
+0.017871595000000004
+Results for PC_mac_verify - 1:
+0.01737187
+Results for PC_mac_verify - 1:
+0.017001505
+Results for PC_mac_verify - 1:
+0.01717274
+Results for PC_mac_verify - 1:
+0.01717519
+Results for PC_mac_verify - 1:
+0.016994900000000004
+Results for PC_mac_verify - 1:
+0.0166814
+Results for PC_mac_verify - 1:
+0.017059585000000002
+Results for PC_mac_verify - 1:
+0.017169089999999998
+Results for PC_mac_verify - 1:
+0.01671899
+Results for PC_mac_verify - 1:
+0.016961745
+Results for PC_mac_verify - 1:
+0.016980585
+Results for PC_mac_verify - 1:
+0.01684461
+Results for PC_mac_verify - 1:
+0.016851965
+Results for PC_mac_verify - 1:
+0.01694237
+Results for PC_mac_verify - 1:
+0.01739045
+Results for PC_mac_verify - 1:
+0.016674795

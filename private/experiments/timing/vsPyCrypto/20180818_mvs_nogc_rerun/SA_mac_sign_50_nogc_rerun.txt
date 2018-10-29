@@ -1,0 +1,100 @@
+Results for SA_mac_sign - 1:
+0.018031415
+Results for SA_mac_sign - 1:
+0.01907634
+Results for SA_mac_sign - 1:
+0.018393995
+Results for SA_mac_sign - 1:
+0.018144365
+Results for SA_mac_sign - 1:
+0.018298584999999996
+Results for SA_mac_sign - 1:
+0.018349925
+Results for SA_mac_sign - 1:
+0.0182473
+Results for SA_mac_sign - 1:
+0.01831793
+Results for SA_mac_sign - 1:
+0.018292125
+Results for SA_mac_sign - 1:
+0.01814558
+Results for SA_mac_sign - 1:
+0.017992150000000002
+Results for SA_mac_sign - 1:
+0.01836016
+Results for SA_mac_sign - 1:
+0.019265690000000002
+Results for SA_mac_sign - 1:
+0.018063255
+Results for SA_mac_sign - 1:
+0.01794152
+Results for SA_mac_sign - 1:
+0.019029269999999997
+Results for SA_mac_sign - 1:
+0.018411314999999998
+Results for SA_mac_sign - 1:
+0.018160464999999997
+Results for SA_mac_sign - 1:
+0.018009265
+Results for SA_mac_sign - 1:
+0.0183399
+Results for SA_mac_sign - 1:
+0.01805567
+Results for SA_mac_sign - 1:
+0.018076365
+Results for SA_mac_sign - 1:
+0.018860655
+Results for SA_mac_sign - 1:
+0.01815617
+Results for SA_mac_sign - 1:
+0.0183013
+Results for SA_mac_sign - 1:
+0.019397655
+Results for SA_mac_sign - 1:
+0.01960239
+Results for SA_mac_sign - 1:
+0.018267375000000002
+Results for SA_mac_sign - 1:
+0.018105855
+Results for SA_mac_sign - 1:
+0.01848747
+Results for SA_mac_sign - 1:
+0.018269515
+Results for SA_mac_sign - 1:
+0.017916805
+Results for SA_mac_sign - 1:
+0.019946424999999997
+Results for SA_mac_sign - 1:
+0.021786909999999996
+Results for SA_mac_sign - 1:
+0.020326445
+Results for SA_mac_sign - 1:
+0.019463789999999998
+Results for SA_mac_sign - 1:
+0.018873485
+Results for SA_mac_sign - 1:
+0.01851707
+Results for SA_mac_sign - 1:
+0.019698180000000003
+Results for SA_mac_sign - 1:
+0.019200184999999998
+Results for SA_mac_sign - 1:
+0.018240785
+Results for SA_mac_sign - 1:
+0.01856071
+Results for SA_mac_sign - 1:
+0.0180059
+Results for SA_mac_sign - 1:
+0.018705834999999997
+Results for SA_mac_sign - 1:
+0.01837017
+Results for SA_mac_sign - 1:
+0.018869479999999998
+Results for SA_mac_sign - 1:
+0.018415175000000002
+Results for SA_mac_sign - 1:
+0.019255325
+Results for SA_mac_sign - 1:
+0.019542055
+Results for SA_mac_sign - 1:
+0.018408675

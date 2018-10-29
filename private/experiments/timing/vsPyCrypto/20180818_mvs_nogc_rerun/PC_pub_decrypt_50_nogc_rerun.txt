@@ -1,0 +1,100 @@
+Results for PC_pub_decrypt - 1:
+3.097496
+Results for PC_pub_decrypt - 1:
+3.1005279999999997
+Results for PC_pub_decrypt - 1:
+3.098184
+Results for PC_pub_decrypt - 1:
+3.119588
+Results for PC_pub_decrypt - 1:
+3.0973729999999997
+Results for PC_pub_decrypt - 1:
+3.0967240000000005
+Results for PC_pub_decrypt - 1:
+3.0933580000000003
+Results for PC_pub_decrypt - 1:
+3.0946979999999997
+Results for PC_pub_decrypt - 1:
+3.097026
+Results for PC_pub_decrypt - 1:
+3.090135
+Results for PC_pub_decrypt - 1:
+3.0944330000000004
+Results for PC_pub_decrypt - 1:
+3.101514
+Results for PC_pub_decrypt - 1:
+3.127399
+Results for PC_pub_decrypt - 1:
+3.140356
+Results for PC_pub_decrypt - 1:
+3.091379
+Results for PC_pub_decrypt - 1:
+3.1048880000000003
+Results for PC_pub_decrypt - 1:
+3.0948610000000003
+Results for PC_pub_decrypt - 1:
+3.096865
+Results for PC_pub_decrypt - 1:
+3.102858
+Results for PC_pub_decrypt - 1:
+3.0970349999999995
+Results for PC_pub_decrypt - 1:
+3.0951380000000004
+Results for PC_pub_decrypt - 1:
+3.098086
+Results for PC_pub_decrypt - 1:
+3.1078350000000006
+Results for PC_pub_decrypt - 1:
+3.120671
+Results for PC_pub_decrypt - 1:
+3.1004359999999997
+Results for PC_pub_decrypt - 1:
+3.106455
+Results for PC_pub_decrypt - 1:
+3.101273
+Results for PC_pub_decrypt - 1:
+3.0985090000000004
+Results for PC_pub_decrypt - 1:
+3.096786
+Results for PC_pub_decrypt - 1:
+3.08984
+Results for PC_pub_decrypt - 1:
+3.097659
+Results for PC_pub_decrypt - 1:
+3.087353
+Results for PC_pub_decrypt - 1:
+3.096474
+Results for PC_pub_decrypt - 1:
+3.0964430000000003
+Results for PC_pub_decrypt - 1:
+3.0940329999999996
+Results for PC_pub_decrypt - 1:
+3.104032
+Results for PC_pub_decrypt - 1:
+3.101146
+Results for PC_pub_decrypt - 1:
+3.0962840000000003
+Results for PC_pub_decrypt - 1:
+3.106879
+Results for PC_pub_decrypt - 1:
+3.103497
+Results for PC_pub_decrypt - 1:
+3.0951839999999997
+Results for PC_pub_decrypt - 1:
+3.090837
+Results for PC_pub_decrypt - 1:
+3.0920330000000003
+Results for PC_pub_decrypt - 1:
+3.099237
+Results for PC_pub_decrypt - 1:
+3.1077480000000004
+Results for PC_pub_decrypt - 1:
+3.1008120000000003
+Results for PC_pub_decrypt - 1:
+3.0923670000000003
+Results for PC_pub_decrypt - 1:
+3.0947210000000003
+Results for PC_pub_decrypt - 1:
+3.107881
+Results for PC_pub_decrypt - 1:
+3.092352

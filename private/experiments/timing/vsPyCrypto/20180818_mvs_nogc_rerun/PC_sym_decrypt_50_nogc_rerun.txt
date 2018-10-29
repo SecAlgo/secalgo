@@ -1,0 +1,100 @@
+Results for PC_sym_decrypt - 1:
+0.014485995000000002
+Results for PC_sym_decrypt - 1:
+0.014223514999999999
+Results for PC_sym_decrypt - 1:
+0.014271774999999997
+Results for PC_sym_decrypt - 1:
+0.014255154999999999
+Results for PC_sym_decrypt - 1:
+0.01433677
+Results for PC_sym_decrypt - 1:
+0.014323605
+Results for PC_sym_decrypt - 1:
+0.014191974999999999
+Results for PC_sym_decrypt - 1:
+0.01415643
+Results for PC_sym_decrypt - 1:
+0.014354244999999998
+Results for PC_sym_decrypt - 1:
+0.014194839999999999
+Results for PC_sym_decrypt - 1:
+0.014572120000000001
+Results for PC_sym_decrypt - 1:
+0.014203559999999999
+Results for PC_sym_decrypt - 1:
+0.015105665
+Results for PC_sym_decrypt - 1:
+0.01427341
+Results for PC_sym_decrypt - 1:
+0.01449581
+Results for PC_sym_decrypt - 1:
+0.014234
+Results for PC_sym_decrypt - 1:
+0.014261835
+Results for PC_sym_decrypt - 1:
+0.014387920000000002
+Results for PC_sym_decrypt - 1:
+0.014159874999999999
+Results for PC_sym_decrypt - 1:
+0.014233315
+Results for PC_sym_decrypt - 1:
+0.014131845
+Results for PC_sym_decrypt - 1:
+0.01432376
+Results for PC_sym_decrypt - 1:
+0.014080135
+Results for PC_sym_decrypt - 1:
+0.014183995
+Results for PC_sym_decrypt - 1:
+0.014405584999999999
+Results for PC_sym_decrypt - 1:
+0.014350945
+Results for PC_sym_decrypt - 1:
+0.014926455
+Results for PC_sym_decrypt - 1:
+0.014157055
+Results for PC_sym_decrypt - 1:
+0.014374515
+Results for PC_sym_decrypt - 1:
+0.01435064
+Results for PC_sym_decrypt - 1:
+0.015098804999999996
+Results for PC_sym_decrypt - 1:
+0.014618035
+Results for PC_sym_decrypt - 1:
+0.014155914999999998
+Results for PC_sym_decrypt - 1:
+0.015075845
+Results for PC_sym_decrypt - 1:
+0.014221355
+Results for PC_sym_decrypt - 1:
+0.014439994999999999
+Results for PC_sym_decrypt - 1:
+0.014771425000000001
+Results for PC_sym_decrypt - 1:
+0.01443943
+Results for PC_sym_decrypt - 1:
+0.014271210000000001
+Results for PC_sym_decrypt - 1:
+0.014457485
+Results for PC_sym_decrypt - 1:
+0.014326964999999997
+Results for PC_sym_decrypt - 1:
+0.0162068
+Results for PC_sym_decrypt - 1:
+0.016670960000000002
+Results for PC_sym_decrypt - 1:
+0.014716
+Results for PC_sym_decrypt - 1:
+0.014198675000000001
+Results for PC_sym_decrypt - 1:
+0.01429988
+Results for PC_sym_decrypt - 1:
+0.014359934999999999
+Results for PC_sym_decrypt - 1:
+0.014573055
+Results for PC_sym_decrypt - 1:
+0.014228344999999996
+Results for PC_sym_decrypt - 1:
+0.014043405

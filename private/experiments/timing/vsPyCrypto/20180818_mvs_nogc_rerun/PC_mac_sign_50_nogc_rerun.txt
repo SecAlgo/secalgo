@@ -1,0 +1,100 @@
+Results for PC_mac_sign - 1:
+0.016692375
+Results for PC_mac_sign - 1:
+0.016179884999999998
+Results for PC_mac_sign - 1:
+0.017135599999999997
+Results for PC_mac_sign - 1:
+0.016181475
+Results for PC_mac_sign - 1:
+0.01882636
+Results for PC_mac_sign - 1:
+0.016772365
+Results for PC_mac_sign - 1:
+0.017244910000000002
+Results for PC_mac_sign - 1:
+0.016366384999999997
+Results for PC_mac_sign - 1:
+0.01652609
+Results for PC_mac_sign - 1:
+0.017007205
+Results for PC_mac_sign - 1:
+0.01683644
+Results for PC_mac_sign - 1:
+0.016586425
+Results for PC_mac_sign - 1:
+0.017013605
+Results for PC_mac_sign - 1:
+0.016202945
+Results for PC_mac_sign - 1:
+0.0164698
+Results for PC_mac_sign - 1:
+0.01638344
+Results for PC_mac_sign - 1:
+0.01675301
+Results for PC_mac_sign - 1:
+0.01706065
+Results for PC_mac_sign - 1:
+0.017375715
+Results for PC_mac_sign - 1:
+0.017221564999999998
+Results for PC_mac_sign - 1:
+0.016994485
+Results for PC_mac_sign - 1:
+0.017776745000000004
+Results for PC_mac_sign - 1:
+0.01668662
+Results for PC_mac_sign - 1:
+0.0173881
+Results for PC_mac_sign - 1:
+0.016439615
+Results for PC_mac_sign - 1:
+0.016407655
+Results for PC_mac_sign - 1:
+0.018184055
+Results for PC_mac_sign - 1:
+0.016544145
+Results for PC_mac_sign - 1:
+0.016752100000000002
+Results for PC_mac_sign - 1:
+0.016324440000000003
+Results for PC_mac_sign - 1:
+0.017979285
+Results for PC_mac_sign - 1:
+0.018149244999999998
+Results for PC_mac_sign - 1:
+0.016757415
+Results for PC_mac_sign - 1:
+0.017046090000000003
+Results for PC_mac_sign - 1:
+0.01879377
+Results for PC_mac_sign - 1:
+0.01634151
+Results for PC_mac_sign - 1:
+0.016354215000000002
+Results for PC_mac_sign - 1:
+0.0164314
+Results for PC_mac_sign - 1:
+0.017008759999999998
+Results for PC_mac_sign - 1:
+0.016287035000000002
+Results for PC_mac_sign - 1:
+0.016594135
+Results for PC_mac_sign - 1:
+0.016888595000000003
+Results for PC_mac_sign - 1:
+0.016476275000000002
+Results for PC_mac_sign - 1:
+0.01698258
+Results for PC_mac_sign - 1:
+0.016703174999999997
+Results for PC_mac_sign - 1:
+0.01705618
+Results for PC_mac_sign - 1:
+0.016641125
+Results for PC_mac_sign - 1:
+0.01688024
+Results for PC_mac_sign - 1:
+0.01698239
+Results for PC_mac_sign - 1:
+0.01621447
