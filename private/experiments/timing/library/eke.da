@@ -1,0 +1,70 @@
+"""
+Encrypted Key Exchange Protocol
+Written by Christopher Kane
+
+Original Source:
+S. M. Bellovin and M. Merritt, "Encrypted Key Exchange: Password-Based 
+Protocols Secure Against Dictionary Attacks", IEEE S&P, May, 1992, pp. 72-84.
+
+Protocol Diagram:
+  (1) A -> B : A, enc(PK_A, K_PW)
+  (2) B -> A : enc(enc(K_AB, PK_A), K_PW)
+  (3) A -> B : enc(C_A, K_AB)
+  (4) B -> A : enc((C_A, C_B), K_AB)
+  (5) A -> B : enc(C_B, K_AB)
+"""
+
+from sa.secalgo import *
+configure(benchmark = True)
+
+class RoleA (process):
+    def setup(B, K_PW):
+        self.A = self
+        self.K_AB = None
+        self.SK_A = None
+        
+    def run():
+        SK_A, PK_A = keygen('public')
+        send(('msg1', A, encrypt(PK_A, key = K_PW)), to = B)
+        await(some(received(((K), _B), from_ = self)))
+        K_AB = K
+        C_A = nonce()
+        send(('encK_AB', encrypt(C_A, key = K_AB)), to = B)
+        await(some(received(((_C_A, C_B), _B), from_ = self)))
+        send(('encK_AB', encrypt(C_B, key = K_AB)), to = B)
+        output('A - Key Exchange Complete')
+
+    def receive(msg=('msg2', m), from_ = B):
+        temp = decrypt(m, key = K_PW)
+        send((decrypt(temp, key = SK_A), B), to = self)
+
+    def receive(msg=('encK_AB', m), from_ = B):
+        send((decrypt(m, key = K_AB), B), to = self)
+
+class RoleB (process):
+    def setup(K_PW):
+        self.B = self
+        self.K_AB = None
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', A, m), from_ = A):
+        PK_A = decrypt(m, key = K_PW)
+        K_AB = keygen('shared')
+        send(('msg2', encrypt(encrypt(K_AB, key = PK_A), key = K_PW)), to = A)
+        await(some(received(((C_A), _A), from_ = self)))
+        C_B = nonce()
+        send(('encK_AB', encrypt((C_A, C_B), key = K_AB)), to = A)
+        await(some(received(((_C_B), _A), from_ = self)))
+        output('B - Key Exchange Complete')
+
+    def receive(msg=('encK_AB', m), from_ = A):
+        send((decrypt(m, key = K_AB), A), to = self)
+
+def main():
+    K_PW = keygen('shared')
+    B = new(RoleB, (K_PW,))
+    A = new(RoleA, (B, K_PW))
+    start(B)
+    start(A)

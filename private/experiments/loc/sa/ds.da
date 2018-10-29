@@ -1,0 +1,26 @@
+from sa.secalgo import *
+class RoleA (process):
+    def setup(skA, B, pkB):
+        at_fork()
+    def run():
+        k = keygen('shared')
+        send(('msg01', encrypt(sign(k, skA), pkB)), to = B)
+        await(some(received(('msg02', m), from_ = _B)))
+        s = decrypt(m, k)
+        output('DECRYPTED MESSAGE:', s)
+class RoleB (process):
+    def setup(skB, pkA):
+        at_fork()
+        self.s = 'secret'
+    def run():
+        await(False)
+    def receive(msg=('msg01', m), from_ = A):
+        k = verify(decrypt(m, skB), pkA)
+        send(('msg02', encrypt(s, k)), to = A)
+def main():
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    B = new(RoleB, (skB, pkA))
+    A = new(RoleA, (skA, B, pkB))
+    start(A)
+    start(B)

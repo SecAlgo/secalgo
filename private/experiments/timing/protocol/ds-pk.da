@@ -1,0 +1,108 @@
+"""
+Denning-Sacco Public Key Key Exchange Protocols
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981, p. 533-536.
+
+Protocol Diagram:
+  (1) A -> S: (A, B)
+  (2) S -> A: (CA, CB)
+  (3) A -> B: (CA, CB, enc(sign((K, T), skA), pkB))
+
+CA and CB are certificates containing the name and public key of A and B
+respecitively signed by the key server S. Certificates look like this:
+  CX == (X, pkX, T, sign((X, pkX, T), skS))
+T is a timestamp. Denning and Sacco give no details concerning the format of
+the timestamp, and, though they discuss how the timestamp can be validated,
+they do not explain how this validation should be incorporated into the
+protocol.
+"""
+
+import sys, time, json
+from sa.secalgo import *
+configure(verify_returns = 'bool')
+
+class roleA(process):
+    def setup(B, S, skA, pkA, pkS, loops):
+        at_fork()
+
+    def run():
+        start_time = time.process_time()
+        for i in range(loops):
+            result = ds_pk(i)
+        print(json.dumps(['ds-pk', 'roleA', start_time, time.process_time(), loops]))
+
+    def ds_pk(i):
+        send(('msg01', i, self, B), to = S)
+        await(some(received(('msg02', _i, (A, _pkA, tA, sigA),
+                             (_B, pkB, tB, sigB)), from_ = _S),
+                   has = (A == self)))
+        if (verify(((A, pkA, tA), sigA), pkS) and
+            verify(((B, pkB, tB), sigB), pkS)):
+            kAB = keygen('shared')
+            tAB = time.time()
+            send(('msg03', i, (A, pkA, tA, sigA), (B, pkB, tB, sigB),
+                  encrypt(((kAB, tAB), sign((kAB, tAB), skA)), pkB)),
+                 to = B)
+            output('Initiator: Key Exchange Complete')
+        else:
+            output('Initiator: Could not verify certificates')
+        return i
+
+class roleB(process):
+    def setup(S, skB, pkB, pkS, loops):
+        at_fork()
+        self.start_time = 0
+
+    def run():
+        self.start_time = time.process_time()
+        await(False)
+        
+    def receive(msg=('msg03', i, (A, pkA, tA, sigA), (B, _pkB, tB, sigB), encKey), from_ = A):
+        if (verify(((A, pkA, tA), sigA), pkS) and
+            verify(((B, pkB, tB), sigB), pkS) and (B == self)):
+            (kAB, tAB), sigAB = decrypt(encKey, skB)
+            if verify(((kAB, tAB), sigAB), pkA):
+                output('Recipient: Key Exchange Complete')
+            else:
+                output('Recipient: Could not verify signature on shared key')
+        else:
+            output('Recipient: Could not verify certificates')
+        if i == (loops - 1):
+            print(json.dumps(['ds-pk', 'roleB', start_time, time.process_time(), loops]))
+            exit()
+
+class roleS(process):
+    def setup(skS, pkS, client_keys, loops):
+        at_fork()
+        self.start_time = 0
+
+    def run():
+        self.start_time = time.process_time()
+        await(False)
+        
+    def receive(msg=('msg01', i, A, B), from_ = _A):
+        pkA = [x for (p, x) in client_keys if p == A].pop()
+        pkB = [x for (p, x) in client_keys if p == B].pop()
+        tA = tB = time.time()
+        send(('msg02', i, (A, pkA, tA, sign((A, pkA, tA), skS)),
+            (B, pkB, tB, sign((B, pkB, tB), skS))), to = A)
+        output('Server: Certificates Sent')
+        if i == (loops - 1):
+            print(json.dumps(['ds-pk', 'roleS', start_time, time.process_time(), loops]))
+            exit()
+
+def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    skS, pkS = keygen('public')
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    S = new(roleS)
+    B = new(roleB, (S, skB, pkB, pkS, loops))
+    A = new(roleA, (B, S, skA, pkA, pkS, loops))
+    setup(S, (skS, pkS, [(A, pkA), (B, pkB)], loops))
+    start(S)
+    start(B)
+    start(A)

@@ -1,0 +1,197 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+R. Needham and M. Schroeder. "Authentication revisited". 
+Operating Systems Review, 21(7), January 1987.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.fr/Software/spore/nssk_amended.html
+
+Protocol Diagram:
+  (1) A -> B : A
+  (2) B -> A : enc((A, nB1), kBS)
+  (3) A -> S : (A, B, nA, enc((A, nB1), kBS))
+  (4) S -> A : enc((nA, kAB, B, enc((kAB, nB1, A), kBS)), K_AS)
+  (5) A -> B : enc((kAB, nB1, A), kBS)
+  (6) B -> A : enc(nB2, kAB)
+  (7) A -> B : enc(nB2 - 1, kAB)
+"""
+# The corrected version of the Needham-Schroeder Symmetric Key key exchange
+# protocol differs from the uncorrected version in several ways.
+
+# The corrected version adds two new messages to the front of the protocol.
+# Instead of contacting the keyserver first, the initiator first contacts the
+# receiver to let it know it wishes to establish a new session key. The receiver
+# responds with a message containing a fresh nonce encrypted for the keyserver.
+
+# The rest of the messages in the corrected protocol are all very similar (and
+# in the case of the last two, identical) to the corresponding messages from
+# the uncorrected protocol. The only difference is the presence of the new
+# encruypted nonoce passed from the receiver to the keyserver and back
+# (mediated by messages to the initiator).
+
+# The purpose of this new nonce is to prevent adversaries from replaying old
+# messages from the keyserver to the receiver containing old compromised keys.
+# Doing so would allow for man-in-the-middle attacks against the protocol.
+
+# The replayed message is the third message from the uncorrected protocol:
+#    (3) A -> B : enc((kAB, A), kBS)
+# The receiver will trust this message becuase it is encrypted with the key
+# it shares with the trusted key server. But, an adversary who has compromised
+# the shared key kAB, can replay this message and trick the receiver into
+# using the compromised key by replaying this message.
+
+# This attack is prevented by the change to the corresponding message in the
+# corrected NS-SK protocol, Msg 5:
+#    (5) A -> B : enc((kAB, nB1, A), kBS)
+# The presence of the fresh nonce that the receiver just sent to the keyserver
+# through Msg 1 and Msg 2 assures the receiver that this is a new key sent in
+# response to its agreement to set up a new shared key with the initiator.
+# Attempts to replay a version of this message from earlier interactions with
+# the keyserver and the initiator will not have the new nonce, and so will be
+# rejected.
+
+from sa.secalgo import *
+
+class RoleS (process):
+    def setup(kAS, kBS):
+        at_fork()
+
+    def run():
+        await(False)
+
+    # Msg3 of the Corrected version of NS-SK contains an extra item, which is
+    # an identifier for the initator and a nonce encrypted by the receiver
+    # using the key it shares with the keyserver.
+    def receive(msg=('msg3', (A, B, nA, encBS)), from_ = _A):
+	# The keyserver decrypts the identifier and nonce sent to it by the
+	# receiver (by way of the initiator).
+	# The keyserver makes sure that the decrypted identifier corresponds to
+	# the identifier of the initiator that sent the keyserver the current
+	# request. This assures the keyserver that the receiver wants to
+	# perform a key exchange with this initiator.
+	if some((_A, nB1) in [decrypt(encBS, key = kBS)]):
+	    kAB = keygen('shared')
+	    send(('msg4', encrypt((nA, kAB, B,
+				   encrypt((kAB, nB1, A), key = kBS)),
+				  key = kAS)), to = A)
+            
+class RoleA (process):
+    def setup(S, kAS, B):
+        at_fork()
+
+    def run():
+        # Msg 1 of the corrected version of NS-SK is sent by the initiator to
+	# the receiver containing just the process id of the initiator.
+	send(('msg1', self), to = B)
+        
+        # Msg 2 of the corrected version of NS-SK is the response from the
+	# receiver containing a tuple encrypted for the keyserver containing
+	# the process id of the initiator (included in Msg 1) and a nonce.
+	await(some(received(('msg2', encBS), from_ = _B)))
+        
+        # Msg 3 of the corrected version of NS-SK is sent by the initiator to
+	# the keyserver. This differs from the first message of the uncorrected
+	# protocol by containing the encrypted tuple sent by the receiver.
+	nA = nonce()
+	send(('msg3', (self, B, nA, encBS)), to = S)
+        
+        # Msg 4 of the corrected version of NS-SK is identical (from the
+	# perspective of the initiator) to the second message of the
+	# uncorrected protocol. The only difference is the presence of the
+	# nonce in the encrypted tuple being passed back to the receiver.
+	await(some(received(('msg4', encAS), from_ = _S),
+		   has = some((_nA, kAB, _B, encSB)
+			      in [decrypt(encAS, key = kAS)])))
+        
+        # Msg 5 of the corrected version of NS-SK is identical (again, from the
+	# perspective of the initiator) to the third message of the uncorrected
+	# protocol. It simply passes an encrypted tuple from the keyserver to
+	# receiver.
+	send(('msg5', encSB), to = B)
+        
+        # Msg 6 of the corrected version of NS-SK is identical to the fourth
+	# message of the uncorrected version. It contains a fresh nonce sent
+	# by the receiver encrypted with the new session key (kAB).
+	# The fresh nonce encrypted with the session key proves that the
+	# receiver is now in possession of the new session key to the initator.
+	await(some(received(('msg6', encBA), from_ = _B)))
+	nB = decrypt(encBA, key = kAB)
+        
+        # Msg 7 of the corrected version of NS-SK is identical to the fifth
+        # message of the uncorrected protocol. The initiator reduces the value
+        # of the nonce by 1, and then sends the modified nonce back to the
+        # receiver encrypted with the new session key. This is done so the
+	# initiator can prove to the receiver that it is also in possession of
+	# the new session key.
+	send(('msg7', encrypt((nB - 1), key = kAB)), to = B)
+	output('A - Key Exchange Complete')
+        
+class RoleB (process):
+    def setup(S, kBS):
+        at_fork()
+
+    def run():
+        await(False)
+
+    # Msg 1 of the corrected version does not appear in the uncorrected
+    # protocol. The initiator sends its process id to the receiver.
+    # The receiver first checks that the process id in the message matches
+    # the source of the message given by the from_ field.
+    def receive(msg=('msg1', A), from_ = _A):
+	# If so, then the receiver generates a nonce that will be encrypted
+	# for the keyserver. The receiver will use this nonce to ensure
+	# that the response from the keyserver containing the new session
+	# key is fresh--that it is not an attempt to replay an old session
+	# key response because an old response will not contain the new
+	# nonce.
+	nB1 = nonce()
+        
+        # Msg 2 of the corrected NS-SK does not appear in the uncorrected
+	# version. It contains the process id of the initiator sent in the
+	# first message and the new nonce encrypted with the key the
+	# receiver shares with the keyserver.
+	send(('msg2', encrypt((A, nB1), key = kBS)), to = A)
+        
+        # Msg 5 of the corrected NS-SK is almost the same as the third
+	# message of the uncorrected protocol. It contains a tuple of
+	# the process id of the initiator, the nonce sent to the keyserver
+	# and the new session key encrypted with the key shared by the
+	# receiver and the keyserver
+	# The value of the process id and the nonce must be checked against
+	# the saved valued before the protocol can proceed.
+	await(some(received(('msg5', encSB), from_ = _A),
+		   has = some((kAB, _nB1, _A) in [decrypt(encSB, key = kBS)])))
+        
+        # The receiver now generates a new nonce it can use to assure
+	# itself and the initiator that each is in possession of the new
+	# session key.
+	nB2 = nonce()
+        
+        # Msg 6 of the corrected NS-SK is identical to the fourth message
+	# of the uncorrected protocol. It contains just the new nonce
+	# encrypted with the new session key. It proves to the initiator
+	# that the receiver possesses the new session key.
+	send(('msg6', encrypt(nB2, key = kAB)), to = A)
+        
+        # Msg 7 of the corrected NS-SK is identical to the fifth message of
+	# the uncorrected protocol. It contains a modified nonce encrypted
+	# with the new session key. It proves to the receiver that the
+	# initiator possesses the new session key.
+	await(some(received(('msg7', enc_AB), from_ = _A),
+		   has = ((nB2 - 1) == decrypt(enc_AB, key = kAB))))
+	output('B - Key Exchange Complete')
+        
+def main():
+    kAS = keygen('shared')
+    kBS = keygen('shared')
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
+    start(S)
+    start(B)
+    start(A)
+    

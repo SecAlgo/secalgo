@@ -1,0 +1,79 @@
+import pickle
+from Crypto.Cipher import AES
+from Crypto import Random
+from Crypto.Random import random
+from sa.Misc.Padding import pkcs7_pad as pad, pkcs7_unpad as unpad
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        Random.atfork()
+    def run():
+        await(False)
+    def receive(msg=('msg4', (enc_IS, enc_RS)), from_ = R):
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, enc_IS[:16])
+        I, R, N_I, N_R = pickle.loads(unpad(cipher_is.decrypt(enc_IS[16:])))
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, enc_RS[:16])
+        if (I, R, N_I, N_R) == pickle.loads(unpad(cipher_rs.decrypt(enc_RS[16:]))):
+            K_IR = Random.new().read(32)
+            iv_is = Random.new().read(AES.block_size)
+            cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
+            iv_rs = Random.new().read(AES.block_size)
+            cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
+            send(('msg5', (iv_is + cipher_is.encrypt(pad(pickle.dumps((R, N_I, N_R, K_IR)))), iv_rs + cipher_rs.encrypt(pad(pickle.dumps((I, N_I, N_R, K_IR)))))), to = R)
+class RoleI (process):
+    def setup(S, K_IS, R):
+        Random.atfork()
+        self.K_IR = None
+    def run():
+        N_I = random.StrongRandom().getrandbits(128)
+        send(('msg1', (self, N_I)), to = R)
+        await(some(received(('msg2', (_R, N_R)), from_ = _R)))
+        iv_is = Random.new().read(AES.block_size)
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
+        send(('msg3', iv_is + cipher_is.encrypt(pad(pickle.dumps((self, R, N_I, N_R))))), to = R)
+        await(some(received(('msg6', (enc_SI, enc_RI)), from_ = _R)))
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, enc_SI[:16])
+        R_ret, N_I_ret, N_R_ret, K_IR = pickle.loads(unpad(cipher_is.decrypt(enc_SI[16:])))
+        if R_ret == R:
+            if N_I_ret == N_I:
+                if N_R_ret == N_R:
+                    cipher_ir = AES.new(K_IR, AES.MODE_CBC, enc_RI[:16])
+                    if (N_I, N_R) == pickle.loads(unpad(cipher_ir.decrypt(enc_RI[16:]))):
+                        iv_ir = Random.new().read(AES.block_size)
+                        cipher_ir = AES.new(K_IR, AES.MODE_CBC, iv_ir)
+                        send(('msg7', iv_ir + cipher_ir.encrypt(pad(pickle.dumps(N_R)))), to = R)
+                        output('I - Key Exchange Complete')
+class RoleR (process):
+    def setup(S, K_RS):
+        Random.atfork()
+        self.K_IR = None
+    def run():
+        await(False)
+    def receive(msg=('msg1', (I, N_I)), from_ = _I):
+        N_R = random.StrongRandom().getrandbits(128)
+        send(('msg2', (self, N_R)), to = I)
+        await(some(received(('msg3', enc_IS), from_ = _I)))
+        iv_rs = Random.new().read(AES.block_size)
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
+        send(('msg4', (enc_IS, iv_rs + cipher_rs.encrypt(pad(pickle.dumps((I, self, N_I, N_R)))))), to = S)
+        await(some(received(('msg5', (enc_SI, enc_SR)), from_ = _S)))
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, enc_SR[:16])
+        I_ret, N_I_ret, N_R_ret, K_IR = pickle.loads(unpad(cipher_rs.decrypt(enc_SR[16:])))
+        if I_ret == I:
+            if N_I_ret == N_I:
+                if N_R_ret == N_R:
+                    iv_ir = Random.new().read(AES.block_size)
+                    cipher_ir = AES.new(K_IR, AES.MODE_CBC, iv_ir)
+                    send(('msg6', (enc_SI, iv_ir + cipher_ir.encrypt(pad(pickle.dumps((N_I, N_R)))))), to = I)
+                    await(some(received(('msg7', enc_IR), from_ = _I)))
+                    cipher_ir = AES.new(K_IR, AES.MODE_CBC, enc_IR[:16])
+                    if N_R == pickle.loads(unpad(cipher_ir.decrypt(enc_IR[16:]))):
+                        output('R - Key Exchange Complete')
+def main():
+    K_IS = Random.new().read(32)
+    K_RS = Random.new().read(32)
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)

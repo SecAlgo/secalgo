@@ -1,0 +1,51 @@
+import sys, time
+from sa.secalgo import *
+configure(verify_returns = 'bool')
+class roleA(process):
+    def setup(B, S, skA, pkA, pkS):
+        at_fork()
+    def run():
+        send(('msg01', self, B), to = S)
+        await(some(received(('msg02', (A, _pkA, tA, sigA), (_B, pkB, tB, sigB)), from_ = _S), has = (A == self)))
+        if (verify(((A, pkA, tA), sigA), pkS) and verify(((B, pkB, tB), sigB), pkS)):
+            kAB = keygen('shared')
+            tAB = time.time()
+            send(('msg03', (A, pkA, tA, sigA), (B, pkB, tB, sigB),encrypt(((kAB, tAB), sign((kAB, tAB), skA)), pkB)), to = B)
+            output('Initiator: Key Exchange Complete')
+        else:
+            output('Initiator: Could not verify certificates')
+class roleB(process):
+    def setup(S, skB, pkB, pkS):
+        at_fork()
+    def run():
+        await(some(received(('msg03', (A, pkA, tA, sigA), (B, _pkB, tB, sigB), encKey), from_ = A), has = (B == self)))
+        if (verify(((A, pkA, tA), sigA), pkS) and verify(((B, pkB, tB), sigB), pkS)):
+            (kAB, tAB), sigAB = decrypt(encKey, skB)
+            if verify(((kAB, tAB), sigAB), pkA):
+                output('Recipient: Key Exchange Complete')
+            else:
+                output('Recipient: Could not verify signature on shared key')
+        else:
+            output('Recipient: Could not verify certificates')
+class roleS(process):
+    def setup(skS, pkS, client_keys):
+        at_fork()
+    def run():
+        await(False)
+    def receive(msg=('msg01', A, B), from_ = _A):
+        pkA = [x for (p, x) in client_keys if p == A].pop()
+        pkB = [x for (p, x) in client_keys if p == B].pop()
+        tA = tB = time.time()
+        send(('msg02', (A, pkA, tA, sign((A, pkA, tA), skS)), (B, pkB, tB, sign((B, pkB, tB), skS))), to = A)
+        output('Server: Certificates Sent')
+def main():
+    skS, pkS = keygen('public')
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    S = new(roleS)
+    B = new(roleB, (S, skB, pkB, pkS))
+    A = new(roleA, (B, S, skA, pkA, pkS))
+    setup(S, (skS, pkS, [(A, pkA), (B, pkB)]))
+    start(S)
+    start(B)
+    start(A)

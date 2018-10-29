@@ -1,0 +1,106 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+R. Needham and M. Schroeder. "Authentication revisited". 
+Operating Systems Review, 21(7), January 1987.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.fr/Software/spore/nssk_amended.html
+
+Protocol Diagram:
+  (1) A -> B : A
+  (2) B -> A : enc((A, nB1), kBS)
+  (3) A -> S : (A, B, nA, enc((A, nB1), kBS))
+  (4) S -> A : enc((nA, kAB, B, enc((kAB, nB1, A), kBS)), K_AS)
+  (5) A -> B : enc((kAB, nB1, A), kBS)
+  (6) B -> A : enc(nB2, kAB)
+  (7) A -> B : enc(nB2 - 1, kAB)
+"""
+
+import gc
+#from sa.secalgo import *
+from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
+    
+class RoleS (process):
+    def setup(kAS, kBS):
+        gc.disable()
+        at_fork()
+        self.terminate = False
+        
+    #@dec_proto_run_timer
+    def run():
+        terminate = False
+        await(terminate)
+        reset(received)
+
+    def receive(msg=('msg3', i, (A, B, nA, encBS)), from_ = _A):
+        if some((_A, nB1) in [decrypt(encBS, key = kBS)]):
+            kAB = keygen('shared')
+            send(('msg4', i, encrypt((nA, kAB, B,
+                                   encrypt((kAB, nB1, A), key = kBS)),
+                                  key = kAS)), to = A)
+        terminate = True
+        #print(str(i) + '.', end='', flush = True)
+        
+class RoleA (process):
+    def setup(S, kAS, B):
+        gc.disable()
+        at_fork()
+        self.i = 1
+
+    #@dec_proto_run_timer
+    def run():
+        send(('msg1', i, self), to = B)
+        await(some(received(('msg2', _i, encBS), from_ = _B)))
+        nA = nonce()
+        send(('msg3', i, (self, B, nA, encBS)), to = S)
+        await(some(received(('msg4', _i, encAS), from_ = _S),
+                   has = some((_nA, kAB, _B, encSB)
+                              in [decrypt(encAS, key = kAS)])))
+        send(('msg5', i, encSB), to = B)
+        await(some(received(('msg6', _i, encBA), from_ = _B)))
+        nB = decrypt(encBA, key = kAB)
+        send(('msg7', i, encrypt((nB - 1), key = kAB)), to = B)
+        output('A - Key Exchange Complete')
+        i += 1
+        reset(received)
+
+class RoleB (process):
+    def setup(S, kBS):
+        gc.disable()
+        at_fork()
+        self.terminate = False
+
+    #@dec_proto_run_timer
+    def run():
+        terminate = False
+        await(terminate)
+        reset(received)
+
+
+    def receive(msg=('msg1', i, A), from_ = _A):
+        nB1 = nonce()
+        send(('msg2', i, encrypt((A, nB1), key = kBS)), to = A)
+        await(some(received(('msg5', _i, encSB), from_ = _A),
+                   has = some((kAB, _nB1, _A) in [decrypt(encSB, key = kBS)])))
+        nB2 = nonce()
+        send(('msg6', i, encrypt(nB2, key = kAB)), to = A)
+        await(some(received(('msg7', _i, enc_AB), from_ = _A),
+                   has = ((nB2 - 1) == decrypt(enc_AB, key = kAB))))
+        output('B - Key Exchange Complete')
+        terminate = True
+        
+def main():
+    gc.disable()
+    kAS = keygen('shared')
+    kBS = keygen('shared')
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
+    start(S)
+    start(B)
+    start(A)

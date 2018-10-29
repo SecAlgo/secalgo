@@ -1,0 +1,175 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+R. Needham and M. Schroeder. "Authentication revisited". 
+Operating Systems Review, 21(7), January 1987.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.fr/Software/spore/nssk_amended.html
+
+Protocol Diagram:
+  (1) I -> R : A
+  (2) R -> I : enc((I, N1_R), K_RS)
+  (3) I -> S : (I, R, N_I, enc((I, N1_R), K_RS))
+  (4) S -> I : enc((N_I, K_IR, R, enc((K_IR, N1_R, I), K_RS)), K_IS)
+  (5) I -> R : enc((K_IR, N1_R, I), K_RS)
+  (6) R -> I : enc(N2_R, K_IR)
+  (7) I -> R : enc(N2_R - 1, K_IR)
+"""
+import time, sys, json
+from sa.secalgoB import *
+    
+class RoleS (process):
+    def setup(K_IS, K_RS, loops, testsize):
+        at_fork()
+        self.results = []    
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg3', (I1, R, N_I, enc_RS)), from_ = I):
+
+        start_time = time.process_time()
+        for i1 in range(loops):
+            I2, N1_R = decrypt(enc_RS, key = K_RS)
+        results.append(['decrypt', start_time, time.process_time(), loops])
+
+        if I2 == I1:
+
+            start_time = time.process_time()
+            for i2 in range(loops):
+                K_IR = keygen('shared', key_size = (testsize * 8))
+            results.append(['keygen', start_time, time.process_time(), loops])
+
+            start_time = time.process_time()
+            for i3 in range(loops):
+                encSR = encrypt((K_IR, N1_R, I2), key = K_RS)
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            start_time = time.process_time()
+            for i4 in range(loops):
+                encSI = encrypt((N_I, K_IR, R, encSR), key = K_IS)
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            send(('msg4', encSI), to = I)
+
+        for result in results:
+            print(json.dumps(result))
+        exit()
+
+class RoleI (process):
+    def setup(S, K_IS, R, loops):
+        at_fork()
+        self.results = []
+
+    def run():
+        send(('msg1', self), to = R)
+        await(some(received(('msg2', enc_RS), from_ = _R)))
+
+        start_time = time.process_time()
+        for i5 in range(loops):
+            N_I = nonce()
+        results.append(['nonce', start_time, time.process_time(), loops])
+
+        send(('msg3', (self, R, N_I, enc_RS)), to = S)
+        await(some(received(('msg4', enc_IS), from_ = _S)))
+
+        start_time = time.process_time()
+        for i6 in range(loops):
+            N_I2, K_IR, R2, enc_SR = decrypt(enc_IS, key = K_IS)
+        results.append(['decrypt', start_time, time.process_time(), loops])
+
+        K_IR['key'] = K_IR['key'][:32]
+
+        if N_I2 == N_I and R2 == R:
+            send(('msg5', enc_SR), to = R)
+            await(some(received(('msg6', enc_RI), from_ = _R)))
+
+            start_time = time.process_time()
+            for i7 in range(loops):
+                N_R = decrypt(enc_RI, key = K_IR)
+            results.append(['decrypt', start_time, time.process_time(), loops])
+
+            start_time = time.process_time()
+            for i8 in range(loops):
+                encIR = encrypt((N_R - 1), key = K_IR)
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            send(('msg7', encIR), to = R)
+            output('I - Key Exchange Complete')
+
+        for result in results:
+            print(json.dumps(result))        
+
+class RoleR (process):
+    def setup(S, K_RS, loops):
+        at_fork()
+        self.results = []
+    
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', I1), from_ = I2):
+        if I1 == I2:
+
+            start_time = time.process_time()
+            for i9 in range(loops):
+                N1_R = nonce()
+            results.append(['nonce', start_time, time.process_time(), loops])
+
+            start_time = time.process_time()
+            for i10 in range(loops):
+                encRS = encrypt((I1, N1_R), key = K_RS)
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            send(('msg2', encRS), to = I1)
+            await(some(received(('msg5', enc_SR), from_ = _I1)))
+
+            start_time = time.process_time()
+            for i11 in range(loops):
+                K_IR, N1_R2, I3 = decrypt(enc_SR, key = K_RS)
+            results.append(['decrypt', start_time, time.process_time(), loops])
+
+            K_IR['key'] = K_IR['key'][:32]
+
+            if N1_R2 == N1_R and I3 == I1:
+
+                start_time = time.process_time()
+                for i12 in range(loops):
+                    N2_R = nonce()
+                results.append(['nonce', start_time, time.process_time(), loops])
+
+                start_time = time.process_time()
+                for i13 in range(loops):
+                    encRI = encrypt(N2_R, key = K_IR)
+                results.append(['encrypt', start_time, time.process_time(), loops])
+
+                send(('msg6', encRI), to = I1)
+                await(some(received(('msg7', enc_IR), from_ = _I1)))
+
+                start_time = time.process_time()
+                for i14 in range(loops):
+                    N2_R2 = decrypt(enc_IR, key = K_IR)
+                results.append(['decrypt', start_time, time.process_time(), loops])
+
+                if N2_R2 == (N2_R - 1):
+                    output('R - Key Exchange Complete')
+
+        for result in results:
+            print(json.dumps(result))
+        exit()
+
+def main():
+    loops = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
+    testsize = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
+    K_IS = keygen('shared')
+    K_RS = keygen('shared')
+    S = new(RoleS, (K_IS, K_RS, loops, testsize))
+    R = new(RoleR, (S, K_RS, loops))
+    I = new(RoleI, (S, K_IS, R, loops))
+    start(S)
+    start(R)
+    start(I)

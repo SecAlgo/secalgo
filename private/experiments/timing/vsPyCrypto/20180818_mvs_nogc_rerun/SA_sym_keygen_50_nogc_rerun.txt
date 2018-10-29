@@ -1,0 +1,100 @@
+Results for SA_sym_keygen - 1:
+0.05439078333333333
+Results for SA_sym_keygen - 1:
+0.049484900000000005
+Results for SA_sym_keygen - 1:
+0.04861266666666667
+Results for SA_sym_keygen - 1:
+0.04850021666666667
+Results for SA_sym_keygen - 1:
+0.05056596666666667
+Results for SA_sym_keygen - 1:
+0.048575216666666664
+Results for SA_sym_keygen - 1:
+0.048398750000000004
+Results for SA_sym_keygen - 1:
+0.04948108333333333
+Results for SA_sym_keygen - 1:
+0.049333216666666665
+Results for SA_sym_keygen - 1:
+0.050973700000000004
+Results for SA_sym_keygen - 1:
+0.04932093333333333
+Results for SA_sym_keygen - 1:
+0.04865956666666666
+Results for SA_sym_keygen - 1:
+0.049268549999999994
+Results for SA_sym_keygen - 1:
+0.053851316666666676
+Results for SA_sym_keygen - 1:
+0.04854111666666667
+Results for SA_sym_keygen - 1:
+0.049404616666666665
+Results for SA_sym_keygen - 1:
+0.04928915
+Results for SA_sym_keygen - 1:
+0.04963666666666667
+Results for SA_sym_keygen - 1:
+0.050182000000000004
+Results for SA_sym_keygen - 1:
+0.048733033333333335
+Results for SA_sym_keygen - 1:
+0.050247099999999996
+Results for SA_sym_keygen - 1:
+0.04934996666666667
+Results for SA_sym_keygen - 1:
+0.04982105
+Results for SA_sym_keygen - 1:
+0.04935269999999999
+Results for SA_sym_keygen - 1:
+0.048935650000000004
+Results for SA_sym_keygen - 1:
+0.049588766666666666
+Results for SA_sym_keygen - 1:
+0.05048335
+Results for SA_sym_keygen - 1:
+0.04896891666666667
+Results for SA_sym_keygen - 1:
+0.04934363333333334
+Results for SA_sym_keygen - 1:
+0.04901851666666667
+Results for SA_sym_keygen - 1:
+0.04935055
+Results for SA_sym_keygen - 1:
+0.048882883333333335
+Results for SA_sym_keygen - 1:
+0.04888521666666667
+Results for SA_sym_keygen - 1:
+0.0502335
+Results for SA_sym_keygen - 1:
+0.04933178333333334
+Results for SA_sym_keygen - 1:
+0.04839516666666668
+Results for SA_sym_keygen - 1:
+0.05123693333333333
+Results for SA_sym_keygen - 1:
+0.04894116666666667
+Results for SA_sym_keygen - 1:
+0.04909659999999999
+Results for SA_sym_keygen - 1:
+0.04898473333333333
+Results for SA_sym_keygen - 1:
+0.050588433333333335
+Results for SA_sym_keygen - 1:
+0.04927901666666666
+Results for SA_sym_keygen - 1:
+0.04898715
+Results for SA_sym_keygen - 1:
+0.04907426666666667
+Results for SA_sym_keygen - 1:
+0.049729550000000004
+Results for SA_sym_keygen - 1:
+0.04913798333333333
+Results for SA_sym_keygen - 1:
+0.04900506666666666
+Results for SA_sym_keygen - 1:
+0.04981863333333333
+Results for SA_sym_keygen - 1:
+0.04957933333333332
+Results for SA_sym_keygen - 1:
+0.048864633333333324

@@ -2,6 +2,9 @@
 __pycache__/
 *~
 *.pyc
+*.sac
 ProtocolImplementations/**/*.py
 build/
 results/
+output/
+rawData/

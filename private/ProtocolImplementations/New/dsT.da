@@ -1,0 +1,65 @@
+"""
+Simplified Denning-Sacco Key Exchange Protocol
+Written by Christopher Kane
+
+Original Source:
+Dorothy Denning and Giovanni Sacco, "Timestamps in Key Distribution Protocols",
+Communications of the ACM, v.24.8, Aug. 1981. p. 533-536.
+
+Immediate Source:
+Bruno Blanchett, "Security Protocol Verification: Symbolic and Computational 
+Models", ETAPS Invited Talk, 2012. 
+
+This simplified version removes the keyserver used to distribute the public keys
+for A and B.
+
+Protocol Diagram:
+  (1) A -> B: enc(sign(k, skA), pkB)
+  (2) B -> A: enc(s, k)
+"""
+#from sa.secalgo import *
+import gc
+from sa.secalgoB import *
+from sa.timers import dec_proto_run_timer
+
+class RoleA (process):
+    def setup(skA, B, pkB):
+        gc.disable()
+        at_fork()
+        self.i = 1
+
+    #@dec_proto_run_timer
+    def run():
+        k = keygen('shared')
+        send(('msg01', i, encrypt((k, sign(k, key = skA)), key = pkB)), to = B)
+        await(some(received(('msg02', _i, m), from_ = _B)))
+        s = decrypt(m, key = k)
+        output('DECRYPTED MESSAGE:', s)
+        i += 1
+
+class RoleB (process):
+    def setup(skB, pkA):
+        gc.disable()
+        at_fork()
+        self.terminate = False
+        self.s = 'secret'
+
+    #@dec_proto_run_timer
+    def run():
+        terminate = False
+        await(terminate)
+
+    def receive(msg=('msg01', i, m), from_ = A):
+        k, sig = decrypt(m, key = skB)
+        if verify(k, sig, key = pkA):
+            send(('msg02', i, encrypt(s, key = k)), to = A)
+        terminate = True
+
+def main():
+    gc.disable()
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    B = new(RoleB, (skB, pkA))
+    A = new(RoleA, (skA, B, pkB))
+    start(A)
+    start(B)

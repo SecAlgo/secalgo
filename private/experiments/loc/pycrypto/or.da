@@ -1,0 +1,63 @@
+import pickle
+from sa.Misc.Padding import pkcs7_pad, pkcs7_unpad
+from Crypto.Cipher import AES
+from Crypto import Random
+from Crypto.Random import random
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        Random.atfork()
+    def run():
+        await(False)
+    def receive(msg=('msg2', (M, I, R, enc_IS, enc_RS)), from_ = R):
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, enc_IS[:16])
+        N_I, M_I, I_I, R_I = pickle.loads(pkcs7_unpad(cipher_is.decrypt(enc_IS[16:])))
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, enc_RS[:16])
+        N_R, M_R, I_R, R_R = pickle.loads(pkcs7_unpad(cipher_rs.decrypt(enc_RS[16:])))
+        if (M == M_I) and (M == M_R):
+            if (I == I_I) and (I == I_R):
+                if (R == R_I) and (R == R_R):
+                    K_IR = Random.new().read(32)
+                    iv_is = Random.new().read(AES.block_size)
+                    cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
+                    iv_rs = Random.new().read(AES.block_size)
+                    cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
+                    send(('msg3', (M, iv_is + cipher_is.encrypt(pkcs7_pad(pickle.dumps((N_I, K_IR)))), iv_rs + cipher_rs.encrypt(pkcs7_pad(pickle.dumps((N_R, K_IR)))))), to = R)
+class RoleI (process):
+    def setup(S, K_IS, R):
+        Random.atfork()
+    def run():
+        M = random.StrongRandom().getrandbits(128)
+        N_I = random.StrongRandom().getrandbits(128)
+        iv_is = Random.new().read(AES.block_size)
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, iv_is)
+        send(('msg1', (M, self, R, iv_is + cipher_is.encrypt(pkcs7_pad(pickle.dumps((N_I, M, self, R)))))), to = R)
+        await(some(received(( 'msg4', (_M, enc_SI)), from_ = _R)))
+        cipher_is = AES.new(K_IS, AES.MODE_CBC, enc_SI[:16])
+        N_I_ret, K_IR = pickle.loads(pkcs7_unpad(cipher_is.decrypt(enc_SI[16:])))
+        if N_I_ret == N_I:
+            output('I - Key Exchange Complete')
+class RoleR (process):
+    def setup(S, K_RS):
+        Random.atfork()
+    def run():
+        await(False)
+    def receive(msg=('msg1', (M, I, self, enc_IS)), from_ = I):
+        N_R = random.StrongRandom().getrandbits(128)
+        iv_rs = Random.new().read(AES.block_size)
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, iv_rs)
+        send(('msg2', (M, I, self, enc_IS, iv_rs + cipher_rs.encrypt(pkcs7_pad(pickle.dumps((N_R, M, I, self)))))), to = S)
+        await(some(received(('msg3', (_M, enc_SI, enc_SR)), from_ = _S)))
+        cipher_rs = AES.new(K_RS, AES.MODE_CBC, enc_SR[:16])
+        N_R_ret, K_IR = pickle.loads(pkcs7_unpad(cipher_rs.decrypt(enc_SR[16:])))
+        if N_R_ret == N_R:
+            send(('msg4', (M, enc_SI)), to = I)
+            output('R - Key Exchange Complete')
+def main():
+    K_IS = Random.new().read(32)
+    K_RS = Random.new().read(32)
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)

@@ -1,0 +1,72 @@
+import sys
+from sa.secalgoB import keygen
+from sa.signal_timers import dec_proto_run_timer
+from nacl.signing import SigningKey, VerifyKey
+from nacl.encoding import HexEncoder
+#import doubleratchet_ext as EXT
+#import doubleratchet_lib as DR
+from doubleratchet_ext import *
+exec(open('/home/christopher/secalgo-org/examples/signal/doubleratchet_lib.py', 'r').read())
+
+class roleA(process):
+    def setup(B, rounds, SK, AD):
+        self.st = None
+        self.recv_set = set()
+        self.ind = 0
+
+    @dec_proto_run_timer
+    def run():
+        self.st = state()
+        await(some(received(('pubk_init', i, pubk_bytes), from_ = B),
+                   has = (i > self.ind)))
+        self.ind = i
+        RatchetInitAlice(self.st, self.SK, pubk_bytes)
+        for r in range(rounds):
+            msg = 'This is message ' + str(r)
+            send(('msg', i, r, RatchetEncrypt(self.st, msg, self.AD)), to = B)
+            await((i, r) in self.recv_set)
+    
+    def receive(msg=('rep', i, r, (msg_header, msg_ct)), from_ = B):
+        msg_pt = RatchetDecrypt(self.st, msg_header, msg_ct, self.AD)
+        #output(msg_pt)
+        self.recv_set.add((i, r))
+
+    def receive(msg=('rep', i, r), from_ = B):
+        self.recv_set.add((i, r))
+
+class roleB(process):
+    def setup(A, rounds, SK, AD):
+        self.bob_init_key_pair = None
+        self.st = None
+        self.recv_count = 0
+        self.i = 1
+
+    @dec_proto_run_timer
+    def run():
+        self.st = state()
+        self.bob_init_key_pair = GENERATE_DH()
+        RatchetInitBob(self.st, self.SK, self.bob_init_key_pair)
+        send(('pubk_init', self.i,
+              self.bob_init_key_pair.verify_key.encode(encoder = HexEncoder)), to = A)
+        await(self.recv_count == rounds)
+        self.recv_count = 0
+        self.i += 1
+
+    def receive(msg=('msg', ind, r, (msg_header, msg_ct)), from_ = A):
+        assert ind == self.i
+        msg_pt = RatchetDecrypt(self.st, msg_header, msg_ct, self.AD)
+        #output(msg_pt)
+        self.recv_count += 1
+        rep = 'This is reply ' + str(r)
+        send(('rep', self.i, r, RatchetEncrypt(self.st, rep, self.AD)), to = A)
+
+def main():
+    rounds = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+    SK = keygen('random', 32) # shared secret key established somehow
+    AD = keygen('random', 32) # simulated associated data established somehow
+    A = new(roleA) # create sender
+    B = new(roleB) # create receiver
+    setup(A, (B, rounds, SK, AD)) # setup sender
+    setup(B, (A, rounds, SK, AD)) # setup receiver
+    start(B) # start receiver
+    start(A) # start sender

@@ -1,0 +1,100 @@
+Results for SA_pub_encrypt - 1:
+1.3152303333333333
+Results for SA_pub_encrypt - 1:
+1.4339319999999998
+Results for SA_pub_encrypt - 1:
+1.3970003333333334
+Results for SA_pub_encrypt - 1:
+1.3173496666666664
+Results for SA_pub_encrypt - 1:
+1.3145436666666666
+Results for SA_pub_encrypt - 1:
+1.3195556666666666
+Results for SA_pub_encrypt - 1:
+1.3122556666666667
+Results for SA_pub_encrypt - 1:
+1.3781016666666663
+Results for SA_pub_encrypt - 1:
+1.3432996666666668
+Results for SA_pub_encrypt - 1:
+1.3603093333333334
+Results for SA_pub_encrypt - 1:
+1.3113276666666664
+Results for SA_pub_encrypt - 1:
+1.3152089999999999
+Results for SA_pub_encrypt - 1:
+1.3227220000000002
+Results for SA_pub_encrypt - 1:
+1.3123390000000001
+Results for SA_pub_encrypt - 1:
+1.3126343333333335
+Results for SA_pub_encrypt - 1:
+1.3181066666666668
+Results for SA_pub_encrypt - 1:
+1.311501
+Results for SA_pub_encrypt - 1:
+1.3152093333333332
+Results for SA_pub_encrypt - 1:
+1.3211369999999998
+Results for SA_pub_encrypt - 1:
+1.3133286666666664
+Results for SA_pub_encrypt - 1:
+1.3193206666666664
+Results for SA_pub_encrypt - 1:
+1.316112333333333
+Results for SA_pub_encrypt - 1:
+1.313125
+Results for SA_pub_encrypt - 1:
+1.308976333333333
+Results for SA_pub_encrypt - 1:
+1.3221593333333332
+Results for SA_pub_encrypt - 1:
+1.3137176666666668
+Results for SA_pub_encrypt - 1:
+1.3161293333333333
+Results for SA_pub_encrypt - 1:
+1.3095173333333334
+Results for SA_pub_encrypt - 1:
+1.319937
+Results for SA_pub_encrypt - 1:
+1.3234766666666664
+Results for SA_pub_encrypt - 1:
+1.3145943333333334
+Results for SA_pub_encrypt - 1:
+1.3201876666666668
+Results for SA_pub_encrypt - 1:
+1.3090263333333334
+Results for SA_pub_encrypt - 1:
+1.3135279999999998
+Results for SA_pub_encrypt - 1:
+1.317844333333333
+Results for SA_pub_encrypt - 1:
+1.3181513333333335
+Results for SA_pub_encrypt - 1:
+1.31483
+Results for SA_pub_encrypt - 1:
+1.3201809999999998
+Results for SA_pub_encrypt - 1:
+1.3138673333333335
+Results for SA_pub_encrypt - 1:
+1.3164313333333335
+Results for SA_pub_encrypt - 1:
+1.3210753333333334
+Results for SA_pub_encrypt - 1:
+1.3088886666666668
+Results for SA_pub_encrypt - 1:
+1.3167223333333335
+Results for SA_pub_encrypt - 1:
+1.312552333333333
+Results for SA_pub_encrypt - 1:
+1.317534
+Results for SA_pub_encrypt - 1:
+1.3297596666666667
+Results for SA_pub_encrypt - 1:
+1.3072193333333335
+Results for SA_pub_encrypt - 1:
+1.3147823333333335
+Results for SA_pub_encrypt - 1:
+1.3082243333333334
+Results for SA_pub_encrypt - 1:
+1.3181976666666666

@@ -1,0 +1,32 @@
+from sa.secalgo import *
+configure(verify_returns = 'bool')
+class RoleA(process):
+    def setup(SK_sig_A, PK_sig_A, PK_sig_B):
+        self.A = self
+    def run():
+        await(False)
+    def receive(msg=('msg1', N_B, 'Text1'), from_ = B):
+        N_A = nonce(128)
+        send(('msg2', N_A, N_B, B, 'Text3', sign((N_A, N_B, B, 'Text2'), key = SK_sig_A)), to = B)
+        await(some(received(('msg3', _N_B, _N_A, _A, 'Text5', m), from_ = B)))
+        if verify(((N_B, N_A, A, 'Text4'), m), key = PK_sig_B) != None:
+            output('A - Authentication Complete')
+class RoleB(process):
+    def setup(SK_sig_B, PK_sig_B, A, PK_sig_A):
+        self.B = self
+    def run():
+        N_B = nonce(128)
+        send(('msg1', N_B, 'Text1'), to = A)
+        await(some(received(('msg2', N_A, _N_B, _B, 'Text3', m), from_ = A)))
+        if verify(((N_A, N_B, B, 'Text2'), m), key = PK_sig_A) != None:
+            send(('msg3', N_B, N_A, A, 'Text5', sign((N_B, N_A, A, 'Text4'), key = SK_sig_B)), to = A)
+            output('B - Authentication Complete')
+def main():
+    SK_sig_A, PK_sig_A = keygen('public')
+    SK_sig_B, PK_sig_B = keygen('public')
+    A = new(RoleA)
+    B = new(RoleB)
+    setup(A, (SK_sig_A, PK_sig_A, PK_sig_B))
+    setup(B, (SK_sig_B, PK_sig_B, A, PK_sig_A))
+    start(A)
+    start(B)

@@ -1,0 +1,100 @@
+Results for PC_pub_encrypt - 1:
+1.320325666666667
+Results for PC_pub_encrypt - 1:
+1.3519096666666663
+Results for PC_pub_encrypt - 1:
+1.3231213333333336
+Results for PC_pub_encrypt - 1:
+1.316219666666667
+Results for PC_pub_encrypt - 1:
+1.323076
+Results for PC_pub_encrypt - 1:
+1.324063
+Results for PC_pub_encrypt - 1:
+1.3266326666666663
+Results for PC_pub_encrypt - 1:
+1.319733
+Results for PC_pub_encrypt - 1:
+1.3212026666666667
+Results for PC_pub_encrypt - 1:
+1.3160246666666666
+Results for PC_pub_encrypt - 1:
+1.316724
+Results for PC_pub_encrypt - 1:
+1.3306046666666664
+Results for PC_pub_encrypt - 1:
+1.3139336666666666
+Results for PC_pub_encrypt - 1:
+1.3480809999999999
+Results for PC_pub_encrypt - 1:
+1.323913
+Results for PC_pub_encrypt - 1:
+1.3173723333333334
+Results for PC_pub_encrypt - 1:
+1.3217839999999998
+Results for PC_pub_encrypt - 1:
+1.3214400000000002
+Results for PC_pub_encrypt - 1:
+1.3163566666666668
+Results for PC_pub_encrypt - 1:
+1.3135436666666667
+Results for PC_pub_encrypt - 1:
+1.3081846666666663
+Results for PC_pub_encrypt - 1:
+1.3101410000000002
+Results for PC_pub_encrypt - 1:
+1.319783
+Results for PC_pub_encrypt - 1:
+1.3245546666666668
+Results for PC_pub_encrypt - 1:
+1.314914
+Results for PC_pub_encrypt - 1:
+1.3868263333333335
+Results for PC_pub_encrypt - 1:
+1.3167446666666665
+Results for PC_pub_encrypt - 1:
+1.3114593333333333
+Results for PC_pub_encrypt - 1:
+1.31962
+Results for PC_pub_encrypt - 1:
+1.3362813333333332
+Results for PC_pub_encrypt - 1:
+1.3113843333333335
+Results for PC_pub_encrypt - 1:
+1.3180376666666664
+Results for PC_pub_encrypt - 1:
+1.3153846666666666
+Results for PC_pub_encrypt - 1:
+1.330273
+Results for PC_pub_encrypt - 1:
+1.3204826666666665
+Results for PC_pub_encrypt - 1:
+1.3158693333333333
+Results for PC_pub_encrypt - 1:
+1.3183593333333332
+Results for PC_pub_encrypt - 1:
+1.3164133333333334
+Results for PC_pub_encrypt - 1:
+1.3197053333333333
+Results for PC_pub_encrypt - 1:
+1.3207056666666666
+Results for PC_pub_encrypt - 1:
+1.3231293333333334
+Results for PC_pub_encrypt - 1:
+1.3202033333333334
+Results for PC_pub_encrypt - 1:
+1.3206556666666667
+Results for PC_pub_encrypt - 1:
+1.3172153333333334
+Results for PC_pub_encrypt - 1:
+1.3191926666666667
+Results for PC_pub_encrypt - 1:
+1.307889
+Results for PC_pub_encrypt - 1:
+1.325912
+Results for PC_pub_encrypt - 1:
+1.3234499999999998
+Results for PC_pub_encrypt - 1:
+1.3165763333333331
+Results for PC_pub_encrypt - 1:
+1.3247053333333334
