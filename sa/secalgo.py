@@ -41,7 +41,8 @@ KEY_SIZES = {'aes' : {128, 129, 256},
 # options. Calls to the config function will change this dictionary, which
 # will change the configuration for all processes running in the current
 # session.
-configuration = {'key_type_shared'   : 'aes',
+configuration = {'key_type'          : 'shared',
+                 'key_type_shared'   : 'aes',
                  'block_cipher_mode' : 'ctr',
                  'key_size_shared'   : SHARED_KEY_DEFAULT_SIZE_BITS,
                  'key_type_mac'      : 'hmac',
@@ -53,6 +54,7 @@ configuration = {'key_type_shared'   : 'aes',
                  'dh_grp'            : DH_DEFAULT_MODP_GROUP,
                  'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                  'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
+                 'sign_return_pair'  : False,
                  'backend_library'   : 'SA_PyCrypto'}
 
 backend_modules = {'SA_PyCrypto' : SA_PyCrypto}
@@ -79,10 +81,12 @@ def nonce(size = None):
 #end nonce()
 
 #@dec_timer
-def keygen(key_type, key_size = None, block_mode = None, hash_alg = None,
+def keygen(key_type = None, key_size = None, block_mode = None, hash_alg = None,
            key_mat = None, use_dh_group = True, curve = None,
            dh_group = None, dh_mod_size = None, dh_p = None, dh_g = None):
     backend = backend_modules[configuration['backend_library']]
+    if key_type == None:
+        key_type = configuration['key_type']
     if key_type == 'random':
         return backend.keygen_random(key_size)
     elif key_type in MAC_ALGORITHMS:
@@ -154,16 +158,24 @@ def decrypt(ciphertext, key):
 def sign(data, key):
     backend = backend_modules[configuration['backend_library']]
     if key['alg'] in PUBLIC_KEY_SIGNING_ALGORITHMS:
-        return backend.public_key_sign(data, key)
+        sig = backend.public_key_sign(data, key)
     elif key['alg'] in MAC_ALGORITHMS:
-        return backend.shared_key_sign(data, key)
+        sig = backend.shared_key_sign(data, key)
     else:
         raise SecAlgoError("Unrecognized signing algorithm: " + key['alg'])
+    if configuration['sign_return_pair']:
+        return (data, sig)
+    else:
+        return sig
 #end sign()
 
 #@dec_timer
-def verify(data, sig, key):
+def verify(data, sig, key = None):
     backend = backend_modules[configuration['backend_library']]
+    if configuration['sign_return_pair'] and key == None:
+        key = sig
+        sig = data[1]
+        data = data[0]
     if key['alg'] in PUBLIC_KEY_SIGNING_ALGORITHMS:
         return backend.public_key_verify(data, sig, key)
     elif key['alg'] in MAC_ALGORITHMS:

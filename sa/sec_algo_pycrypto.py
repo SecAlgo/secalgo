@@ -347,7 +347,10 @@ def shared_key_verify(data, sig, key):
     if alg == 'hmac':
         h = HMAC.new(k, digestmod = hash_alg)
         h.update(serial_data)
-        return sig == h.digest()
+        if sig == h.digest():
+            return data
+        else:
+            return False
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end shared_key_verify()
@@ -364,7 +367,10 @@ def public_key_verify(data, sig, key):
         pubk = RSA.importKey(k)
         h = hash_alg.new(serial_data)
         verifier = PKCS1_v1_5.new(pubk)
-        return verifier.verify(h, sig)
+        if verifier.verify(h, sig):
+            return data
+        else:
+            return False
     else:
         print('SA_ERROR:', alg, 'not yet implemented.', flush = True)
 #end public_key_verify()
