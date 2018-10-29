@@ -1,0 +1,151 @@
+import sys
+import json
+import random
+from Crypto.Random import random as securerandom
+from Crypto.PublicKey.RSA import importKey
+from sa.Misc.da_utils import serialize_endpoint, deserialize_endpoint
+from sa.sec_algo_pycrypto import encrypt, decrypt, sign, verify
+from sa.sec_algo_pycrypto import gen_key_pair, get_pub_key
+
+#Misc Global Methods
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+#end needed()
+
+#End Misc Global Methods
+
+class KG_Server(process):
+    def setup():
+        self.secret_key = gen_key_pair()
+        self.pk = dict()
+    #end setup()
+    
+    def run():
+        output('Key Server started...')
+        await(False)
+    #end run()
+    
+    def receive(msg=('set-key', cid, client_A, pub_key_A), from_ = setter):
+        if client_A == setter:
+            self.pk[client_A] = pub_key_A
+            send(('re-set-key', cid, get_pub_key(self.secret_key).exportKey()), to = setter)
+    #end receive(msg=('set-key')
+
+    def receive(msg=('req-key', cid, client_A, client_B), from_ = getter):
+        await(client_B in self.pk.keys())
+        if client_A == getter:
+            key_dict = {'length': len(self.pk[client_B]), 
+                        'key': int.from_bytes(self.pk[client_B], byteorder = 'little')}
+            pub_key_package_B = [key_dict, serialize_endpoint(client_B)]
+            s_pub_key_package_B = json.dumps(pub_key_package_B).encode()
+            ss_pub_key_package_B = sign(s_pub_key_package_B, self.secret_key)
+            send(('re-req-key', cid, ss_pub_key_package_B), to = getter)
+    #end receive(msg=('get-key'))
+
+class NS_PK(process):
+    def setup(s, kg_p):
+        self.counter = 0
+        self.secret_key = gen_key_pair()
+        self.server_pub_key = None
+    #end setup()
+
+    def run():
+        output('Started...')
+        set_pub_key(get_pub_key(self.secret_key))
+        if needed():
+            b = random.choice(tuple(s))
+            s = ns_pk(b)
+            output(s)
+            await(False)
+        else:
+            await(False)
+            #end run()
+            
+    def gen_cid():
+        self.counter += 1
+        return (serialize_endpoint(self.id), self.counter)
+    #end gen_cid()
+
+    def set_pub_key(pub_key):
+        output('Setting public key.')
+        cid = gen_cid()
+        send(('set-key', cid, self.id, pub_key.exportKey()), to = kg_p)
+        await(some(received(('re-set-key', cid, spk), from_ = kg_p)))
+        self.server_pub_key = importKey(spk)
+    #end set_pub_key()
+
+    def req_pub_key(client_B):
+        output('Requesting public key for:', client_B)
+        cid = gen_cid()
+        send(('req-key', cid, self.id, client_B), to = kg_p)
+        await(some(received(('re-req-key', _cid, ss_pub_key_package_B), from_ = kg_p)))
+        s_pub_key_package_B = verify(ss_pub_key_package_B, self.server_pub_key).decode()
+        pub_key_package_B = json.loads(s_pub_key_package_B)
+        key_dict = pub_key_package_B[0]
+        key = key_dict['key'].to_bytes(key_dict['length'], byteorder = 'little')
+        return [key, pub_key_package_B[1]]
+    #end get_pub_key
+
+    def ns_pk(recipient):
+        output('NS_PK initiated from', self.id, 'to', recipient)
+        #msg1 and msg2
+        pub_key_package_R = req_pub_key(recipient)
+        (pub_key_R, client_R) = pub_key_package_R
+        if deserialize_endpoint(client_R) == recipient:
+            nonce_I = securerandom.getrandbits(128)
+            nonce_package_I = [nonce_I, serialize_endpoint(self.id)]
+            s_nonce_package_I = json.dumps(nonce_package_I).encode()
+            cs_nonce_package_I = encrypt(s_nonce_package_I, importKey(pub_key_R))
+            cid = gen_cid()
+            send(('msg3', cid, cs_nonce_package_I), to = recipient)
+            await(some(received(('msg6', _cid, cs_nonce_package_R), from_ = recipient)))
+            s_nonce_package_R = decrypt(cs_nonce_package_R, self.secret_key).decode()
+            nonce_package_R = json.loads(s_nonce_package_R)
+            if nonce_package_R[0] == nonce_I:
+                output('Initiator: Authenticated Identity of:', recipient)
+                s_nonce_R = json.dumps(nonce_package_R[1]).encode()
+                cs_nonce_R = encrypt(s_nonce_R, importKey(pub_key_R))
+                send(('msg7', cid, cs_nonce_R), to = recipient)
+                await(some(received(('msg', _cid, m), from_ = recipient)))
+                return decrypt(m, self.secret_key).decode()
+    #end ns_pk()
+
+    def receive(msg=('msg3', cid, cs_nonce_package_I), from_ = initiator):
+        s_nonce_package_I = decrypt(cs_nonce_package_I, self.secret_key).decode()
+        nonce_package_I = json.loads(s_nonce_package_I)
+        if deserialize_endpoint(nonce_package_I[1]) == initiator:
+            #msg4 and msg5
+            pub_key_package_I = req_pub_key(initiator)
+            (pub_key_I, client_I) = pub_key_package_I
+            if deserialize_endpoint(client_I) == initiator:
+                nonce_R = securerandom.getrandbits(128)
+                nonce_package_R = [nonce_package_I[0], nonce_R]
+                s_nonce_package_R = json.dumps(nonce_package_R).encode()
+                cs_nonce_package_R = encrypt(s_nonce_package_R, importKey(pub_key_I))
+                send(('msg6', cid, cs_nonce_package_R), to = initiator)
+                await(some(received(('msg7', _cid, cs_nonce_R), from_ = initiator)))
+                s_nonce_R = decrypt(cs_nonce_R, self.secret_key).decode()
+                if json.loads(s_nonce_R) == nonce_R:
+                    output('Recipient: Authenticated Identity of:', initiator)
+                    output('Protocol Instance Complete!')
+                    m = 'secret'
+                    send(('msg', cid, encrypt(m.encode(), importKey(pub_key_I))), to = initiator)
+                else:
+                    output('Error: Recipient: Returned nonce does not match', 
+                           'original; Could Not Authenticate Identity of:', initiator)
+    #end receive(msg=('msg3'))
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    ps = new(NS_PK, num = n)
+    kg_p = new(KG_Server)
+    for p in ps:
+        setup(p, (ps - {p}, kg_p))
+    setup(kg_p, ())
+    start(kg_p)
+    start(ps)
+#end main()

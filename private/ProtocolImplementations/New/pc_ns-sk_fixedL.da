@@ -1,0 +1,205 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Written by Christopher Kane
+
+Original Source:
+R. Needham and M. Schroeder. "Authentication revisited". 
+Operating Systems Review, 21(7), January 1987.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.fr/Software/spore/nssk_amended.html
+
+Protocol Diagram:
+  (1) A -> B : A
+  (2) B -> A : enc((A, nB1), kBS)
+  (3) A -> S : (A, B, nA, enc((A, nB1), kBS))
+  (4) S -> A : enc((nA, kAB, B, enc((kAB, nB1, A), kBS)), kAS)
+  (5) A -> B : enc((kAB, nB1, A), kBS)
+  (6) B -> A : enc(nB2, kAB)
+  (7) A -> B : enc(nB2 - 1, kAB)
+"""
+
+import pickle, time, json
+from Crypto.Cipher import AES
+from Crypto import Random
+from Crypto.Random import random
+from sa.Misc.Padding import pkcs7_pad as pad, pkcs7_unpad as unpad
+
+shared_method_loops = {'keygen'  : 60000,
+                       'encrypt' : 50000,
+                       'decrypt' : 200000,
+                       'sign'    : 15000,
+                       'verify'  : 15000,
+                       'nonce'   : 60000,}
+
+class RoleS (process):
+    def setup(kAS, kBS):
+        Random.atfork()
+        self.results = []
+        self.terminate = False
+
+    def run():
+        await(terminate)
+
+    def receive(msg=('msg3', (A, B, nA, encBS)), from_ = _A):
+
+        loops = shared_method_loops['decrypt']
+        start_time = time.process_time()
+        for i in range(loops):
+            cipher = AES.new(kBS, AES.MODE_CBC, encBS[:AES.block_size])
+            A2, nB1 = pickle.loads(unpad(cipher.decrypt(encBS[AES.block_size:])))
+        results.append(['decrypt', start_time, time.process_time(), loops])
+        
+        if A2 == A:
+            loops = shared_method_loops['keygen']
+            start_time = time.process_time()
+            for i in range(loops):
+                kAB = Random.new().read(32)
+            results.append(['keygen', start_time, time.process_time(), loops])
+
+            loops = shared_method_loops['encrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                ivB = Random.new().read(AES.block_size)
+                cipherB = AES.new(kBS, AES.MODE_CBC, ivB)
+                encSB = ivB + cipherB.encrypt(pad(pickle.dumps((kAB, nB1, A))))
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            loops = shared_method_loops['encrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                ivA = Random.new().read(AES.block_size)
+                cipherA = AES.new(kAS, AES.MODE_CBC, ivA)
+                encSA = ivA + cipherA.encrypt(pad(pickle.dumps((nA, kAB, B, encSB))))
+            results.append(['encrypt', start_time, time.process_time(), loops])
+            
+            send(('msg4', encSA), to = A)
+        for result in self.results:
+            print(json.dumps(result))
+        terminate = True
+
+class RoleA (process):
+    def setup(S, kAS, B):
+        Random.atfork()
+        self.results = []
+
+    def run():
+        send(('msg1', self), to = B)
+        await(some(received(('msg2', encBS), from_ = _B)))
+
+        loops = shared_method_loops['nonce']
+        start_time = time.process_time()
+        for i in range(loops):
+            nA = random.StrongRandom().getrandbits(128)
+        results.append(['nonce', start_time, time.process_time(), loops])
+        
+        send(('msg3', (self, B, nA, encBS)), to = S)
+        await(some(received(('msg4', encAS), from_ = _S)))
+
+        loops = shared_method_loops['decrypt']
+        start_time = time.process_time()
+        for i in range(loops):
+            cipherAS = AES.new(kAS, AES.MODE_CBC, encAS[:AES.block_size])
+            nA2, kAB, B2, encSB = pickle.loads(unpad(cipherAS.decrypt(encAS[AES.block_size:])))
+        results.append(['decrypt', start_time, time.process_time(), loops])
+        
+        if nA2 == nA and B2 == B:
+            send(('msg5', encSB), to = B)
+            await(some(received(('msg6', encBA), from_ = _B)))
+
+            loops = shared_method_loops['decrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                cipherBA = AES.new(kAB, AES.MODE_CBC, encBA[:AES.block_size])
+                nB = pickle.loads(unpad(cipherBA.decrypt(encBA[AES.block_size:])))
+            results.append(['decrypt', start_time, time.process_time(), loops])
+
+            loops = shared_method_loops['encrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                ivAB = Random.new().read(AES.block_size)
+                cipherAB = AES.new(kAB, AES.MODE_CBC, ivAB)
+                encAB = ivAB + cipherAB.encrypt(pad(pickle.dumps((nB - 1))))
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            send(('msg7', encAB), to = B)
+            output('A - Key Exchange Complete')
+        for result in self.results:
+            print(json.dumps(result))
+
+class RoleB (process):
+    def setup(S, kBS):
+        Random.atfork()
+        self.results = []
+        self.terminate = False
+    
+    def run():
+        await(terminate)
+
+    def receive(msg=('msg1', A), from_ = _A):
+        loops = shared_method_loops['nonce']
+        start_time = time.process_time()
+        for i in range(loops):
+            nB1 = random.StrongRandom().getrandbits(128)
+        results.append(['nonce', start_time, time.process_time(), loops])
+
+        loops = shared_method_loops['encrypt']
+        start_time = time.process_time()
+        for i in range(loops):
+            ivBS = Random.new().read(AES.block_size)
+            cipherBS = AES.new(kBS, AES.MODE_CBC, ivBS)
+            encBS = ivBS + cipherBS.encrypt(pad(pickle.dumps((A, nB1))))
+        results.append(['encrypt', start_time, time.process_time(), loops])
+        
+        send(('msg2', encBS), to = A)
+        await(some(received(('msg5', encSB), from_ = _A)))
+
+        loops = shared_method_loops['decrypt']
+        start_time = time.process_time()
+        for i in range(loops):
+            cipherBS = AES.new(kBS, AES.MODE_CBC, encSB[:AES.block_size])
+            kAB, nB12, A2 = pickle.loads(unpad(cipherBS.decrypt(encSB[AES.block_size:])))
+        results.append(['decrypt', start_time, time.process_time(), loops])
+
+        if nB12 == nB1 and A2 == A:
+
+            loops = shared_method_loops['nonce']
+            start_time = time.process_time()
+            for i in range(loops):
+                nB2 = random.StrongRandom().getrandbits(128)
+            results.append(['nonce', start_time, time.process_time(), loops])
+
+            loops = shared_method_loops['encrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                ivBA = Random.new().read(AES.block_size)
+                cipherBA = AES.new(kAB, AES.MODE_CBC, ivBA)
+                encBA = ivBA + cipherBA.encrypt(pad(pickle.dumps(nB2)))
+            results.append(['encrypt', start_time, time.process_time(), loops])
+
+            send(('msg6', encBA), to = A)
+            await(some(received(('msg7', encAB), from_ = _A)))
+
+            loops = shared_method_loops['decrypt']
+            start_time = time.process_time()
+            for i in range(loops):
+                cipherAB = AES.new(kAB, AES.MODE_CBC, encAB[:AES.block_size])
+                nB22 = pickle.loads(unpad(cipherAB.decrypt(encAB[AES.block_size:])))
+            results.append(['decrypt', start_time, time.process_time(), loops])
+            
+            if nB22 == (nB2 - 1):
+                output('B - Key Exchange Complete')
+        for result in self.results:
+            print(json.dumps(result))
+        terminate = True
+        
+def main():
+    kAS = Random.new().read(32)
+    kBS = Random.new().read(32)
+    S = new(RoleS, (kAS, kBS))
+    B = new(RoleB, (S, kBS))
+    A = new(RoleA, (S, kAS, B))
+    start(S)
+    start(B)
+    start(A)

@@ -1,0 +1,77 @@
+"""
+Yahalom Key Distribution and Mutual Authentication Protocol,
+    using a trusted key server and symmetric keys.
+Written by Christopher Kane
+
+Original Source:
+Micahel Burrows, Martin Abadi, and Roger Needham, "A Logic of Authentication",
+SRC Research Report 39, Feb., 1990 (revised). (Authors learned of Yahalom
+protocol through personal correspondence from Yahalom).
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/yahalom.html
+
+Protocol Diagram:
+    -A knows: A, B, S, kAS
+    -R knows: B, S, kBS
+    -S knows: S, A, B, kAS, kBS
+  (1) A -> B : A, nA
+  (2) B -> S : B, enc((A, nA, nB), kBS)
+  (3) S -> A : enc((B, kAB, nA, nB), kAS), enc((A, kAB), kBS)
+  (4) A -> B : enc((A, kAB), kBS), enc(nB, kAB)
+"""
+
+from sa.secalgo import *
+
+class RoleS (process):
+    def setup(A, B, kAS, kBS):
+        at_fork()
+        
+    def run():
+        await(False)
+
+    def receive(msg=('msg2', (_B, encBS)), from_ = _B):
+        if some((_A, nA, nB) in [decrypt(encBS, key = kBS)]):
+            kAB = keygen('shared')
+            send(('msg3', (encrypt((B, kAB, nA, nB), key = kAS),
+                           encrypt((A, kAB), key = kBS))), to = A)
+            
+class RoleA (process):
+    def setup(B, S, kAS):
+        at_fork()
+    
+    def run():
+        nA = nonce()
+        send(('msg1', (self, nA)), to = B)
+        await(some(received(('msg3', (encSA, encSB)), from_ = _S),
+                   has = some((_B, kAB, _nA, nB) in [decrypt(encSA, key = kAS)])))
+        send(('msg4', (encSB, encrypt(nB, key = kAB))), to = B)
+        output('A - Key Exchange Complete')
+
+class RoleB (process):
+    def setup(S, kBS):
+        at_fork()
+    
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', (A, nA)), from_ = A):
+        nB = nonce()
+        send(('msg2', (self, encrypt((A, nA, nB), key = kBS))), to = S)
+        await(some(received(('msg4', (encSB, encAB)), from_ = _A),
+                   has = (some((_A, kAB) in [decrypt(encSB, key = kBS)])
+                          and some(_nB in [decrypt(encAB, key = kAB)]))))
+        output('B - Key Exchange Complete')
+
+def main():
+    kAS = keygen('shared')
+    kBS = keygen('shared')
+    B = new(RoleB)
+    A = new(RoleA)
+    S = new(RoleS, (A, B, kAS, kBS))
+    setup(A, (B, S, kAS))
+    setup(B, (S, kBS))
+    start(S)
+    start(B)
+    start(A)

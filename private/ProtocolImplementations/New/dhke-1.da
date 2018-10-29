@@ -1,0 +1,92 @@
+"""
+Diffie-Hellman Key Exchange (DHKE-1)
+A protocol based on classical Diffie-Hellman, given in Shoup 1999.
+Models available for Scyther, and in Gupta and Shmatikov 2005.
+
+1. A -> B : g^x, sign((g^x, B), skA), certA
+2. B -> A : g^y, k, sign(g^x, g^y, k, A), certB
+3. A -> B : BitGen(H_k(g^xy))
+
+g is a generator for a group G of prime order q, all decided in advance. In
+Shoup, a "description" of G and g are included in each participant's public
+key. I will simulate this by passing this information to each process during 
+its setup. The certificates, certA and certB, are certificates granted by a 
+Certification Authority linking each participant's public key to their
+identity. k is a randomly generated index for a hash function.
+"""
+from sa.secalgo import *
+import random
+from Crypto.Random.random import StrongRandom
+from Crypto.Hash import SHA256
+configure(verify_returns = 'bool')
+
+class RoleA (process):
+    def setup(skA, pkA, B, pkB, certA, pkSigT):
+        at_fork()
+
+    def run():
+        dh_x, dh_X, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
+        send(('msg1', dh_X, sign((dh_X, B), key = skA), certA), to = B)
+        await(some(received(('msg2', dh_Y, k, m, certB), from_ = B)))
+        if verify(((B, pkB), certB), pkSigT):
+            if verify(((dh_X, dh_Y, k, self), m), pkB[0]):
+                #Key Derived as H_k(dh_Y ** dh_x mod dh_p), where H_k is the
+                #Hash function whose index is k
+                kAB = key_derivation(dh_Y, dh_x, pkA[2])
+                send(('msg3', BitGen(kAB)), to = B)
+                output('A - Authenticated Exchange of Key Material Complete')
+        
+class RoleB (process):
+    def setup(skB, pkB, pkA, certB, pkSigT):
+        at_fork()
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg1', dh_X, m, certA), from_ = A):
+        dh_y, dh_Y, _, _ = keygen('dh', dh_p = pkA[2], dh_g = pkA[1])
+        if verify(((A, pkA), certA), pkSigT):
+            if verify(((dh_X, self), m), pkA[0]):
+                k = StrongRandom().randint(1, 100) #k supposed to be bitstring
+                send(('msg2', dh_Y, k, sign((dh_X, dh_Y, k, A), key = skB), certB), to = A)
+                #Key Derived as H_k(dh_X ** dh_y mod dh_p), where H_k is the
+                #Hash function whose index is k
+                kAB = key_derivation(dh_X, dh_y, pkA[2])
+                await(some(received(('msg3', m2), from_ = A)))
+                if BitGen(kAB) == m2:
+                    output('B - Authenticated Exchange of Key Material Complete')
+
+def main():
+    skSigA, pkSigA = keygen('public')
+    skSigB, pkSigB = keygen('public')
+    skSigT, pkSigT = keygen('public')
+    dh_grpA = keygen('dh', 1)
+    dh_grpB = keygen('dh', 1)
+    print(dh_grpA)
+    print(dh_grpB)
+    skA = skSigA
+    skB = skSigB
+    pkA = (pkSigA, dh_grpA[2], dh_grpA[3])
+    pkB = (pkSigB, dh_grpB[2], dh_grpB[3])
+    B = new(RoleB)
+    A = new(RoleA)
+    certA = sign((A, pkA), skSigT)
+    certB = sign((B, pkB), skSigT)
+    setup(B, (skB, pkB, pkA, certB, pkSigT))
+    setup(A, (skA, pkA, B, pkB, certA, pkSigT))
+    start(B)
+    start(A)
+
+def BitGen(x):
+    random.seed(x)
+    return random.getrandbits(256)
+    
+def key_derivation(public, private, mod_p):
+    shared_secret = pow(public, private, mod_p)
+    ss_length_bits = shared_secret.bit_length()
+    ss_length_bytes = ss_length_bits // 8
+    if ss_length_bits % 8 != 0:
+        ss_length_bytes += 1
+    ss_as_bytes = shared_secret.to_bytes(ss_length_bytes, byteorder = 'little')
+    new_key = SHA256.new(ss_as_bytes).digest()
+    return new_key

@@ -1,0 +1,117 @@
+"""
+Woo-Lam Key Distribution and Mutual Authentication Protocol, 
+    with trusted server and symmetric keys.
+Written by Christopher Kane
+
+Original Source:
+Thomas Y. C. Woo and Simon S. Lam, "A Lesson on Authentication Protocol Design",
+ACM SIGOPS, v.28.3, July, 1994, pp. 24-37.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/wooLamMutual.html
+
+Protocol Diagram:
+  (1) I -> R : I, N_I
+  (2) R -> I : R, N_R
+  (3) I -> R : enc((I, R, N_I, N_R), K_IS)
+  (4) R -> S : enc((I, R, N_I, N_R), K_IS), enc((I, R, N_I, N_R), K_RS)
+  (5) S -> R : enc((R, N_I, N_R, K_IR), K_IS), enc((I, N_I, N_R, K_IR), K_RS)
+  (6) R -> I : enc((R, N_I, N_R, K_IR), K_IS), enc((N_I, N_R), K_IR)
+  (7) I -> R : enc(N_R, K_IR)
+"""
+
+from sa.secalgo import *
+configure(benchmark = True)
+
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        self.I1 = None
+        self.R1 = None
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('msg4', encI, encR), from_ = R):
+        R1 = R
+        send(encR, to = self)
+        await(some(received(((I, _R, N_I, N_R), _R), from_ = self)))
+        I1 = I
+        send(encI, to = self)
+        await(some(received(((_I, _R, _N_I, _N_R), _I), from_ = self)))
+        K_IR = keygen('shared')
+        send(('msg5', ('encS', encrypt((R, N_I, N_R, K_IR), key = K_IS)),
+              ('encS', encrypt((I, N_I, N_R, K_IR), key = K_RS))), to = R)
+
+    def receive(msg=('encI', m), from_ = self):
+        send((decrypt(m, key = K_IS), I1), to = self)
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_RS), R1), to = self) 
+        
+class RoleI (process):
+    def setup(S, K_IS, R):
+        self.I = self
+        self.K_IR = None
+
+    def run():
+        N_I = nonce()
+        send(('msg1', I, N_I), to = R)
+        await(some(received(('msg2', _R, N_R), from_ = _R)))
+        send(('msg3', ('encI', encrypt((I, R, N_I, N_R), key = K_IS))), to = R)
+        await(some(received(('msg6', encS, encR), from_ = _R)))
+        send(encS, to = self)
+        await(some(received(((_R, _N_I, N_R, K), _S), from_ = self)))
+        K_IR = K
+        send(encR, to = self)
+        await(some(received(((_N_I, _N_R), _R), from_ = self)))
+        send(('encI', encrypt(N_R, K_IR)), to = R)
+        output('I - Key Exchange Complete')
+
+    def receive(msg=('encS', m), from_ = self):
+        send((decrypt(m, key = K_IS), S), to = self)
+
+    def receive(msg=('encR', m), from_ = self):
+        send((decrypt(m, key = K_IR), R), to = self)
+
+
+class RoleR (process):
+    def setup(S, K_RS):
+        self.R = self
+        self.I1 = None
+        self.K_IR = None
+
+    def run():
+        if await(False): pass
+        elif timeout(10): pass
+
+    def receive(msg=('msg1', I, N_I), from_ = _I):
+        N_R = nonce()
+        self.I1 = I
+        send(('msg2', R, N_R), to = I)
+        await(some(received(('msg3', encI), from_ = _I)))
+        send(('msg4', encI, ('encR', encrypt((I, R, N_I, N_R), key = K_RS))), to = S)
+        await(some(received(('msg5', encSI, encSR), from_ = S)))
+        send(encSR, to = self)
+        await(some(received(((_I, _N_I, _N_R, K), _S), from_ = self)))
+        K_IR = K
+        send(('msg6', encSI, ('encR', encrypt((N_I, N_R), key = K_IR))), to = I)
+        await(some(received((N_R, _I), from_ = self)))
+        output('R - Key Exchange Complete')
+
+    def receive(msg=('encS', m), from_ = self):
+        send((decrypt(m, key = K_RS), S), to = self)
+
+    def receive(msg=('encI', m), from_ = I):
+        send((decrypt(m, key = K_IR), I1), to = self)
+
+def main():
+    K_IS = keygen('shared')
+    K_RS = keygen('shared')
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)

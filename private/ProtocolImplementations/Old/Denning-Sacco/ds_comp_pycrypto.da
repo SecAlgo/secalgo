@@ -1,0 +1,153 @@
+import sys
+import random
+from Crypto.Cipher import AES
+from Crypto.Util import Counter
+from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA256
+from Crypto import Random
+
+
+#Misc Global Methods
+
+#I am afraid I could not figure out how to implement a true once version of
+#needed that would work in a distributed setting.
+
+def needed():
+    if random.random() < 0.25:
+        return True
+    else:
+        return False
+    
+def print_public_keys(key_dict):
+    for k, v in key_dict.items():
+        print(k)
+        print(v.exportKey())
+#End Misc Global Methods
+
+class pk_server (process):
+    def setup():
+        self.pk = dict()
+
+    def run():
+        output('pks started')
+        await(False)
+        #elif timeout(5):
+        #print_public_keys(self.pk)
+
+    def receive(msg=('set_pk', p, k, cid), from_ = client):
+        pk[p] = k
+        send(('re_set_pk', cid), to = client)
+
+    def receive(msg=('get_pk', p, cid), from_ = client):
+        await(p in self.pk.keys())
+        send(('re_get_pk', self.pk[p], cid), to = client)
+
+"""
+Changes:
+1. I had to move the call to set_pk() out of setup() and into run() because
+set_pk() contains an await statement and await statements are not permitted
+within the setup() method.
+
+2. The await statements in set_pk() and get_pk() did nto work when the from_
+class was included (that is, they never evaluated to true and all the processes
+would hang. So, I remove the from_ from each.
+
+3. I had to change the definition of get_pk inside the pk_server class in order
+to prevent cases in which a process would request the public key for another
+process that had not yet registered its key.
+"""
+class P (process):
+    def setup(s, pk_p, testing, test_i, test_r):
+        self.skA = RSA.generate(1024)
+        self.counter = 0
+        #self.cid_gen = self.gen_cid()
+        #set_pk(self.id, gen_pk(skA))
+
+    def run():
+        output('started')
+        set_pk(self.id, self.skA.publickey())
+        if needed() and not testing:
+            b = random.choice(tuple(s))
+            s = ds(b)
+            output(s)
+        if testing and test_i:
+           test_s = ds(test_r.pop())
+           output(test_s)
+        await(False)
+
+    def gen_cid():
+        self.counter += 1
+        return (self.id, self.counter)
+
+    #def gen_cid():
+    #    counter = 0
+    #    while True:
+    #        yield (self.id, counter)
+    #        counter = counter + 1
+
+    def set_pk(p, k):
+        #cid = next(self.cid_gen)
+        cid = self.gen_cid()
+        send(('set_pk', p, k, cid), to = self.pk_p)
+        await(some(received(('re_set_pk', _cid))))
+        #await(some(received(('re_set_pk', _cid), from_ = self.pk_p)))
+
+    def get_pk(p):
+        #cid = next(self.cid_gen)
+        cid = self.gen_cid()
+        send(('get_pk', p, cid), to = self.pk_p)
+        await(some(received(('re_get_pk', k, _cid))))
+        #await(some(received(('re_get_pk', k, _cid), from_ = self.pk_p)))
+        return k
+
+    def ds(b):
+        output('DS Initiated from', self.id, 'to', b)
+        k = Random.new().read(16)
+        pkB = get_pk(b)
+        key_sig,  = self.skA.sign(SHA256.new(k).digest(), '')
+        c_key_sig = pkB.encrypt(key_sig, '')
+        c_k = pkB.encrypt(k, '')
+        send(('ds-key', (c_k, c_key_sig)), to = b)
+        await(some(received(('msg', m), from_= b)))
+        pre = m[0:8]
+        ctr = Counter.new(64, prefix = pre)
+        decrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
+        return decrypter.decrypt(m[8:]).decode()
+        
+    def receive(msg=('ds-key', m), from_ = b):
+        output('Retrieving Key for:', b)
+        pkB = get_pk(b)
+        c_k, c_key_sig = m
+        k = self.skA.decrypt(c_k)
+        key_sig = self.skA.decrypt(c_key_sig)
+        verdict = pkB.verify(SHA256.new(k).digest(), (key_sig,))
+        if verdict:
+            s = "secret"
+            pre = Random.new().read(8)
+            ctr = Counter.new(64, prefix = pre)
+            encrypter = AES.new(k, AES.MODE_CTR, counter = ctr)
+            send(('msg', pre + encrypter.encrypt(s)), to = b)
+        else:
+            output('VERIFICATION FAILED for DS from:', b, 'to:', self.id)
+
+def main():
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    test_run = True if (len(sys.argv) > 2 and sys.argv[2] == 'test') else False
+    pk_p = new(pk_server)
+    setup(pk_p, ())
+    if test_run:
+        i1 = new(P, num = 1)
+        i2 = new(P, num = 1)
+        r = new(P, num = 1)
+        ps = i1 | i2 | r
+        setup(i1, (i2 | r, pk_p, True, True, r))
+        setup(i2, (i1 | r, pk_p, True, True, r))
+        setup(r, (i1 | i2, pk_p, True, False, r))
+        start(pk_p)
+        start(ps)
+    else:
+        ps = new(P, num = n)
+        for p in ps:
+            setup(p, ((ps - {p}), pk_p, False, False, None))
+        start(pk_p)
+        start(ps)

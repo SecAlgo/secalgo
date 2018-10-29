@@ -1,0 +1,71 @@
+"""
+Needham-Schroeder Symmetric Key Key Exhange Protocol
+Message Abstraction Version
+Written by Christopher Kane
+
+Original Source:
+Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
+Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
+pp. 993-999.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/nssk.html
+
+Protocol Diagram:
+  (1) I -> S : (I, R, N_I)
+  (2) S -> I : enc((N_I, K_IR, R, enc((K_IR, I), K_RS)), K_IS)
+  (3) I -> R : enc((K_IR, I), K_RS)
+  (4) R -> I : enc(N_R, K_IR)
+  (5) I -> R : enc(N_R - 1, K_IR)
+"""
+from sa.secalgo import *
+    
+class RoleS (process):
+    def setup(K_IS, K_RS):
+        pass
+
+    def run():
+        await(False):
+            pass
+            
+    def receive(msg=('1', _), from_ = I):
+        K_IR = keygen('shared')
+        send(('2', encrypt((N_I, K_IR, R, encrypt((K_IR, I), key = K_RS)), key = K_IS)), to = I)
+        
+class RoleI (process):
+    def setup(S, K_IS, R):
+        pass
+    
+    def run():
+        N_I = nonce()
+        send(('1', (self, R, N_I)), to = S)
+        await(some(received(('2', _), from_ = _S)))
+        send(('3', encrypt((K_IR, I), key = K_RS)), to = R)
+        await(some(received(('4', _), from_ = _R)))
+        send(('5', encrypt(N_R - 1, key = K_IR)), to = R)
+        output('I - Key Exchange Complete')
+        
+class RoleR (process):
+    def setup(S, K_RS):
+        pass
+    
+    def run():
+        await(False):
+            pass
+            
+    def receive(msg=('3', _), from_ = I):
+        N_R = nonce()
+        send(('4', encrypt(N_R, key = K_IR)), to = I)
+        await(some(received(('5', _), from_ = _I)))
+        output('R - Key Exchange Complete')
+        
+def main():
+    K_IS = keygen('shared')
+    K_RS = keygen('shared')
+    S = new(RoleS, (K_IS, K_RS))
+    R = new(RoleR, (S, K_RS))
+    I = new(RoleI, (S, K_IS, R))
+    start(S)
+    start(R)
+    start(I)

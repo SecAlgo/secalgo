@@ -1,0 +1,87 @@
+"""
+Needham-Schroeder Public Key Mutual Authentication Protocol
+Written by Christopher Kane
+
+Original Source:
+Roger Needham and Michael Schroeder, "Using Encryption for Authentication in 
+Large Networks of Computers", Communications of the ACM, v.21.12. Dec., 1978.
+pp. 993-999.
+
+Immediate Source:
+Security Protocol Open Repository
+http://www.lsv.ens-cachan.fr/Software/spore/nspk.html
+
+Protocol Diagram:
+  (1) A -> S : (A, B)
+  (2) S -> A : sign((B, pkB), skS)
+  (3) A -> B : enc((Na, A), pkB)
+  (4) B -> S : (B, A)
+  (5) S -> B : sign((A, pkA), skS)
+  (6) B -> A : enc((Na, Nb), pkA)
+  (7) A -> B : enc(Nb, pkB)
+
+did fix for (6):
+  (6) B -> A : enc((Na, Nb, B), pkA)
+"""
+
+from sa.secalgo import *
+
+class roleS (process):
+    def setup(skS, clientKeys):
+        at_fork()
+
+    def run():
+        await(False)
+        
+    def receive(msg=('msg1', (A, B)), from_ = _A):
+        pkB = [x for (p, x) in clientKeys if p == B].pop()
+        send(('msg2', sign((B, pkB), key = skS)), to = A)
+
+    def receive(msg=('msg4', (B, A)), from_ = _B):
+        pkA = [x for (p, x) in clientKeys if p == A].pop()
+        send(('msg5', sign((A, pkA), key = skS)), to = B)
+
+class roleA (process):
+    def setup(skA, S, pkS, B):
+        at_fork()
+    
+    def run():
+        send(('msg1', (self, B)), to = S)
+        await(some(received(('msg2', sigS), from_ = _S),
+                   has = some((_B, pkB) in [verify(sigS, key = pkS)])))
+        nA = nonce()
+        send(('msg3', encrypt((nA, self), key = pkB)), to = B)
+        await(some(received(('msg6', encBA), from_ = _B),
+                   has = some((_nA, nB, _B) in [decrypt(encBA, key = skA)])))
+        send(('msg7', encrypt(nB, key = pkB)), to = B)
+        output('A authenticated B')
+
+class roleB (process):
+    def setup(skB, S, pkS):
+        at_fork()
+
+    def run():
+        await(False)
+
+    def receive(msg=('msg3', encAB), from_ = A):
+        if some((nA, _A) in [decrypt(encAB, key = skB)]):
+            send(('msg4', (self, A)), to = S)
+            await(some(received(('msg5', sigS), from_ = _S),
+                       has = some((_A, pkA) in [verify(sigS, key = pkS)])))
+        nB = nonce()
+        send(('msg6', encrypt((nA, nB, self), key = pkA)), to = A)
+        await(some(received(('msg7', encAB2), from_ = _A),
+                   has = (decrypt(encAB2, key = skB) == nB)))
+        output('B authenticated A')
+
+def main():
+    skS, pkS = keygen('public')
+    skA, pkA = keygen('public')
+    skB, pkB = keygen('public')
+    S = new(roleS)
+    B = new(roleB, (skB, S, pkS))
+    A = new(roleA, (skA, S, pkS, B))
+    setup(S, (skS, [(A, pkA), (B, pkB)]))
+    start(S)
+    start(B)
+    start(A)
