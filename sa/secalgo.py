@@ -1,6 +1,6 @@
 import sys
 import sa.sec_algo_pycrypto as SA_PyCrypto
-#import sa.sec_algo_pycrytodome as SA_PyCryptodome
+import sa.sec_algo_pycryptodome as SA_PyCryptodome
 #import sa.sec_algo_charm as SA_Charm
 from Crypto.Random import atfork as raf
 from sa.timers import dec_timer
@@ -55,9 +55,10 @@ configuration = {'key_type'          : 'shared',
                  'dh_mod_size'       : DH_DEFAULT_MOD_SIZE_BITS,
                  'dh_exp_size'       : DH_DEFAULT_EXP_SIZE_BITS,
                  'sign_return_pair'  : False,
-                 'backend_library'   : 'SA_PyCrypto'}
+                 'backend_library'   : 'sa_pycrypto'}
 
-backend_modules = {'SA_PyCrypto' : SA_PyCrypto}
+backend_modules = {'sa_pycrypto' : SA_PyCrypto,
+                   'sa_pycryptodome' : SA_PyCryptodome}
 
 def configure(**configs):
     global configuration
