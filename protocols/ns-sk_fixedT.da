@@ -21,14 +21,14 @@ Protocol Diagram:
 """
 
 import sys, gc
-#from sa.secalgo import *
-from sa.secalgoB import *
+from sa.secalgo import *
 from sa.timers import dec_proto_run_timer
-    
+
+configure(backend_library = 'sa_pycryptodome')
+
 class RoleS (process):
     def setup(kAS, kBS):
         gc.disable()
-        at_fork()
         self.terminate = False
         
     #@dec_proto_run_timer
@@ -49,7 +49,6 @@ class RoleS (process):
 class RoleA (process):
     def setup(S, kAS, B):
         gc.disable()
-        at_fork()
         self.i = 1
 
     #@dec_proto_run_timer
@@ -72,7 +71,6 @@ class RoleA (process):
 class RoleB (process):
     def setup(S, kBS):
         gc.disable()
-        at_fork()
         self.terminate = False
 
     #@dec_proto_run_timer
