@@ -93,7 +93,7 @@ def keygen(key_type = None, key_size = None, block_mode = None, hash_alg = None,
         if key_type == 'mac':
             key_type = configuration['key_type_mac']
         if key_size == None:
-            key_size = (configuration['key_size_mac']['key_type_mac'] // 8)
+            key_size = (configuration['key_size_mac'][key_type] // 8)
         if hash_alg == None:
             hash_alg = configuration['signing_hash']
         return backend.keygen_mac(key_size, key_type, hash_alg, key_mat)
@@ -172,8 +172,11 @@ def sign(data, key):
 #@dec_timer
 def verify(data, sig, key = None):
     backend = backend_modules[configuration['backend_library']]
-    if configuration['sign_return_pair'] and key == None:
+    if key == None:
         key = sig
+        sig = data[1]
+        data = data[0]
+    elif sig == None:
         sig = data[1]
         data = data[0]
     if key['alg'] in PUBLIC_KEY_SIGNING_ALGORITHMS:
